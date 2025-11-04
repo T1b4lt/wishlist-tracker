@@ -17,6 +17,22 @@ class ProductInfoResponse(BaseModel):
     category: str
 
 
+class Config(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    key: str = Field(unique=True, index=True)
+    value: str
+
+
+class ConfigUpdate(BaseModel):
+    analysys_hour: int | None = None
+    hist_window_size: int | None = None
+
+
+class ConfigResponse(BaseModel):
+    analysys_hour: int
+    hist_window_size: int
+
+
 class Category(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
@@ -59,6 +75,20 @@ def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
 
+def initialize_config(session: Session):
+    """Initialize configuration values if they don't exist"""
+    config_keys = ["analysys_hour", "hist_window_size"]
+    default_values = {"analysys_hour": "12", "hist_window_size": "60"}
+
+    for key in config_keys:
+        existing_config = session.exec(select(Config).where(Config.key == key)).first()
+        if not existing_config:
+            config = Config(key=key, value=default_values[key])
+            session.add(config)
+
+    session.commit()
+
+
 def get_session():
     with Session(engine) as session:
         yield session
@@ -71,6 +101,8 @@ SessionDep = Annotated[Session, Depends(get_session)]
 async def lifespan(app: FastAPI):
     # Startup
     create_db_and_tables()
+    with Session(engine) as session:
+        initialize_config(session)
     yield
     # Shutdown (if needed in the future)
 
@@ -79,6 +111,47 @@ app = FastAPI(
     title="Wishlist Tracker API",
     version="0.0.1 RC1",
     lifespan=lifespan)
+
+
+# Config endpoints
+@app.get("/config/")
+def get_config(session: SessionDep) -> ConfigResponse:
+    analysys_hour_config = session.exec(select(Config).where(Config.key == "analysys_hour")).first()
+    hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
+
+    return ConfigResponse(
+        analysys_hour=int(analysys_hour_config.value) if analysys_hour_config else 12,
+        hist_window_size=int(hist_window_size_config.value) if hist_window_size_config else 60
+    )
+
+
+@app.patch("/config/")
+def update_config(config_update: ConfigUpdate, session: SessionDep) -> ConfigResponse:
+    if config_update.analysys_hour is not None:
+        if config_update.analysys_hour < 0 or config_update.analysys_hour > 23:
+            raise HTTPException(status_code=400, detail="analysys_hour must be between 0 and 23")
+
+        analysys_hour_config = session.exec(select(Config).where(Config.key == "analysys_hour")).first()
+        if analysys_hour_config:
+            analysys_hour_config.value = str(config_update.analysys_hour)
+        else:
+            analysys_hour_config = Config(key="analysys_hour", value=str(config_update.analysys_hour))
+            session.add(analysys_hour_config)
+
+    if config_update.hist_window_size is not None:
+        if config_update.hist_window_size < 30 or config_update.hist_window_size > 180:
+            raise HTTPException(status_code=401, detail="hist_window_size must be between 30 and 180")
+
+        hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
+        if hist_window_size_config:
+            hist_window_size_config.value = str(config_update.hist_window_size)
+        else:
+            hist_window_size_config = Config(key="hist_window_size", value=str(config_update.hist_window_size))
+            session.add(hist_window_size_config)
+
+    session.commit()
+
+    return get_config(session)
 
 
 # Category endpoints
