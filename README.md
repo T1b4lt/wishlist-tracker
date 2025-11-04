@@ -18,11 +18,11 @@ WIP (but it will be a Docker-based self-hosted OSS application.)
 
 ### Frontend
 
-Vite, React with JavaScript, Tailwind CSS, Wouter for routing.
+Vite, React with JavaScript, Tailwind CSS and Wouter for routing.
 
 ### Backend
 
-FastAPI with Python, SQLite for the database, Stagehand for AI agent scraping and monitoring.
+FastAPI with Python, SQLite for the database, Stagehand for AI agent scraping and monitoring and Telegram Bot API for notifications.
 
 ## Development Setup
 
