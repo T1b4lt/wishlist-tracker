@@ -67,13 +67,13 @@ async def get_product_info(url: str, categories: list[str]) -> ProductExtraction
     return product
 
 
-async def get_item_price(url: str) -> float:
+async def get_product_price(url: str) -> float:
     """
-    Fetch the price of an item from the given URL using Stagehand.
+    Fetch the price of a product from the given URL using Stagehand.
     Args:
-        url (str): The URL of the item page.
+        url (str): The URL of the product page.
     Returns:
-        float: The price of the item.
+        float: The price of the product.
     """
 
     stagehand = Stagehand(
@@ -99,23 +99,23 @@ async def get_item_price(url: str) -> float:
     # Initialize Stagehand
     await stagehand.init()
 
-    # Navigate to the item page
+    # Navigate to the product page
     page = stagehand.page
     await page.goto(url)
 
     # Close any pop-ups or cookie consent banners if present
     await page.act("close any pop-ups or cookies consent banners if present")
 
-    # Extract the price of the item
-    item = await page.extract(
-        "extract the price of the item",
+    # Extract the price of the product
+    product = await page.extract(
+        "extract the price of the product",
         schema=PriceExtraction
     )
 
     # Close Stagehand
     await stagehand.close()
 
-    return item.price
+    return product.price
 
 if __name__ == "__main__":
     load_dotenv(override=True)
@@ -123,4 +123,4 @@ if __name__ == "__main__":
     categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
 
     asyncio.run(get_product_info(test_url, categories))
-    asyncio.run(get_item_price(test_url))
+    asyncio.run(get_product_price(test_url))
