@@ -64,6 +64,13 @@ class ProductUpdate(SQLModel):
     category_id: int | None = None
 
 
+class PriceHist(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    price: float
+    timestamp: int  # Unix timestamp in seconds
+
+
 sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
@@ -264,3 +271,19 @@ def delete_product(product_id: int, session: SessionDep):
     session.delete(product)
     session.commit()
     return {"ok": True}
+
+
+# Price History endpoints
+@app.get("/price-history/{product_id}")
+def get_price_history(product_id: int, session: SessionDep) -> list[PriceHist]:
+    # Verify product exists
+    product = session.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Get all price history for this product, ordered by timestamp
+    price_history = session.exec(
+        select(PriceHist).where(PriceHist.product_id == product_id).order_by(PriceHist.timestamp)
+    ).all()
+
+    return price_history
