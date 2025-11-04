@@ -109,8 +109,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Wishlist Tracker API",
-    version="0.0.1 RC1",
-    lifespan=lifespan)
+    version="0.0.1",
+    lifespan=lifespan
+)
 
 
 # Config endpoints
