@@ -1,0 +1,9 @@
+# General
+python-dotenv
+
+# Scrapping
+stagehand
+
+# API
+fastapi[standard]
+sqlmodel
