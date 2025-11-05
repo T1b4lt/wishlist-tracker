@@ -11,31 +11,10 @@ import logging
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
-from sqlmodel import Session, SQLModel, create_engine, select, Field
+from sqlmodel import Session, create_engine, select
 
 from stagehand_utils import get_product_price
-
-
-# Database models
-class Config(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    key: str = Field(unique=True, index=True)
-    value: str
-
-
-class Product(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(index=True)
-    url: str
-    priority: str = Field(index=True)
-    category_id: int | None = Field(default=None, foreign_key="category.id")
-
-
-class PriceHist(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    product_id: int = Field(foreign_key="product.id", index=True)
-    price: float
-    timestamp: int
+from database_models import Config, Product, PriceHist
 
 
 # Database setup
@@ -43,11 +22,6 @@ sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
-
-
-def create_db_and_tables():
-    """Create database tables if they don't exist."""
-    SQLModel.metadata.create_all(engine)
 
 
 # Configure logging
@@ -144,9 +118,6 @@ async def main():
     Main entry point for the cronjob.
     """
     logger.info("=== Price Tracking Cronjob Started ===")
-
-    # Ensure database tables exist
-    create_db_and_tables()
 
     # Check if we should run the analysis
     if should_run_analysis():
