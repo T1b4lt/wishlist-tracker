@@ -3,9 +3,10 @@ from typing import Annotated
 
 from pydantic import BaseModel
 from fastapi import Depends, FastAPI, HTTPException
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from src.stagehand_utils import get_product_info
+from src.database_models import Config, Category, Product, PriceHist
 
 
 class ProductInfoRequest(BaseModel):
@@ -15,12 +16,6 @@ class ProductInfoRequest(BaseModel):
 class ProductInfoResponse(BaseModel):
     name: str
     category: str
-
-
-class Config(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    key: str = Field(unique=True, index=True)
-    value: str
 
 
 class ConfigUpdate(BaseModel):
@@ -33,21 +28,8 @@ class ConfigResponse(BaseModel):
     hist_window_size: int
 
 
-class Category(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(index=True)
-
-
 class CategoryCreate(SQLModel):
     name: str
-
-
-class Product(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(index=True)
-    url: str
-    priority: str = Field(index=True)  # high, medium, low
-    category_id: int | None = Field(default=None, foreign_key="category.id")
 
 
 class ProductCreate(SQLModel):
@@ -64,16 +46,8 @@ class ProductUpdate(SQLModel):
     category_id: int | None = None
 
 
-class PriceHist(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    product_id: int = Field(foreign_key="product.id", index=True)
-    price: float
-    timestamp: int  # Unix timestamp in seconds
-
-
 sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
-
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
 
