@@ -17,6 +17,7 @@ class ConfigUpdate(BaseModel):
     hist_window_size: int | None = None
     is_price_drop_alert: bool | None = None
     is_stock_change_alert: bool | None = None
+    telegram_bot_connection_string: str | None = None
 
 
 class ConfigResponse(BaseModel):
@@ -24,6 +25,7 @@ class ConfigResponse(BaseModel):
     hist_window_size: int
     is_price_drop_alert: bool
     is_stock_change_alert: bool
+    telegram_bot_connection_string: str | None
 
 
 class CategoryCreate(SQLModel):
@@ -105,12 +107,15 @@ def get_config(session: SessionDep) -> ConfigResponse:
     hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
     is_price_drop_alert_config = session.exec(select(Config).where(Config.key == "is_price_drop_alert")).first()
     is_stock_change_alert_config = session.exec(select(Config).where(Config.key == "is_stock_change_alert")).first()
+    telegram_bot_connection_string_config = session.exec(
+        select(Config).where(Config.key == "telegram_bot_connection_string")).first()
 
     return ConfigResponse(
         analysys_hour=int(analysys_hour_config.value) if analysys_hour_config else 12,
         hist_window_size=int(hist_window_size_config.value) if hist_window_size_config else 60,
         is_price_drop_alert=is_price_drop_alert_config.value.lower() == "true" if is_price_drop_alert_config else False,
-        is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False
+        is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False,
+        telegram_bot_connection_string=telegram_bot_connection_string_config.value if telegram_bot_connection_string_config and telegram_bot_connection_string_config.value else None
     )
 
 
@@ -155,6 +160,16 @@ def update_config(config_update: ConfigUpdate, session: SessionDep) -> ConfigRes
             is_stock_change_alert_config = Config(key="is_stock_change_alert",
                                                   value=str(config_update.is_stock_change_alert).lower())
             session.add(is_stock_change_alert_config)
+
+    if config_update.telegram_bot_connection_string is not None:
+        telegram_bot_connection_string_config = session.exec(
+            select(Config).where(Config.key == "telegram_bot_connection_string")).first()
+        if telegram_bot_connection_string_config:
+            telegram_bot_connection_string_config.value = config_update.telegram_bot_connection_string
+        else:
+            telegram_bot_connection_string_config = Config(key="telegram_bot_connection_string",
+                                                           value=config_update.telegram_bot_connection_string)
+            session.add(telegram_bot_connection_string_config)
 
     session.commit()
 
