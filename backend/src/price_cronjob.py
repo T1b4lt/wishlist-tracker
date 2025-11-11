@@ -13,8 +13,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from sqlmodel import Session, create_engine, select
 
-from stagehand_utils import get_product_price
-from database_models import Config, Product, PriceHist
+from stagehand_utils import get_product_status
+from database_models import Config, Product, ProductHist
 
 
 # Database setup
@@ -35,11 +35,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def fetch_and_store_prices():
+async def fetch_and_store_product_status():
     """
-    Fetch prices for all products and store them in the database.
+    Fetch product status for all products and store them in the database.
     """
-    logger.info("Starting price fetch process...")
+    logger.info("Starting product status fetch process...")
 
     with Session(engine) as session:
         # Get all products from the database
@@ -60,22 +60,24 @@ async def fetch_and_store_prices():
 
         for product in products:
             try:
-                logger.info(f"Fetching price for product: {product.name} (ID: {product.id})")
+                logger.info(f"Fetching product status for product: {product.name} (ID: {product.id})")
 
-                # Fetch the price using stagehand
-                price = await get_product_price(product.url)
+                # Fetch the product status using stagehand
+                product_status = await get_product_status(product.url)
 
-                # Create a new price history record
-                price_hist = PriceHist(
+                # Create a new product history record
+                product_hist = ProductHist(
                     product_id=product.id,
-                    price=price,
+                    price=product_status.price,
+                    is_in_stock=product_status.is_in_stock,
                     timestamp=current_timestamp
                 )
 
-                session.add(price_hist)
+                session.add(product_hist)
                 session.commit()
 
-                logger.info(f"Successfully stored price {price} for product {product.name}")
+                logger.info(
+                    f"Successfully stored price {product_status.price} and stock status {product_status.is_in_stock} for product {product.name}")
                 success_count += 1
 
             except Exception as e:
@@ -84,7 +86,7 @@ async def fetch_and_store_prices():
                 # Continue with next product even if one fails
                 continue
 
-        logger.info(f"Price fetch process completed. Success: {success_count}, Errors: {error_count}")
+        logger.info(f"Product status process completed. Success: {success_count}, Errors: {error_count}")
 
 
 def should_run_analysis() -> bool:
@@ -117,16 +119,16 @@ async def main():
     """
     Main entry point for the cronjob.
     """
-    logger.info("=== Price Tracking Cronjob Started ===")
+    logger.info("=== Product Status Tracking Cronjob Started ===")
 
     # Check if we should run the analysis
     if should_run_analysis():
-        logger.info("Current hour matches configured analysis hour. Starting price fetch...")
-        await fetch_and_store_prices()
+        logger.info("Current hour matches configured analysis hour. Starting product status fetch...")
+        await fetch_and_store_product_status()
     else:
-        logger.info("Current hour does not match configured analysis hour. Skipping price fetch.")
+        logger.info("Current hour does not match configured analysis hour. Skipping product status fetch.")
 
-    logger.info("=== Price Tracking Cronjob Completed ===")
+    logger.info("=== Product Status Tracking Cronjob Completed ===")
 
 
 if __name__ == "__main__":

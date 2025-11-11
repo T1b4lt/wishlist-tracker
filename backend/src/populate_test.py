@@ -9,11 +9,11 @@ import sys
 API_BASE_URL = "http://localhost:8000"
 
 
-def create_category(name: str) -> dict:
+def create_category(name: str, color: str) -> dict:
     """Create a category and return the created category data."""
     response = requests.post(
         f"{API_BASE_URL}/categories/",
-        json={"name": name}
+        json={"name": name, "color": color}
     )
 
     if response.status_code == 200:
@@ -24,7 +24,7 @@ def create_category(name: str) -> dict:
         sys.exit(1)
 
 
-def create_product(name: str, url: str, category_id: int, priority: str) -> dict:
+def create_product(name: str, url: str, category_id: int, priority: str, description: str) -> dict:
     """Create a product and return the created product data."""
     response = requests.post(
         f"{API_BASE_URL}/products/",
@@ -32,7 +32,8 @@ def create_product(name: str, url: str, category_id: int, priority: str) -> dict
             "name": name,
             "url": url,
             "category_id": category_id,
-            "priority": priority
+            "priority": priority,
+            "description": description
         }
     )
 
@@ -57,15 +58,16 @@ def main():
         sys.exit(1)
 
     print("Step 1: Creating categories...")
-    hogar = create_category("Hogar")
-    electronica = create_category("Electrónica")
+    hogar = create_category("Hogar", "#FF5733")
+    electronica = create_category("Electrónica", "#33FF57")
 
     print("\nStep 2: Creating product...")
     producto = create_product(
         name="Millenium MPS-850 E-Drum Set Bundle",
         url="https://www.thomann.es/millenium_mps_850_e_drum_set_bundle.htm",
         category_id=electronica["id"],
-        priority="high"
+        priority="high",
+        description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar."
     )
 
     print("\n=== Database populated successfully! ===")
@@ -77,6 +79,7 @@ def main():
     print(f"    Category: Electrónica")
     print(f"    Priority: {producto['priority']}")
     print(f"    URL: {producto['url']}")
+    print(f"    Description: {producto['description']}")
 
 
 if __name__ == "__main__":

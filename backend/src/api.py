@@ -6,16 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from src.stagehand_utils import get_product_info
-from src.database_models import Config, Category, Product, PriceHist
-
-
-class ProductInfoRequest(BaseModel):
-    url: str
-
-
-class ProductInfoResponse(BaseModel):
-    name: str
-    category: str
+from src.database_models import Config, Category, Product, ProductHist
 
 
 class ConfigUpdate(BaseModel):
@@ -46,7 +37,8 @@ class ProductCreate(SQLModel):
     name: str
     url: str
     priority: str
-    category_id: int | None = None
+    category_id: int
+    description: str
 
 
 class ProductUpdate(SQLModel):
@@ -54,6 +46,16 @@ class ProductUpdate(SQLModel):
     url: str | None = None
     priority: str | None = None
     category_id: int | None = None
+
+
+class ProductInfoRequest(BaseModel):
+    url: str
+
+
+class ProductInfoResponse(BaseModel):
+    name: str
+    category: str
+    description: str
 
 
 sqlite_file_name = "database.db"
@@ -247,7 +249,7 @@ async def extract_product_info(request: ProductInfoRequest, session: SessionDep)
     # Call stagehand to extract product info
     product_info = await get_product_info(request.url, category_names)
 
-    return ProductInfoResponse(name=product_info.name, category=product_info.category)
+    return ProductInfoResponse(name=product_info.name, category=product_info.category, description=product_info.description)
 
 
 # Product endpoints
@@ -298,17 +300,17 @@ def delete_product(product_id: int, session: SessionDep):
     return {"ok": True}
 
 
-# Price History endpoints
-@app.get("/price-history/{product_id}")
-def get_price_history(product_id: int, session: SessionDep) -> list[PriceHist]:
+# Product History endpoints
+@app.get("/product-history/{product_id}")
+def get_product_history(product_id: int, session: SessionDep) -> list[ProductHist]:
     # Verify product exists
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Get all price history for this product, ordered by timestamp
-    price_history = session.exec(
-        select(PriceHist).where(PriceHist.product_id == product_id).order_by(PriceHist.timestamp)
+    # Get all product history for this product, ordered by timestamp
+    product_history = session.exec(
+        select(ProductHist).where(ProductHist.product_id == product_id).order_by(ProductHist.timestamp)
     ).all()
 
-    return price_history
+    return product_history

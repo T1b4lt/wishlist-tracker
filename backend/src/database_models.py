@@ -22,11 +22,13 @@ class Product(SQLModel, table=True):
     name: str = Field(index=True)
     url: str
     priority: str = Field(index=True)  # high, medium, low
-    category_id: int | None = Field(default=None, foreign_key="category.id")
+    category_id: int | None = Field(default=None, foreign_key="category.id"),
+    description: str
 
 
-class PriceHist(SQLModel, table=True):
+class ProductHist(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     product_id: int = Field(foreign_key="product.id", index=True)
     price: float
+    is_in_stock: bool
     timestamp: int  # Unix timestamp in seconds

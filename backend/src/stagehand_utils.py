@@ -1,27 +1,31 @@
 import os
-from dotenv import load_dotenv
 import asyncio
+
+from dotenv import load_dotenv
+
 from stagehand import Stagehand
 from pydantic import BaseModel
 
 
-class PriceExtraction(BaseModel):
+class ProductStatusExtraction(BaseModel):
     price: float
+    is_in_stock: bool
 
 
-class ProductExtraction(BaseModel):
+class ProductInfoExtraction(BaseModel):
     name: str
     category: str
+    description: str
 
 
-async def get_product_info(url: str, categories: list[str]) -> ProductExtraction:
+async def get_product_info(url: str, categories: list[str]) -> ProductInfoExtraction:
     """
     Fetch the product information from the given URL using Stagehand.
     Args:
         url (str): The URL of the product page.
         categories (list[str]): List of possible product categories.
     Returns:
-        ProductExtraction: The extracted product information.
+        ProductInfoExtraction: The extracted product information.
     """
     stagehand = Stagehand(
         env="LOCAL",
@@ -51,29 +55,30 @@ async def get_product_info(url: str, categories: list[str]) -> ProductExtraction
     await page.goto(url)
 
     # Close any pop-ups or cookie consent banners if present
-    await page.act("close any pop-ups or cookies consent banners if present")
+    await page.act("Close any pop-ups or cookies consent banners if present")
 
     # Extract the product information
-    product = await page.extract(
+    product_info = await page.extract(
         f"""Extract the product name and category.
         The name should be short and descriptive, including a short sequence of words like: brand, type, specs, etc.
+        For description, provide a concise summary of the product's key features and uses.
         For categories, select one from the following list, the most accurate: {', '.join(categories)}""",
-        schema=ProductExtraction
+        schema=ProductInfoExtraction
     )
 
     # Close Stagehand
     await stagehand.close()
 
-    return product
+    return product_info
 
 
-async def get_product_price(url: str) -> float:
+async def get_product_status(url: str) -> ProductStatusExtraction:
     """
     Fetch the price of a product from the given URL using Stagehand.
     Args:
         url (str): The URL of the product page.
     Returns:
-        float: The price of the product.
+        ProductStatusExtraction: The recurrent extracted product price and stock status.
     """
 
     stagehand = Stagehand(
@@ -104,18 +109,18 @@ async def get_product_price(url: str) -> float:
     await page.goto(url)
 
     # Close any pop-ups or cookie consent banners if present
-    await page.act("close any pop-ups or cookies consent banners if present")
+    await page.act("Close any pop-ups or cookies consent banners if present")
 
     # Extract the price of the product
-    product = await page.extract(
-        "extract the price of the product",
-        schema=PriceExtraction
+    product_status = await page.extract(
+        "Extract the price of the product as a float number and if it's in stock as boolean",
+        schema=ProductStatusExtraction
     )
 
     # Close Stagehand
     await stagehand.close()
 
-    return product.price
+    return product_status
 
 if __name__ == "__main__":
     load_dotenv(override=True)
@@ -123,4 +128,4 @@ if __name__ == "__main__":
     categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
 
     asyncio.run(get_product_info(test_url, categories))
-    asyncio.run(get_product_price(test_url))
+    asyncio.run(get_product_status(test_url))
