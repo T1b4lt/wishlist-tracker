@@ -30,6 +30,12 @@ class ConfigResponse(BaseModel):
 
 class CategoryCreate(SQLModel):
     name: str
+    color: str
+
+
+class CategoryUpdate(SQLModel):
+    name: str | None = None
+    color: str | None = None
 
 
 class ProductCreate(SQLModel):
@@ -157,6 +163,20 @@ def read_category(category_id: int, session: SessionDep) -> Category:
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+    return category
+
+
+@app.patch("/categories/{category_id}")
+def update_category(category_id: int, category_update: CategoryUpdate, session: SessionDep) -> Category:
+    category = session.get(Category, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    category_data = category_update.model_dump(exclude_unset=True)
+    category.sqlmodel_update(category_data)
+    session.add(category)
+    session.commit()
+    session.refresh(category)
     return category
 
 

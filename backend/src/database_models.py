@@ -14,6 +14,7 @@ class Config(SQLModel, table=True):
 class Category(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
+    color: str
 
 
 class Product(SQLModel, table=True):
