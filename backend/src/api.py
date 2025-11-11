@@ -21,11 +21,15 @@ class ProductInfoResponse(BaseModel):
 class ConfigUpdate(BaseModel):
     analysys_hour: int | None = None
     hist_window_size: int | None = None
+    is_price_drop_alert: bool | None = None
+    is_stock_change_alert: bool | None = None
 
 
 class ConfigResponse(BaseModel):
     analysys_hour: int
     hist_window_size: int
+    is_price_drop_alert: bool
+    is_stock_change_alert: bool
 
 
 class CategoryCreate(SQLModel):
@@ -64,8 +68,13 @@ def create_db_and_tables():
 
 def initialize_config(session: Session):
     """Initialize configuration values if they don't exist"""
-    config_keys = ["analysys_hour", "hist_window_size"]
-    default_values = {"analysys_hour": "12", "hist_window_size": "60"}
+    config_keys = ["analysys_hour", "hist_window_size", "is_price_drop_alert", "is_stock_change_alert"]
+    default_values = {
+        "analysys_hour": "12",
+        "hist_window_size": "60",
+        "is_price_drop_alert": "false",
+        "is_stock_change_alert": "false"
+    }
 
     for key in config_keys:
         existing_config = session.exec(select(Config).where(Config.key == key)).first()
@@ -106,10 +115,14 @@ app = FastAPI(
 def get_config(session: SessionDep) -> ConfigResponse:
     analysys_hour_config = session.exec(select(Config).where(Config.key == "analysys_hour")).first()
     hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
+    is_price_drop_alert_config = session.exec(select(Config).where(Config.key == "is_price_drop_alert")).first()
+    is_stock_change_alert_config = session.exec(select(Config).where(Config.key == "is_stock_change_alert")).first()
 
     return ConfigResponse(
         analysys_hour=int(analysys_hour_config.value) if analysys_hour_config else 12,
-        hist_window_size=int(hist_window_size_config.value) if hist_window_size_config else 60
+        hist_window_size=int(hist_window_size_config.value) if hist_window_size_config else 60,
+        is_price_drop_alert=is_price_drop_alert_config.value.lower() == "true" if is_price_drop_alert_config else False,
+        is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False
     )
 
 
@@ -136,6 +149,24 @@ def update_config(config_update: ConfigUpdate, session: SessionDep) -> ConfigRes
         else:
             hist_window_size_config = Config(key="hist_window_size", value=str(config_update.hist_window_size))
             session.add(hist_window_size_config)
+
+    if config_update.is_price_drop_alert is not None:
+        is_price_drop_alert_config = session.exec(select(Config).where(Config.key == "is_price_drop_alert")).first()
+        if is_price_drop_alert_config:
+            is_price_drop_alert_config.value = str(config_update.is_price_drop_alert).lower()
+        else:
+            is_price_drop_alert_config = Config(key="is_price_drop_alert", value=str(
+                config_update.is_price_drop_alert).lower())
+            session.add(is_price_drop_alert_config)
+
+    if config_update.is_stock_change_alert is not None:
+        is_stock_change_alert_config = session.exec(select(Config).where(Config.key == "is_stock_change_alert")).first()
+        if is_stock_change_alert_config:
+            is_stock_change_alert_config.value = str(config_update.is_stock_change_alert).lower()
+        else:
+            is_stock_change_alert_config = Config(key="is_stock_change_alert",
+                                                  value=str(config_update.is_stock_change_alert).lower())
+            session.add(is_stock_change_alert_config)
 
     session.commit()
 
