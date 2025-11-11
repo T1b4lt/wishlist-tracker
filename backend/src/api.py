@@ -1,7 +1,10 @@
-from contextlib import asynccontextmanager
-from typing import Annotated
+import os
+import sys
+
 
 from pydantic import BaseModel
+from typing import Annotated
+from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -64,29 +67,6 @@ connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
 
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
-
-def initialize_config(session: Session):
-    """Initialize configuration values if they don't exist"""
-    config_keys = ["analysys_hour", "hist_window_size", "is_price_drop_alert", "is_stock_change_alert"]
-    default_values = {
-        "analysys_hour": "12",
-        "hist_window_size": "60",
-        "is_price_drop_alert": "false",
-        "is_stock_change_alert": "false"
-    }
-
-    for key in config_keys:
-        existing_config = session.exec(select(Config).where(Config.key == key)).first()
-        if not existing_config:
-            config = Config(key=key, value=default_values[key])
-            session.add(config)
-
-    session.commit()
-
-
 def get_session():
     with Session(engine) as session:
         yield session
@@ -97,10 +77,16 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    create_db_and_tables()
-    with Session(engine) as session:
-        initialize_config(session)
+    # Startup: Verify database exists
+    if not os.path.exists(sqlite_file_name):
+        print(f"\n✗ ERROR: Database not found at '{sqlite_file_name}'")
+        print("\nPlease run the setup script first:")
+        print("  python src/setup_backend.py")
+        print("\nTo also populate with test data:")
+        print("  python src/setup_backend.py --populate\n")
+        sys.exit(1)
+
+    print(f"✓ Database found at '{sqlite_file_name}'")
     yield
     # Shutdown (if needed in the future)
 
