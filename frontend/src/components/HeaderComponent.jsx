@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { LuMenu, LuSun, LuMoon } from 'react-icons/lu';
+import {
+  LuMenu,
+  LuSun,
+  LuMoon,
+  LuChartLine,
+  LuLayoutDashboard,
+  LuSettings
+} from 'react-icons/lu';
 import { Box, Flex, IconButton, Text } from '@chakra-ui/react';
 import { useColorMode } from '@/components/ui/color-mode';
 import {
@@ -19,9 +26,9 @@ const HeaderComponent = () => {
   const { colorMode, toggleColorMode } = useColorMode();
 
   const navItems = [
-    { label: 'Dashboard', path: '/' },
-    { label: 'Categories', path: '/categories' },
-    { label: 'Settings', path: '/settings' }
+    { label: 'Dashboard', path: '/', icon: LuChartLine },
+    { label: 'Categories', path: '/categories', icon: LuLayoutDashboard },
+    { label: 'Settings', path: '/settings', icon: LuSettings }
   ];
 
   const handleNavigation = (path) => {
@@ -55,7 +62,7 @@ const HeaderComponent = () => {
                 <LuMenu size={20} />
               </IconButton>
             </DrawerTrigger>
-            <DrawerContent>
+            <DrawerContent offset={4}>
               <DrawerHeader>
                 <Text fontSize="xl" fontWeight="bold">
                   Menu
@@ -64,30 +71,36 @@ const HeaderComponent = () => {
               <DrawerCloseTrigger />
               <DrawerBody>
                 <Flex direction="column" gap={2}>
-                  {navItems.map((item) => (
-                    <Box
-                      key={item.path}
-                      as="button"
-                      px={4}
-                      py={3}
-                      borderRadius="md"
-                      textAlign="left"
-                      fontWeight={location === item.path ? 'bold' : 'normal'}
-                      bg={
-                        location === item.path
-                          ? colorMode === 'light'
-                            ? 'gray.100'
-                            : 'gray.700'
-                          : 'transparent'
-                      }
-                      _hover={{
-                        bg: colorMode === 'light' ? 'gray.100' : 'gray.700'
-                      }}
-                      onClick={() => handleNavigation(item.path)}
-                    >
-                      {item.label}
-                    </Box>
-                  ))}
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Box
+                        key={item.path}
+                        as="button"
+                        px={4}
+                        py={3}
+                        borderRadius="md"
+                        textAlign="left"
+                        fontWeight={location === item.path ? 'bold' : 'normal'}
+                        bg={
+                          location === item.path
+                            ? colorMode === 'light'
+                              ? 'gray.100'
+                              : 'gray.700'
+                            : 'transparent'
+                        }
+                        _hover={{
+                          bg: colorMode === 'light' ? 'gray.100' : 'gray.700'
+                        }}
+                        onClick={() => handleNavigation(item.path)}
+                      >
+                        <Flex align="center" gap={3}>
+                          <Icon size={20} />
+                          <Text>{item.label}</Text>
+                        </Flex>
+                      </Box>
+                    );
+                  })}
                 </Flex>
               </DrawerBody>
             </DrawerContent>
