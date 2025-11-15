@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import Annotated
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from src.stagehand_utils import get_product_info
@@ -99,6 +100,14 @@ app = FastAPI(
     title="Wishlist Tracker API",
     version="0.0.1",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
