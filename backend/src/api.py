@@ -253,9 +253,9 @@ def delete_category(category_id: int, session: SessionDep):
 async def extract_product_info(request: ProductInfoRequest, session: SessionDep) -> ProductInfoResponse:
     # Get all categories from the database
     categories = session.exec(select(Category)).all()
+    category_names = [category.name for category in categories]
     selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
     selected_language = selected_language_config.value if selected_language_config else "spanish"
-    category_names = [category.name for category in categories]
 
     # If no categories exist, return an error
     if not category_names:
