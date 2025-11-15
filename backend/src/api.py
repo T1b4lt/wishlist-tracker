@@ -18,6 +18,7 @@ class ConfigUpdate(BaseModel):
     is_price_drop_alert: bool | None = None
     is_stock_change_alert: bool | None = None
     telegram_bot_connection_string: str | None = None
+    selected_language: str | None = None
 
 
 class ConfigResponse(BaseModel):
@@ -26,6 +27,7 @@ class ConfigResponse(BaseModel):
     is_price_drop_alert: bool
     is_stock_change_alert: bool
     telegram_bot_connection_string: str | None
+    selected_language: str
 
 
 class CategoryCreate(SQLModel):
@@ -109,13 +111,15 @@ def get_config(session: SessionDep) -> ConfigResponse:
     is_stock_change_alert_config = session.exec(select(Config).where(Config.key == "is_stock_change_alert")).first()
     telegram_bot_connection_string_config = session.exec(
         select(Config).where(Config.key == "telegram_bot_connection_string")).first()
+    selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
 
     return ConfigResponse(
         analysys_hour=int(analysys_hour_config.value) if analysys_hour_config else 12,
         hist_window_size=int(hist_window_size_config.value) if hist_window_size_config else 60,
         is_price_drop_alert=is_price_drop_alert_config.value.lower() == "true" if is_price_drop_alert_config else False,
         is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False,
-        telegram_bot_connection_string=telegram_bot_connection_string_config.value if telegram_bot_connection_string_config and telegram_bot_connection_string_config.value else None
+        telegram_bot_connection_string=telegram_bot_connection_string_config.value if telegram_bot_connection_string_config and telegram_bot_connection_string_config.value else None,
+        selected_language=selected_language_config.value if selected_language_config else "spanish"
     )
 
 
@@ -170,6 +174,14 @@ def update_config(config_update: ConfigUpdate, session: SessionDep) -> ConfigRes
             telegram_bot_connection_string_config = Config(key="telegram_bot_connection_string",
                                                            value=config_update.telegram_bot_connection_string)
             session.add(telegram_bot_connection_string_config)
+
+    if config_update.selected_language is not None:
+        selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
+        if selected_language_config:
+            selected_language_config.value = config_update.selected_language
+        else:
+            selected_language_config = Config(key="selected_language", value=config_update.selected_language)
+            session.add(selected_language_config)
 
     session.commit()
 
@@ -241,6 +253,8 @@ def delete_category(category_id: int, session: SessionDep):
 async def extract_product_info(request: ProductInfoRequest, session: SessionDep) -> ProductInfoResponse:
     # Get all categories from the database
     categories = session.exec(select(Category)).all()
+    selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
+    selected_language = selected_language_config.value if selected_language_config else "spanish"
     category_names = [category.name for category in categories]
 
     # If no categories exist, return an error
@@ -248,7 +262,7 @@ async def extract_product_info(request: ProductInfoRequest, session: SessionDep)
         raise HTTPException(status_code=400, detail="No categories found in database. Please create categories first.")
 
     # Call stagehand to extract product info
-    product_info = await get_product_info(request.url, category_names)
+    product_info = await get_product_info(request.url, selected_language, category_names)
 
     return ProductInfoResponse(name=product_info.name, category=product_info.category, description=product_info.description)
 

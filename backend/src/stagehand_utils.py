@@ -18,11 +18,12 @@ class ProductInfoExtraction(BaseModel):
     description: str
 
 
-async def get_product_info(url: str, categories: list[str]) -> ProductInfoExtraction:
+async def get_product_info(url: str, language: str, categories: list[str]) -> ProductInfoExtraction:
     """
     Fetch the product information from the given URL using Stagehand.
     Args:
         url (str): The URL of the product page.
+        language (str): The language to use for the extraction.
         categories (list[str]): List of possible product categories.
     Returns:
         ProductInfoExtraction: The extracted product information.
@@ -62,7 +63,8 @@ async def get_product_info(url: str, categories: list[str]) -> ProductInfoExtrac
         f"""Extract the product name and category.
         The name should be short and descriptive, including a short sequence of words like: brand, type, specs, etc.
         For description, provide a concise summary of the product's key features and uses.
-        For categories, select one from the following list, the most accurate: {', '.join(categories)}""",
+        For categories, select one from the following list, the most accurate: {', '.join(categories)}
+        The product information should be provided in {language} language.""",
         schema=ProductInfoExtraction
     )
 
@@ -125,7 +127,8 @@ async def get_product_status(url: str) -> ProductStatusExtraction:
 if __name__ == "__main__":
     load_dotenv(override=True)
     test_url = "https://fpvcapital.store/emisora-radiomaster-pocket-elrs/"
-    categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
+    test_language = "spanish"
+    test_categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
 
-    asyncio.run(get_product_info(test_url, categories))
+    asyncio.run(get_product_info(test_url, test_language, test_categories))
     asyncio.run(get_product_status(test_url))
