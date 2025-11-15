@@ -175,7 +175,6 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
               Cancel
             </Button>
             <Button
-              colorPalette="blue"
               onClick={handleSave}
               disabled={!name.trim() || isLoading}
               loading={isLoading}

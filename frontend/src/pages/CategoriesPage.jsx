@@ -235,11 +235,7 @@ const CategoriesPage = () => {
             <Box>
               <Heading size="lg">Add New Category</Heading>
             </Box>
-            <Button
-              colorPalette="blue"
-              size="lg"
-              onClick={handleOpenCreateModal}
-            >
+            <Button size="lg" onClick={handleOpenCreateModal}>
               <LuPlus /> Add Category
             </Button>
           </Flex>

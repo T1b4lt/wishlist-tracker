@@ -349,7 +349,6 @@ const SettingsPage = () => {
         {/* Save Button */}
         <Flex justify="flex-end">
           <Button
-            colorPalette="blue"
             size="lg"
             onClick={handleSave}
             disabled={!hasChanges || isSaving}

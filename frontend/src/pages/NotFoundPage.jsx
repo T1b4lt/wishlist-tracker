@@ -50,7 +50,7 @@ const NotFoundPage = () => {
 
         {/* Action Buttons */}
         <VStack gap={3} pt={4}>
-          <Button colorPalette="blue" size="lg" onClick={() => navigate('/')}>
+          <Button size="lg" onClick={() => navigate('/')}>
             <LuHouse /> Go Back Home
           </Button>
           <Text
