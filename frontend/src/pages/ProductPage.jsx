@@ -1,13 +1,9 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import { useParams } from 'wouter';
 
-const ProductPage = (props) => {
-  const { productId } = props;
-  return <div>ProductPage: {productId}</div>;
-};
+const ProductPage = () => {
+  const params = useParams();
 
-ProductPage.propTypes = {
-  productId: PropTypes.string.isRequired
+  return <div>ProductPage: {params.productId}</div>;
 };
 
 export default ProductPage;
