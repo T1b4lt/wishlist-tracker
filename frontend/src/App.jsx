@@ -1,5 +1,6 @@
 import { Route, Switch } from 'wouter';
 
+import HeaderComponent from './components/HeaderComponent';
 import DashboardPage from './pages/DashboardPage';
 import ProductPage from './pages/ProductPage';
 import CategoriesPage from './pages/CategoriesPage';
@@ -9,6 +10,7 @@ import NotFoundPage from './pages/NotFoundPage';
 function App() {
   return (
     <div className="app-container">
+      <HeaderComponent />
       <Switch>
         <Route path="/" component={DashboardPage} />
         <Route path="/product/:productId" component={ProductPage} />
