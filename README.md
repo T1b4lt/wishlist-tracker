@@ -18,7 +18,7 @@ WIP (but it will be a Docker-based self-hosted OSS application.)
 
 ### Frontend
 
-Vite, React with JavaScript, Chakra UI and Wouter for routing.
+Vite, React with JavaScript, Chakra UI, Lucide Icons and Wouter for routing.
 
 ### Backend
 
