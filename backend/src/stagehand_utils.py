@@ -127,7 +127,7 @@ async def get_product_status(url: str) -> ProductStatusExtraction:
 if __name__ == "__main__":
     load_dotenv(override=True)
     test_url = "https://fpvcapital.store/emisora-radiomaster-pocket-elrs/"
-    test_language = "spanish"
+    test_language = "english"
     test_categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
 
     asyncio.run(get_product_info(test_url, test_language, test_categories))

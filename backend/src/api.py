@@ -119,7 +119,7 @@ def get_config(session: SessionDep) -> ConfigResponse:
         is_price_drop_alert=is_price_drop_alert_config.value.lower() == "true" if is_price_drop_alert_config else False,
         is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False,
         telegram_bot_connection_string=telegram_bot_connection_string_config.value if telegram_bot_connection_string_config and telegram_bot_connection_string_config.value else None,
-        selected_language=selected_language_config.value if selected_language_config else "spanish"
+        selected_language=selected_language_config.value if selected_language_config else "english"
     )
 
 
@@ -255,7 +255,7 @@ async def extract_product_info(request: ProductInfoRequest, session: SessionDep)
     categories = session.exec(select(Category)).all()
     category_names = [category.name for category in categories]
     selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
-    selected_language = selected_language_config.value if selected_language_config else "spanish"
+    selected_language = selected_language_config.value if selected_language_config else "english"
 
     # If no categories exist, return an error
     if not category_names:

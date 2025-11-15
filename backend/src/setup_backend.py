@@ -66,7 +66,7 @@ def initialize_config(engine):
         "is_price_drop_alert": "false",
         "is_stock_change_alert": "false",
         "telegram_bot_connection_string": "",
-        "selected_language": "spanish"
+        "selected_language": "english"
     }
 
     with Session(engine) as session:
