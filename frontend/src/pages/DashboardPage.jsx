@@ -7,11 +7,17 @@ import {
   Text,
   Flex,
   Spinner,
-  Card
+  Card,
+  Table,
+  IconButton,
+  Circle
 } from '@chakra-ui/react';
 import { Link } from 'wouter';
 import { useColorMode } from '@/components/ui/color-mode';
+import { Tag } from '@/components/ui/tag';
 import NewProductModal from '@/components/NewProductModal';
+import DeleteProductDialog from '@/components/DeleteProductDialog';
+import { LuTrash2 } from 'react-icons/lu';
 
 const API_URL = 'http://localhost:8000';
 
@@ -19,6 +25,8 @@ const DashboardPage = () => {
   const [products, setProducts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
   const { colorMode } = useColorMode();
 
   useEffect(() => {
@@ -28,7 +36,7 @@ const DashboardPage = () => {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/products/`);
+      const response = await fetch(`${API_URL}/products/dashboard-summary`);
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
       setProducts(data);
@@ -62,8 +70,74 @@ const DashboardPage = () => {
     }
   };
 
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/products/${productToDelete.id}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+
+      // Refresh products list
+      await fetchProducts();
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setProductToDelete(null);
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return 'red';
+      case 'medium':
+        return 'orange';
+      case 'low':
+        return 'green';
+      default:
+        return 'gray';
+    }
+  };
+
+  const formatPrice = (price) => {
+    if (price === null || price === undefined) return '-';
+    return `$${price.toFixed(2)}`;
+  };
+
+  const formatPriceChange = (priceChange) => {
+    if (priceChange === null || priceChange === undefined) return '-';
+
+    const sign = priceChange >= 0 ? '+' : '';
+    const color = priceChange >= 0 ? 'red.500' : 'green.500';
+
+    return (
+      <Text color={color} fontWeight="medium">
+        {sign}
+        {priceChange.toFixed(1)}%
+      </Text>
+    );
+  };
+
   return (
-    <Box maxW="1200px" mx="auto" p={6}>
+    <Box maxW="1400px" mx="auto" p={6}>
       <VStack gap={8} align="stretch">
         {/* Add New Product Section */}
         <Card.Root bg={colorMode === 'light' ? 'white' : 'gray.800'} p={6}>
@@ -77,7 +151,7 @@ const DashboardPage = () => {
               </Text>
             </Box>
             <Button
-              colorScheme="blue"
+              colorPalette="blue"
               size="lg"
               onClick={() => setIsModalOpen(true)}
             >
@@ -114,30 +188,99 @@ const DashboardPage = () => {
               </VStack>
             </Card.Root>
           ) : (
-            <VStack gap={3} align="stretch">
-              {products.map((product) => (
-                <Card.Root
-                  key={product.id}
-                  bg={colorMode === 'light' ? 'white' : 'gray.800'}
-                  p={4}
-                  _hover={{
-                    bg: colorMode === 'light' ? 'gray.50' : 'gray.700',
-                    cursor: 'pointer'
-                  }}
-                  transition="background 0.2s"
-                >
-                  <Link href={`/product/${product.id}`}>
-                    <Text
-                      fontSize="lg"
-                      fontWeight="medium"
-                      color={colorMode === 'light' ? 'gray.900' : 'gray.100'}
-                    >
-                      {product.name}
-                    </Text>
-                  </Link>
-                </Card.Root>
-              ))}
-            </VStack>
+            <Card.Root bg={colorMode === 'light' ? 'white' : 'gray.800'} p={0}>
+              <Table.Root size="sm" variant="outline">
+                <Table.Header>
+                  <Table.Row>
+                    <Table.ColumnHeader>Product Name</Table.ColumnHeader>
+                    <Table.ColumnHeader>Category</Table.ColumnHeader>
+                    <Table.ColumnHeader>Priority</Table.ColumnHeader>
+                    <Table.ColumnHeader textAlign="end">
+                      Current Price
+                    </Table.ColumnHeader>
+                    <Table.ColumnHeader textAlign="end">
+                      Price Change (60D)
+                    </Table.ColumnHeader>
+                    <Table.ColumnHeader textAlign="center">
+                      Stock
+                    </Table.ColumnHeader>
+                    <Table.ColumnHeader textAlign="center">
+                      Actions
+                    </Table.ColumnHeader>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {products.map((product) => (
+                    <Table.Row key={product.id}>
+                      <Table.Cell>
+                        <Link href={`/product/${product.id}`}>
+                          <Text
+                            fontWeight="medium"
+                            color={
+                              colorMode === 'light' ? 'blue.600' : 'blue.400'
+                            }
+                            _hover={{
+                              textDecoration: 'underline',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {product.name}
+                          </Text>
+                        </Link>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Tag
+                          size="sm"
+                          style={{ backgroundColor: product.category_color }}
+                        >
+                          {product.category_name}
+                        </Tag>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Tag
+                          size="sm"
+                          colorPalette={getPriorityColor(product.priority)}
+                        >
+                          {product.priority.charAt(0).toUpperCase() +
+                            product.priority.slice(1)}
+                        </Tag>
+                      </Table.Cell>
+                      <Table.Cell textAlign="end">
+                        <Text fontWeight="medium">
+                          {formatPrice(product.current_price)}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell textAlign="end">
+                        {formatPriceChange(product.price_change_60d)}
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        {product.is_in_stock !== null && (
+                          <Circle
+                            size="10px"
+                            bg={product.is_in_stock ? 'green.500' : 'red.500'}
+                            display="inline-block"
+                          />
+                        )}
+                        {product.is_in_stock === null && (
+                          <Text color="gray.500">-</Text>
+                        )}
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          colorPalette="red"
+                          onClick={() => handleDeleteClick(product)}
+                          aria-label="Delete product"
+                        >
+                          <LuTrash2 />
+                        </IconButton>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
+            </Card.Root>
           )}
         </Box>
       </VStack>
@@ -147,6 +290,14 @@ const DashboardPage = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveProduct}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteProductDialog
+        isOpen={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        productName={productToDelete?.name || ''}
       />
     </Box>
   );
