@@ -10,7 +10,6 @@ import asyncio
 import logging
 import sys
 from datetime import datetime
-from dotenv import load_dotenv
 from sqlmodel import Session, create_engine, select
 
 from stagehand_utils import get_product_status
@@ -42,6 +41,13 @@ async def fetch_and_store_product_status():
     logger.info("Starting product status fetch process...")
 
     with Session(engine) as session:
+        # Get Google API key from config
+        google_api_key_config = session.exec(select(Config).where(Config.key == "google_api_key")).first()
+        if not google_api_key_config or not google_api_key_config.value:
+            logger.error("Google API key not configured in database. Exiting.")
+            return
+        google_api_key = google_api_key_config.value
+
         # Get all products from the database
         products = session.exec(select(Product)).all()
 
@@ -63,7 +69,7 @@ async def fetch_and_store_product_status():
                 logger.info(f"Fetching product status for product: {product.name} (ID: {product.id})")
 
                 # Fetch the product status using stagehand
-                product_status = await get_product_status(product.url)
+                product_status = await get_product_status(google_api_key, product.url)
 
                 # Create a new product history record
                 product_hist = ProductHist(
@@ -132,8 +138,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    # Load environment variables
-    load_dotenv(override=True)
-
     # Run the main function
     asyncio.run(main())

@@ -22,6 +22,7 @@ class ConfigUpdate(BaseModel):
     telegram_bot_token: str | None = None
     telegram_bot_chat_id: str | None = None
     selected_language: str | None = None
+    google_api_key: str | None = None
 
 
 class ConfigResponse(BaseModel):
@@ -32,6 +33,7 @@ class ConfigResponse(BaseModel):
     telegram_bot_token: str | None
     telegram_bot_chat_id: str | None
     selected_language: str
+    google_api_key: str | None
 
 
 class CategoryCreate(SQLModel):
@@ -138,6 +140,7 @@ def get_config(session: SessionDep) -> ConfigResponse:
     telegram_bot_chat_id_config = session.exec(
         select(Config).where(Config.key == "telegram_bot_chat_id")).first()
     selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
+    google_api_key_config = session.exec(select(Config).where(Config.key == "google_api_key")).first()
 
     return ConfigResponse(
         analysys_hour=int(analysys_hour_config.value) if analysys_hour_config else 12,
@@ -146,7 +149,8 @@ def get_config(session: SessionDep) -> ConfigResponse:
         is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False,
         telegram_bot_token=telegram_bot_token_config.value if telegram_bot_token_config and telegram_bot_token_config.value else None,
         telegram_bot_chat_id=telegram_bot_chat_id_config.value if telegram_bot_chat_id_config and telegram_bot_chat_id_config.value else None,
-        selected_language=selected_language_config.value if selected_language_config else "english"
+        selected_language=selected_language_config.value if selected_language_config else "english",
+        google_api_key=google_api_key_config.value if google_api_key_config and google_api_key_config.value else None
     )
 
 
@@ -219,6 +223,14 @@ def update_config(config_update: ConfigUpdate, session: SessionDep) -> ConfigRes
         else:
             selected_language_config = Config(key="selected_language", value=config_update.selected_language)
             session.add(selected_language_config)
+
+    if config_update.google_api_key is not None:
+        google_api_key_config = session.exec(select(Config).where(Config.key == "google_api_key")).first()
+        if google_api_key_config:
+            google_api_key_config.value = config_update.google_api_key
+        else:
+            google_api_key_config = Config(key="google_api_key", value=config_update.google_api_key)
+            session.add(google_api_key_config)
 
     session.commit()
 
@@ -294,12 +306,18 @@ async def extract_product_info(request: ProductInfoRequest, session: SessionDep)
     selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
     selected_language = selected_language_config.value if selected_language_config else "english"
 
+    # Get Google API key from config
+    google_api_key_config = session.exec(select(Config).where(Config.key == "google_api_key")).first()
+    if not google_api_key_config or not google_api_key_config.value:
+        raise HTTPException(status_code=400, detail="Google API key not configured. Please set it in Settings.")
+    google_api_key = google_api_key_config.value
+
     # If no categories exist, return an error
     if not category_names:
         raise HTTPException(status_code=400, detail="No categories found in database. Please create categories first.")
 
     # Call stagehand to extract product info
-    product_info = await get_product_info(request.url, selected_language, category_names)
+    product_info = await get_product_info(google_api_key, request.url, selected_language, category_names)
 
     return ProductInfoResponse(name=product_info.name, category=product_info.category, description=product_info.description)
 

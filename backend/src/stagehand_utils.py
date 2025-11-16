@@ -18,10 +18,11 @@ class ProductInfoExtraction(BaseModel):
     description: str
 
 
-async def get_product_info(url: str, language: str, categories: list[str]) -> ProductInfoExtraction:
+async def get_product_info(google_api_key: str, url: str, language: str, categories: list[str]) -> ProductInfoExtraction:
     """
     Fetch the product information from the given URL using Stagehand.
     Args:
+        google_api_key (str): The Google API key for authentication.
         url (str): The URL of the product page.
         language (str): The language to use for the extraction.
         categories (list[str]): List of possible product categories.
@@ -31,7 +32,7 @@ async def get_product_info(url: str, language: str, categories: list[str]) -> Pr
     stagehand = Stagehand(
         env="LOCAL",
         model_name="google/gemini-2.5-flash",
-        model_api_key=os.getenv("GOOGLE_API_KEY"),
+        model_api_key=google_api_key,
         local_browser_launch_options={
             "viewport": {"width": 1920, "height": 1080},
             "args": [
@@ -74,10 +75,11 @@ async def get_product_info(url: str, language: str, categories: list[str]) -> Pr
     return product_info
 
 
-async def get_product_status(url: str) -> ProductStatusExtraction:
+async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtraction:
     """
     Fetch the price of a product from the given URL using Stagehand.
     Args:
+        google_api_key (str): The Google API key for authentication.
         url (str): The URL of the product page.
     Returns:
         ProductStatusExtraction: The recurrent extracted product price and stock status.
@@ -86,7 +88,7 @@ async def get_product_status(url: str) -> ProductStatusExtraction:
     stagehand = Stagehand(
         env="LOCAL",
         model_name="google/gemini-2.5-flash",
-        model_api_key=os.getenv("GOOGLE_API_KEY"),
+        model_api_key=google_api_key,
         local_browser_launch_options={
             "viewport": {"width": 1920, "height": 1080},
             "args": [
@@ -129,6 +131,7 @@ if __name__ == "__main__":
     test_url = "https://fpvcapital.store/emisora-radiomaster-pocket-elrs/"
     test_language = "english"
     test_categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
+    google_api_key = os.getenv("GOOGLE_API_KEY")
 
-    asyncio.run(get_product_info(test_url, test_language, test_categories))
-    asyncio.run(get_product_status(test_url))
+    asyncio.run(get_product_info(google_api_key, test_url, test_language, test_categories))
+    asyncio.run(get_product_status(google_api_key, test_url))
