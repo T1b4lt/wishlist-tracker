@@ -163,11 +163,7 @@ const DashboardPage = () => {
                 Track prices and availability of products you want to buy
               </Text>
             </Box>
-            <Button
-              colorPalette="blue"
-              size="lg"
-              onClick={() => setIsModalOpen(true)}
-            >
+            <Button size="lg" onClick={() => setIsModalOpen(true)}>
               + Add New Product
             </Button>
           </Flex>
