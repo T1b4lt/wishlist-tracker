@@ -69,6 +69,18 @@ class ProductInfoResponse(BaseModel):
     description: str
 
 
+class ProductDashboardSummary(BaseModel):
+    id: int
+    name: str
+    category_id: int
+    category_name: str
+    category_color: str
+    priority: str
+    current_price: float | None
+    price_change_60d: float | None
+    is_in_stock: bool | None
+
+
 sqlite_file_name = "db/database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 connect_args = {"check_same_thread": False}
@@ -308,6 +320,67 @@ def read_products(session: SessionDep) -> list[Product]:
     return products
 
 
+@app.get("/products/dashboard-summary")
+def get_products_dashboard_summary(session: SessionDep) -> list[ProductDashboardSummary]:
+    """
+    Get all products with enriched data for dashboard display:
+    - Current price (most recent ProductHist record)
+    - Price change percentage (comparison with average of last 60 records, excluding current)
+    - Stock status (from most recent ProductHist record)
+    """
+    products = session.exec(select(Product)).all()
+    summary_list = []
+
+    for product in products:
+        # Get category information
+        category = session.get(Category, product.category_id)
+        category_name = category.name if category else "Unknown"
+        category_color = category.color if category else "gray"
+
+        # Get product history ordered by timestamp descending (most recent first)
+        product_history = session.exec(
+            select(ProductHist)
+            .where(ProductHist.product_id == product.id)
+            .order_by(ProductHist.timestamp.desc())
+        ).all()
+
+        current_price = None
+        price_change_60d = None
+        is_in_stock = None
+
+        if product_history:
+            # Current price and stock from most recent record
+            current_price = product_history[0].price
+            is_in_stock = product_history[0].is_in_stock
+
+            # Calculate price change if we have more than 1 record
+            if len(product_history) > 1:
+                # Get up to 60 records (excluding the current one)
+                historical_records = product_history[1:61]  # Skip first (current), take next 60
+
+                if historical_records:
+                    # Calculate average price of historical records
+                    avg_price = sum(record.price for record in historical_records) / len(historical_records)
+
+                    # Calculate percentage change: ((current - avg) / avg) * 100
+                    if avg_price > 0:
+                        price_change_60d = ((current_price - avg_price) / avg_price) * 100
+
+        summary_list.append(ProductDashboardSummary(
+            id=product.id,
+            name=product.name,
+            category_id=product.category_id,
+            category_name=category_name,
+            category_color=category_color,
+            priority=product.priority,
+            current_price=current_price,
+            price_change_60d=price_change_60d,
+            is_in_stock=is_in_stock
+        ))
+
+    return summary_list
+
+
 @app.get("/products/{product_id}")
 def read_product(product_id: int, session: SessionDep) -> Product:
     product = session.get(Product, product_id)
@@ -335,6 +408,15 @@ def delete_product(product_id: int, session: SessionDep):
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    # Delete all ProductHist records associated with this product
+    product_history = session.exec(
+        select(ProductHist).where(ProductHist.product_id == product_id)
+    ).all()
+    for hist_record in product_history:
+        session.delete(hist_record)
+
+    # Delete the product
     session.delete(product)
     session.commit()
     return {"ok": True}
