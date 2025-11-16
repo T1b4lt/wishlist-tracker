@@ -321,13 +321,30 @@ const SettingsPage = () => {
           </Field>
 
           <Field
-            label="Google API Key"
-            helperText="Required for extracting product information from URLs. Get your key from Google Cloud Console."
+            label="Google AI Studio API Key"
+            helperText={
+              <>
+                Required for extracting product information from URLs. Get your
+                key from{' '}
+                <a
+                  href="https://aistudio.google.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: colorMode === 'light' ? '#3182ce' : '#63b3ed',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Google AI Studio
+                </a>
+                .
+              </>
+            }
           >
             <Input
               value={googleApiKey}
               onChange={(e) => setGoogleApiKey(e.target.value)}
-              placeholder="Enter your Google API key"
+              placeholder="Enter your Google AI Studio API key"
               type="password"
             />
           </Field>
