@@ -75,6 +75,7 @@ const SettingsPage = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('english');
   const [analysisHour, setAnalysisHour] = useState(12);
   const [histWindowSize, setHistWindowSize] = useState(60);
+  const [googleApiKey, setGoogleApiKey] = useState('');
   const [telegramBotString, setTelegramBotString] = useState('');
   const [telegramBotChatId, setTelegramBotChatId] = useState('');
   const [isPriceDropAlert, setIsPriceDropAlert] = useState(false);
@@ -100,6 +101,7 @@ const SettingsPage = () => {
       setSelectedLanguage(data.selected_language);
       setAnalysisHour(data.analysys_hour);
       setHistWindowSize(data.hist_window_size);
+      setGoogleApiKey(data.google_api_key || '');
       setTelegramBotString(data.telegram_bot_token || '');
       setTelegramBotChatId(data.telegram_bot_chat_id || '');
       setIsPriceDropAlert(data.is_price_drop_alert);
@@ -131,6 +133,7 @@ const SettingsPage = () => {
       selectedLanguage !== originalConfig.selected_language ||
       analysisHour !== originalConfig.analysys_hour ||
       histWindowSize !== originalConfig.hist_window_size ||
+      googleApiKey !== (originalConfig.google_api_key || '') ||
       telegramBotString !== (originalConfig.telegram_bot_token || '') ||
       isPriceDropAlert !== originalConfig.is_price_drop_alert ||
       isStockChangeAlert !== originalConfig.is_stock_change_alert;
@@ -140,6 +143,7 @@ const SettingsPage = () => {
     selectedLanguage,
     analysisHour,
     histWindowSize,
+    googleApiKey,
     telegramBotString,
     isPriceDropAlert,
     isStockChangeAlert,
@@ -233,6 +237,7 @@ const SettingsPage = () => {
           selected_language: selectedLanguage,
           analysys_hour: analysisHour,
           hist_window_size: histWindowSize,
+          google_api_key: googleApiKey || null,
           telegram_bot_token: telegramBotString || null,
           is_price_drop_alert: isPriceDropAlert,
           is_stock_change_alert: isStockChangeAlert
@@ -313,6 +318,18 @@ const SettingsPage = () => {
                 ))}
               </SelectContent>
             </SelectRoot>
+          </Field>
+
+          <Field
+            label="Google API Key"
+            helperText="Required for extracting product information from URLs. Get your key from Google Cloud Console."
+          >
+            <Input
+              value={googleApiKey}
+              onChange={(e) => setGoogleApiKey(e.target.value)}
+              placeholder="Enter your Google API key"
+              type="password"
+            />
           </Field>
         </Box>
 
