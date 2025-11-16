@@ -29,6 +29,7 @@ import {
   SelectItem
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Field } from '@/components/ui/field';
 import {
   DialogRoot,
@@ -57,6 +58,13 @@ const hourCollection = createListCollection({
   }))
 });
 
+const histWindowSizeOptions = [
+  { label: '30 days', value: '30' },
+  { label: '60 days', value: '60' },
+  { label: '90 days', value: '90' },
+  { label: '180 days', value: '180' }
+];
+
 const SettingsPage = () => {
   const { colorMode } = useColorMode();
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +74,7 @@ const SettingsPage = () => {
   // Configuration states
   const [selectedLanguage, setSelectedLanguage] = useState('english');
   const [analysisHour, setAnalysisHour] = useState(12);
+  const [histWindowSize, setHistWindowSize] = useState(60);
   const [telegramBotString, setTelegramBotString] = useState('');
   const [telegramBotChatId, setTelegramBotChatId] = useState('');
   const [isPriceDropAlert, setIsPriceDropAlert] = useState(false);
@@ -90,6 +99,7 @@ const SettingsPage = () => {
       // Set all values
       setSelectedLanguage(data.selected_language);
       setAnalysisHour(data.analysys_hour);
+      setHistWindowSize(data.hist_window_size);
       setTelegramBotString(data.telegram_bot_token || '');
       setTelegramBotChatId(data.telegram_bot_chat_id || '');
       setIsPriceDropAlert(data.is_price_drop_alert);
@@ -120,6 +130,7 @@ const SettingsPage = () => {
     const changed =
       selectedLanguage !== originalConfig.selected_language ||
       analysisHour !== originalConfig.analysys_hour ||
+      histWindowSize !== originalConfig.hist_window_size ||
       telegramBotString !== (originalConfig.telegram_bot_token || '') ||
       isPriceDropAlert !== originalConfig.is_price_drop_alert ||
       isStockChangeAlert !== originalConfig.is_stock_change_alert;
@@ -128,6 +139,7 @@ const SettingsPage = () => {
   }, [
     selectedLanguage,
     analysisHour,
+    histWindowSize,
     telegramBotString,
     isPriceDropAlert,
     isStockChangeAlert,
@@ -220,6 +232,7 @@ const SettingsPage = () => {
         body: JSON.stringify({
           selected_language: selectedLanguage,
           analysys_hour: analysisHour,
+          hist_window_size: histWindowSize,
           telegram_bot_token: telegramBotString || null,
           is_price_drop_alert: isPriceDropAlert,
           is_stock_change_alert: isStockChangeAlert
@@ -338,6 +351,19 @@ const SettingsPage = () => {
                 ))}
               </SelectContent>
             </SelectRoot>
+          </Field>
+
+          <Field
+            label="Historical Window Size"
+            helperText="Number of days to use for calculating price change trends"
+            mt={4}
+          >
+            <SegmentedControl
+              items={histWindowSizeOptions}
+              value={histWindowSize.toString()}
+              onValueChange={(e) => setHistWindowSize(parseInt(e.value))}
+              size="md"
+            />
           </Field>
         </Box>
 
