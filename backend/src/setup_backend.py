@@ -10,10 +10,12 @@ Usage:
 import os
 import sys
 import argparse
+import random
+from datetime import datetime, timedelta
 
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from database_models import Config, Category, Product
+from database_models import Config, Category, Product, ProductHist
 
 
 def check_database_exists(db_path: str) -> bool:
@@ -124,6 +126,35 @@ def populate_test_data(engine):
         print(f"  ✓ Created product: {producto.name} (ID: {producto.id})")
         print(f"    Category: {electronica.name}")
         print(f"    Priority: {producto.priority}")
+
+        # Create 60 days of price history
+        print("Creating price history (60 days)...")
+        base_price = 599.99
+        current_date = datetime.now()
+
+        for days_ago in range(59, -1, -1):  # From 59 days ago to today
+            # Calculate timestamp for this day
+            record_date = current_date - timedelta(days=days_ago)
+            timestamp = int(record_date.timestamp())
+
+            # Generate a realistic price with some variation
+            # Price will fluctuate between base_price - 50 and base_price + 30
+            price_variation = random.uniform(-50, 30)
+            price = round(base_price + price_variation, 2)
+
+            # Randomly determine stock status (80% in stock, 20% out of stock)
+            is_in_stock = random.random() < 0.8
+
+            price_hist = ProductHist(
+                product_id=producto.id,
+                price=price,
+                is_in_stock=is_in_stock,
+                timestamp=timestamp
+            )
+            session.add(price_hist)
+
+        session.commit()
+        print(f"  ✓ Created 30 price history records")
 
     print("✓ Test data populated successfully")
 
