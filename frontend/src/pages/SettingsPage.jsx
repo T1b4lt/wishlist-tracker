@@ -276,6 +276,7 @@ const SettingsPage = () => {
                 bg: colorMode === 'light' ? 'gray.50' : 'gray.800'
               }}
               transition="all 0.2s"
+              opacity={!telegramBotString ? 0.5 : 1}
             >
               <Flex align="center" gap={4} flex={1}>
                 <Box
@@ -294,7 +295,9 @@ const SettingsPage = () => {
                     fontSize="sm"
                     color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                   >
-                    Receive notifications when product prices drop
+                    {!telegramBotString
+                      ? 'Configure a Telegram bot token first'
+                      : 'Receive notifications when product prices drop'}
                   </Text>
                 </Box>
               </Flex>
@@ -302,6 +305,7 @@ const SettingsPage = () => {
                 size="lg"
                 checked={isPriceDropAlert}
                 onCheckedChange={(e) => setIsPriceDropAlert(e.checked)}
+                disabled={!telegramBotString}
               />
             </Flex>
 
@@ -315,6 +319,7 @@ const SettingsPage = () => {
                 bg: colorMode === 'light' ? 'gray.50' : 'gray.800'
               }}
               transition="all 0.2s"
+              opacity={!telegramBotString ? 0.5 : 1}
             >
               <Flex align="center" gap={4} flex={1}>
                 <Box
@@ -333,7 +338,9 @@ const SettingsPage = () => {
                     fontSize="sm"
                     color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                   >
-                    Receive notifications when product stock status changes
+                    {!telegramBotString
+                      ? 'Configure a Telegram bot token first'
+                      : 'Receive notifications when product stock status changes'}
                   </Text>
                 </Box>
               </Flex>
@@ -341,6 +348,7 @@ const SettingsPage = () => {
                 size="lg"
                 checked={isStockChangeAlert}
                 onCheckedChange={(e) => setIsStockChangeAlert(e.checked)}
+                disabled={!telegramBotString}
               />
             </Flex>
           </VStack>
