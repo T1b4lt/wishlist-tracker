@@ -30,6 +30,7 @@ import {
 import { Field } from '@/components/ui/field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useColorMode } from '@/components/ui/color-mode';
+import { LuSparkles } from 'react-icons/lu';
 
 const API_URL = 'http://localhost:8000';
 
@@ -50,6 +51,13 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { colorMode } = useColorMode();
+
+  // Error dialog state
+  const [errorDialog, setErrorDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
 
   // Create collection from categories
   const categoryCollection = useMemo(
@@ -80,7 +88,11 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
 
   const handleGenerateDetails = async () => {
     if (!url.trim()) {
-      alert('Please enter a product URL first');
+      setErrorDialog({
+        isOpen: true,
+        title: 'URL Required',
+        message: 'Please enter a product URL first'
+      });
       return;
     }
 
@@ -106,7 +118,11 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
       setHasGenerated(true);
     } catch (error) {
       console.error('Error generating details:', error);
-      alert(`Error: ${error.message}`);
+      setErrorDialog({
+        isOpen: true,
+        title: 'Generation Error',
+        message: error.message
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -114,14 +130,22 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
 
   const handleSave = async () => {
     if (!url.trim() || !name.trim() || !category) {
-      alert('Please fill in all required fields');
+      setErrorDialog({
+        isOpen: true,
+        title: 'Missing Fields',
+        message: 'Please fill in all required fields'
+      });
       return;
     }
 
     // Find category ID by name
     const selectedCategory = categories.find((cat) => cat.name === category);
     if (!selectedCategory) {
-      alert('Please select a valid category');
+      setErrorDialog({
+        isOpen: true,
+        title: 'Invalid Category',
+        message: 'Please select a valid category'
+      });
       return;
     }
 
@@ -139,7 +163,11 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
       handleClose();
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Failed to save product');
+      setErrorDialog({
+        isOpen: true,
+        title: 'Save Error',
+        message: 'Failed to save product. Please try again.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -211,7 +239,10 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                   <Text>Generating...</Text>
                 </Flex>
               ) : (
-                '✨ Generate Details'
+                <Flex align="center" gap={2}>
+                  <LuSparkles />
+                  <Text> Generate Details</Text>
+                </Flex>
               )}
             </Button>
 
@@ -303,6 +334,33 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
           </Flex>
         </DialogFooter>
       </DialogContent>
+
+      {/* Error Dialog */}
+      <DialogRoot
+        open={errorDialog.isOpen}
+        onOpenChange={(e) => setErrorDialog({ ...errorDialog, isOpen: e.open })}
+        size="sm"
+        placement="center"
+      >
+        <DialogBackdrop />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{errorDialog.title}</DialogTitle>
+          </DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody>
+            <Text>{errorDialog.message}</Text>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              onClick={() => setErrorDialog({ ...errorDialog, isOpen: false })}
+              colorScheme="blue"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </DialogRoot>
   );
 };
