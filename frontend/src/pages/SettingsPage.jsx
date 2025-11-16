@@ -8,9 +8,16 @@ import {
   Text,
   VStack,
   Flex,
-  createListCollection
+  createListCollection,
+  HStack
 } from '@chakra-ui/react';
-import { LuSave, LuTrendingDown, LuPackage } from 'react-icons/lu';
+import {
+  LuSave,
+  LuTrendingDown,
+  LuPackage,
+  LuDownload,
+  LuSend
+} from 'react-icons/lu';
 import { useColorMode } from '@/components/ui/color-mode';
 import { toaster } from '@/components/ui/toaster';
 import {
@@ -22,6 +29,15 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Field } from '@/components/ui/field';
+import {
+  DialogRoot,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogTitle,
+  DialogCloseTrigger
+} from '@/components/ui/dialog';
 
 const API_URL = 'http://localhost:8000';
 
@@ -50,11 +66,17 @@ const SettingsPage = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('english');
   const [analysisHour, setAnalysisHour] = useState(12);
   const [telegramBotString, setTelegramBotString] = useState('');
+  const [telegramBotChatId, setTelegramBotChatId] = useState('');
   const [isPriceDropAlert, setIsPriceDropAlert] = useState(false);
   const [isStockChangeAlert, setIsStockChangeAlert] = useState(false);
 
   // Original values to track changes
   const [originalConfig, setOriginalConfig] = useState({});
+
+  // UI states for Telegram functionality
+  const [isGettingChatId, setIsGettingChatId] = useState(false);
+  const [isSendingTestMessage, setIsSendingTestMessage] = useState(false);
+  const [showStartBotModal, setShowStartBotModal] = useState(false);
 
   // Fetch configuration
   const fetchConfig = async () => {
@@ -68,6 +90,7 @@ const SettingsPage = () => {
       setSelectedLanguage(data.selected_language);
       setAnalysisHour(data.analysys_hour);
       setTelegramBotString(data.telegram_bot_token || '');
+      setTelegramBotChatId(data.telegram_bot_chat_id || '');
       setIsPriceDropAlert(data.is_price_drop_alert);
       setIsStockChangeAlert(data.is_stock_change_alert);
 
@@ -109,6 +132,82 @@ const SettingsPage = () => {
     isStockChangeAlert,
     originalConfig
   ]);
+
+  // Get Telegram Chat ID
+  const handleGetChatId = async () => {
+    setIsGettingChatId(true);
+    try {
+      const response = await fetch(`${API_URL}/telegram-chat-id`);
+
+      if (response.status === 400) {
+        toaster.create({
+          title: 'Bot token not configured',
+          description:
+            'Please save the bot token first before getting the chat ID.',
+          type: 'error'
+        });
+        return;
+      }
+
+      if (response.status === 404) {
+        setShowStartBotModal(true);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to get chat ID');
+      }
+
+      // Refresh config to get the saved chat_id
+      await fetchConfig();
+
+      toaster.create({
+        title: 'Chat ID saved',
+        description: 'Your Telegram chat ID has been saved successfully.',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Error getting chat ID:', error);
+      toaster.create({
+        title: 'Error getting chat ID',
+        description: 'Failed to retrieve chat ID. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsGettingChatId(false);
+    }
+  };
+
+  // Send test message
+  const handleSendTestMessage = async () => {
+    setIsSendingTestMessage(true);
+    try {
+      const response = await fetch(`${API_URL}/telegram-test-message`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Failed to send test message');
+      }
+
+      toaster.create({
+        title: 'Test message sent',
+        description: 'Check your Telegram for the test message!',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Error sending test message:', error);
+      toaster.create({
+        title: 'Error sending test message',
+        description:
+          error.message || 'Failed to send test message. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsSendingTestMessage(false);
+    }
+  };
 
   // Save configuration
   const handleSave = async () => {
@@ -256,14 +355,47 @@ const SettingsPage = () => {
           <VStack gap={6} align="stretch">
             <Field
               label="Telegram Bot Token"
-              helperText="Enter your Telegram bot token to receive notifications"
+              helperText="Create a bot with @BotFather on Telegram and paste the token here"
             >
-              <Input
-                value={telegramBotString}
-                onChange={(e) => setTelegramBotString(e.target.value)}
-                placeholder="Enter your Telegram bot token"
-              />
+              <HStack gap={2}>
+                <Input
+                  value={telegramBotString}
+                  onChange={(e) => setTelegramBotString(e.target.value)}
+                  placeholder="Enter your Telegram bot token"
+                  flex={1}
+                />
+                {telegramBotString && (
+                  <Button
+                    onClick={handleGetChatId}
+                    loading={isGettingChatId}
+                    disabled={isGettingChatId}
+                    size="md"
+                  >
+                    <LuDownload /> Get Chat ID
+                  </Button>
+                )}
+              </HStack>
             </Field>
+
+            {telegramBotChatId && (
+              <Field
+                label="Telegram Chat ID"
+                helperText="This is your unique chat ID for receiving notifications"
+              >
+                <HStack gap={2}>
+                  <Input value={telegramBotChatId} disabled flex={1} />
+                  <Button
+                    onClick={handleSendTestMessage}
+                    loading={isSendingTestMessage}
+                    disabled={isSendingTestMessage}
+                    size="md"
+                    colorScheme="blue"
+                  >
+                    <LuSend /> Test Bot
+                  </Button>
+                </HStack>
+              </Field>
+            )}
 
             {/* Price Drop Alerts */}
             <Flex
@@ -365,6 +497,46 @@ const SettingsPage = () => {
           </Button>
         </Flex>
       </VStack>
+
+      {/* Start Bot Modal */}
+      <DialogRoot
+        open={showStartBotModal}
+        onOpenChange={(e) => setShowStartBotModal(e.open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start your Telegram bot</DialogTitle>
+          </DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody>
+            <VStack gap={4} align="stretch">
+              <Text>
+                No chat ID was found. To connect your Telegram bot, please
+                follow these steps:
+              </Text>
+              <Box
+                p={4}
+                borderRadius="md"
+                bg={colorMode === 'light' ? 'gray.50' : 'gray.800'}
+              >
+                <Text fontWeight="medium" mb={2}>
+                  Steps:
+                </Text>
+                <VStack align="stretch" gap={2}>
+                  <Text>1. Open Telegram and search for your bot</Text>
+                  <Text>
+                    2. Send the command <strong>/start</strong> to the bot
+                  </Text>
+                  <Text>3. Come back here and click "Get Chat ID" again</Text>
+                </VStack>
+              </Box>
+            </VStack>
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={() => setShowStartBotModal(false)}>Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </Container>
   );
 };
