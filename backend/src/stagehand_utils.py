@@ -131,7 +131,7 @@ if __name__ == "__main__":
     test_url = "https://fpvcapital.store/emisora-radiomaster-pocket-elrs/"
     test_language = "english"
     test_categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
-    google_api_key = os.getenv("GOOGLE_API_KEY")
+    google_api_key = os.getenv("ASD_GOOGLE")
 
     asyncio.run(get_product_info(google_api_key, test_url, test_language, test_categories))
     asyncio.run(get_product_status(google_api_key, test_url))
