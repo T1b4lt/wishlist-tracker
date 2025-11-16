@@ -83,6 +83,27 @@ class ProductDashboardSummary(BaseModel):
     is_in_stock: bool | None
 
 
+class ProductHistResponse(BaseModel):
+    price: float
+    is_in_stock: bool
+    timestamp: int
+
+
+class ProductDetailResponse(BaseModel):
+    id: int
+    name: str
+    url: str
+    priority: str
+    category_id: int
+    category_name: str
+    category_color: str
+    description: str
+    current_price: float | None
+    min_price: float | None
+    is_in_stock: bool | None
+    price_history: list[ProductHistResponse]
+
+
 sqlite_file_name = "db/database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 connect_args = {"check_same_thread": False}
@@ -404,11 +425,74 @@ def get_products_dashboard_summary(session: SessionDep) -> list[ProductDashboard
 
 
 @app.get("/products/{product_id}")
-def read_product(product_id: int, session: SessionDep) -> Product:
+def get_product_detail(product_id: int, session: SessionDep) -> ProductDetailResponse:
+    """
+    Get complete product details including:
+    - Product information
+    - Category information
+    - Current price and stock status
+    - Minimum price from last hist_window_size records
+    - Complete price history
+    """
+    # Get product
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product
+
+    # Get category
+    category = session.get(Category, product.category_id)
+    category_name = category.name if category else "Unknown"
+    category_color = category.color if category else "gray"
+
+    # Get hist_window_size from config
+    hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
+    hist_window_size = int(hist_window_size_config.value) if hist_window_size_config else 60
+
+    # Get product history ordered by timestamp descending
+    product_history = session.exec(
+        select(ProductHist)
+        .where(ProductHist.product_id == product_id)
+        .order_by(ProductHist.timestamp.desc())
+    ).all()
+
+    current_price = None
+    min_price = None
+    is_in_stock = None
+
+    if product_history:
+        # Current price and stock from most recent record
+        current_price = product_history[0].price
+        is_in_stock = product_history[0].is_in_stock
+
+        # Calculate minimum price from last hist_window_size records
+        recent_records = product_history[:hist_window_size]
+        if recent_records:
+            min_price = min(record.price for record in recent_records)
+
+    # Convert history to response format (reverse to get chronological order for chart)
+    price_history = [
+        ProductHistResponse(
+            price=record.price,
+            is_in_stock=record.is_in_stock,
+            timestamp=record.timestamp
+        )
+        for record in reversed(product_history)
+    ]
+
+    return ProductDetailResponse(
+        id=product.id,
+        name=product.name,
+        url=product.url,
+        priority=product.priority,
+        category_id=product.category_id,
+        category_name=category_name,
+        category_color=category_color,
+        description=product.description,
+        current_price=current_price,
+        min_price=min_price,
+        is_in_stock=is_in_stock,
+        price_history=price_history
+    )
 
 
 @app.patch("/products/{product_id}")
@@ -442,22 +526,6 @@ def delete_product(product_id: int, session: SessionDep):
     session.delete(product)
     session.commit()
     return {"ok": True}
-
-
-# Product History endpoints
-@app.get("/product-history/{product_id}")
-def get_product_history(product_id: int, session: SessionDep) -> list[ProductHist]:
-    # Verify product exists
-    product = session.get(Product, product_id)
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-
-    # Get all product history for this product, ordered by timestamp
-    product_history = session.exec(
-        select(ProductHist).where(ProductHist.product_id == product_id).order_by(ProductHist.timestamp)
-    ).all()
-
-    return product_history
 
 
 # Telegram endpoints
