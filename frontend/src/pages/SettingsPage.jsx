@@ -9,7 +9,8 @@ import {
   VStack,
   Flex,
   createListCollection,
-  HStack
+  HStack,
+  Stack
 } from '@chakra-ui/react';
 import {
   LuSave,
@@ -353,49 +354,53 @@ const SettingsPage = () => {
           </Heading>
 
           <VStack gap={6} align="stretch">
-            <Field
-              label="Telegram Bot Token"
-              helperText="Create a bot with @BotFather on Telegram and paste the token here"
-            >
-              <HStack gap={2}>
-                <Input
-                  value={telegramBotString}
-                  onChange={(e) => setTelegramBotString(e.target.value)}
-                  placeholder="Enter your Telegram bot token"
-                  flex={1}
-                />
-                {telegramBotString && (
-                  <Button
-                    onClick={handleGetChatId}
-                    loading={isGettingChatId}
-                    disabled={isGettingChatId}
-                    size="md"
-                  >
-                    <LuDownload /> Get Chat ID
-                  </Button>
-                )}
-              </HStack>
-            </Field>
-
-            {telegramBotChatId && (
+            <Stack gap={4} align="flex-start" direction={{ base: 'column', md: 'row' }}>
               <Field
-                label="Telegram Chat ID"
-                helperText="This is your unique chat ID for receiving notifications"
+                label="Telegram Bot Token"
+                helperText="Create a bot with @BotFather on Telegram and paste the token here"
+                flex={1}
               >
                 <HStack gap={2}>
-                  <Input value={telegramBotChatId} disabled flex={1} />
-                  <Button
-                    onClick={handleSendTestMessage}
-                    loading={isSendingTestMessage}
-                    disabled={isSendingTestMessage}
-                    size="md"
-                    colorScheme="blue"
-                  >
-                    <LuSend /> Test Bot
-                  </Button>
+                  <Input
+                    value={telegramBotString}
+                    onChange={(e) => setTelegramBotString(e.target.value)}
+                    placeholder="Enter your Telegram bot token"
+                    flex={1}
+                  />
+                  {telegramBotString && (
+                    <Button
+                      onClick={handleGetChatId}
+                      loading={isGettingChatId}
+                      disabled={isGettingChatId}
+                      size="md"
+                    >
+                      <LuDownload /> Get Chat ID
+                    </Button>
+                  )}
                 </HStack>
               </Field>
-            )}
+
+              {telegramBotChatId && (
+                <Field
+                  label="Telegram Chat ID"
+                  helperText="This is your unique chat ID for receiving notifications"
+                  flex={1}
+                >
+                  <HStack gap={2}>
+                    <Input value={telegramBotChatId} disabled flex={1} />
+                    <Button
+                      onClick={handleSendTestMessage}
+                      loading={isSendingTestMessage}
+                      disabled={isSendingTestMessage}
+                      size="md"
+                      colorScheme="blue"
+                    >
+                      <LuSend /> Test Bot
+                    </Button>
+                  </HStack>
+                </Field>
+              )}
+            </Stack>
 
             {/* Price Drop Alerts */}
             <Flex
