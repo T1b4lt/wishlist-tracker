@@ -59,13 +59,14 @@ def initialize_config(engine):
     print("Initializing configuration...")
 
     config_keys = ["analysys_hour", "hist_window_size", "is_price_drop_alert",
-                   "is_stock_change_alert", "telegram_bot_connection_string", "selected_language"]
+                   "is_stock_change_alert", "telegram_bot_token", "telegram_bot_chat_id", "selected_language"]
     default_values = {
         "analysys_hour": "12",
         "hist_window_size": "60",
         "is_price_drop_alert": "false",
         "is_stock_change_alert": "false",
-        "telegram_bot_connection_string": "",
+        "telegram_bot_token": "",
+        "telegram_bot_chat_id": "",
         "selected_language": "english"
     }
 

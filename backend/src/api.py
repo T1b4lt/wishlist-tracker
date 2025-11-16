@@ -9,8 +9,9 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from src.stagehand_utils import get_product_info
 from src.database_models import Config, Category, Product, ProductHist
+from src.stagehand_utils import get_product_info
+from src.telegram_utils import get_chat_id, send_test_message
 
 
 class ConfigUpdate(BaseModel):
@@ -18,7 +19,8 @@ class ConfigUpdate(BaseModel):
     hist_window_size: int | None = None
     is_price_drop_alert: bool | None = None
     is_stock_change_alert: bool | None = None
-    telegram_bot_connection_string: str | None = None
+    telegram_bot_token: str | None = None
+    telegram_bot_chat_id: str | None = None
     selected_language: str | None = None
 
 
@@ -27,7 +29,8 @@ class ConfigResponse(BaseModel):
     hist_window_size: int
     is_price_drop_alert: bool
     is_stock_change_alert: bool
-    telegram_bot_connection_string: str | None
+    telegram_bot_token: str | None
+    telegram_bot_chat_id: str | None
     selected_language: str
 
 
@@ -118,8 +121,10 @@ def get_config(session: SessionDep) -> ConfigResponse:
     hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
     is_price_drop_alert_config = session.exec(select(Config).where(Config.key == "is_price_drop_alert")).first()
     is_stock_change_alert_config = session.exec(select(Config).where(Config.key == "is_stock_change_alert")).first()
-    telegram_bot_connection_string_config = session.exec(
-        select(Config).where(Config.key == "telegram_bot_connection_string")).first()
+    telegram_bot_token_config = session.exec(
+        select(Config).where(Config.key == "telegram_bot_token")).first()
+    telegram_bot_chat_id_config = session.exec(
+        select(Config).where(Config.key == "telegram_bot_chat_id")).first()
     selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
 
     return ConfigResponse(
@@ -127,7 +132,8 @@ def get_config(session: SessionDep) -> ConfigResponse:
         hist_window_size=int(hist_window_size_config.value) if hist_window_size_config else 60,
         is_price_drop_alert=is_price_drop_alert_config.value.lower() == "true" if is_price_drop_alert_config else False,
         is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False,
-        telegram_bot_connection_string=telegram_bot_connection_string_config.value if telegram_bot_connection_string_config and telegram_bot_connection_string_config.value else None,
+        telegram_bot_token=telegram_bot_token_config.value if telegram_bot_token_config and telegram_bot_token_config.value else None,
+        telegram_bot_chat_id=telegram_bot_chat_id_config.value if telegram_bot_chat_id_config and telegram_bot_chat_id_config.value else None,
         selected_language=selected_language_config.value if selected_language_config else "english"
     )
 
@@ -174,15 +180,25 @@ def update_config(config_update: ConfigUpdate, session: SessionDep) -> ConfigRes
                                                   value=str(config_update.is_stock_change_alert).lower())
             session.add(is_stock_change_alert_config)
 
-    if config_update.telegram_bot_connection_string is not None:
-        telegram_bot_connection_string_config = session.exec(
-            select(Config).where(Config.key == "telegram_bot_connection_string")).first()
-        if telegram_bot_connection_string_config:
-            telegram_bot_connection_string_config.value = config_update.telegram_bot_connection_string
+    if config_update.telegram_bot_token is not None:
+        telegram_bot_token_config = session.exec(
+            select(Config).where(Config.key == "telegram_bot_token")).first()
+        if telegram_bot_token_config:
+            telegram_bot_token_config.value = config_update.telegram_bot_token
         else:
-            telegram_bot_connection_string_config = Config(key="telegram_bot_connection_string",
-                                                           value=config_update.telegram_bot_connection_string)
-            session.add(telegram_bot_connection_string_config)
+            telegram_bot_token_config = Config(key="telegram_bot_token",
+                                               value=config_update.telegram_bot_token)
+            session.add(telegram_bot_token_config)
+
+    if config_update.telegram_bot_chat_id is not None:
+        telegram_bot_chat_id_config = session.exec(
+            select(Config).where(Config.key == "telegram_bot_chat_id")).first()
+        if telegram_bot_chat_id_config:
+            telegram_bot_chat_id_config.value = config_update.telegram_bot_chat_id
+        else:
+            telegram_bot_chat_id_config = Config(key="telegram_bot_chat_id",
+                                                 value=config_update.telegram_bot_chat_id)
+            session.add(telegram_bot_chat_id_config)
 
     if config_update.selected_language is not None:
         selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
@@ -338,3 +354,79 @@ def get_product_history(product_id: int, session: SessionDep) -> list[ProductHis
     ).all()
 
     return product_history
+
+
+# Telegram endpoints
+@app.get("/telegram-chat-id")
+async def get_telegram_chat_id(session: SessionDep) -> dict:
+    """
+    Retrieve the most recent chat ID from Telegram and save it to the database.
+
+    Returns:
+        dict: Contains the chat_id if found, or an error message
+    """
+    # Get the bot token from config
+    telegram_bot_token_config = session.exec(
+        select(Config).where(Config.key == "telegram_bot_token")).first()
+
+    if not telegram_bot_token_config or not telegram_bot_token_config.value:
+        raise HTTPException(status_code=400, detail="Telegram bot token not configured")
+
+    # Get the chat ID using the telegram utility
+    chat_id = await get_chat_id(telegram_bot_token_config.value)
+
+    if not chat_id:
+        raise HTTPException(status_code=404, detail="No chat ID found. Please send a message to the bot first.")
+
+    # Save the chat ID to the database
+    telegram_bot_chat_id_config = session.exec(
+        select(Config).where(Config.key == "telegram_bot_chat_id")).first()
+
+    if telegram_bot_chat_id_config:
+        telegram_bot_chat_id_config.value = chat_id
+    else:
+        telegram_bot_chat_id_config = Config(key="telegram_bot_chat_id", value=chat_id)
+        session.add(telegram_bot_chat_id_config)
+
+    session.commit()
+
+    return {"message": "Chat ID saved successfully"}
+
+
+@app.post("/telegram-test-message")
+async def send_telegram_test_message(session: SessionDep) -> dict:
+    """
+    Send a test message to the configured Telegram chat.
+
+    Returns:
+        dict: Success message
+    """
+    # Get the bot token from config
+    telegram_bot_token_config = session.exec(
+        select(Config).where(Config.key == "telegram_bot_token")).first()
+
+    if not telegram_bot_token_config or not telegram_bot_token_config.value:
+        raise HTTPException(status_code=400, detail="Telegram bot token not configured")
+
+    # Get the chat ID from config
+    telegram_bot_chat_id_config = session.exec(
+        select(Config).where(Config.key == "telegram_bot_chat_id")).first()
+
+    if not telegram_bot_chat_id_config or not telegram_bot_chat_id_config.value:
+        raise HTTPException(
+            status_code=400, detail="Telegram chat ID not configured. Please call /telegram-chat-id first.")
+
+    # Get the selected language
+    selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
+    selected_language = selected_language_config.value if selected_language_config else "english"
+
+    # Send the test message
+    try:
+        await send_test_message(
+            telegram_bot_token_config.value,
+            telegram_bot_chat_id_config.value,
+            selected_language
+        )
+        return {"message": "Test message sent successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send test message: {str(e)}")
