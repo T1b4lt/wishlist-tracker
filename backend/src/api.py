@@ -325,9 +325,13 @@ def get_products_dashboard_summary(session: SessionDep) -> list[ProductDashboard
     """
     Get all products with enriched data for dashboard display:
     - Current price (most recent ProductHist record)
-    - Price change percentage (comparison with average of last 60 records, excluding current)
+    - Price change percentage (comparison with average of last N records from config, excluding current)
     - Stock status (from most recent ProductHist record)
     """
+    # Get hist_window_size from config
+    hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
+    hist_window_size = int(hist_window_size_config.value) if hist_window_size_config else 60
+
     products = session.exec(select(Product)).all()
     summary_list = []
 
@@ -355,8 +359,8 @@ def get_products_dashboard_summary(session: SessionDep) -> list[ProductDashboard
 
             # Calculate price change if we have more than 1 record
             if len(product_history) > 1:
-                # Get up to 60 records (excluding the current one)
-                historical_records = product_history[1:61]  # Skip first (current), take next 60
+                # Get up to hist_window_size records (excluding the current one)
+                historical_records = product_history[1:hist_window_size + 1]  # Skip first (current), take next N
 
                 if historical_records:
                     # Calculate average price of historical records
