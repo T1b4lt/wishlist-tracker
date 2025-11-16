@@ -7,3 +7,6 @@ stagehand
 # API
 fastapi[standard]
 sqlmodel
+
+# Telegram
+python-telegram-bot
