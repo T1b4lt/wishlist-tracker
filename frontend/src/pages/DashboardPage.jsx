@@ -27,11 +27,24 @@ const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [histWindowSize, setHistWindowSize] = useState(60);
   const { colorMode } = useColorMode();
 
   useEffect(() => {
+    fetchConfig();
     fetchProducts();
   }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const response = await fetch(`${API_URL}/config/`);
+      if (!response.ok) throw new Error('Failed to fetch config');
+      const data = await response.json();
+      setHistWindowSize(data.hist_window_size);
+    } catch (error) {
+      console.error('Error fetching config:', error);
+    }
+  };
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -199,7 +212,7 @@ const DashboardPage = () => {
                       Current Price
                     </Table.ColumnHeader>
                     <Table.ColumnHeader textAlign="end">
-                      Price Change (60D)
+                      Price Change ({histWindowSize}D)
                     </Table.ColumnHeader>
                     <Table.ColumnHeader textAlign="center">
                       Stock
