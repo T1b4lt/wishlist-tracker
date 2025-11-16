@@ -67,7 +67,7 @@ const SettingsPage = () => {
       // Set all values
       setSelectedLanguage(data.selected_language);
       setAnalysisHour(data.analysys_hour);
-      setTelegramBotString(data.telegram_bot_connection_string || '');
+      setTelegramBotString(data.telegram_bot_token || '');
       setIsPriceDropAlert(data.is_price_drop_alert);
       setIsStockChangeAlert(data.is_stock_change_alert);
 
@@ -96,8 +96,7 @@ const SettingsPage = () => {
     const changed =
       selectedLanguage !== originalConfig.selected_language ||
       analysisHour !== originalConfig.analysys_hour ||
-      telegramBotString !==
-        (originalConfig.telegram_bot_connection_string || '') ||
+      telegramBotString !== (originalConfig.telegram_bot_token || '') ||
       isPriceDropAlert !== originalConfig.is_price_drop_alert ||
       isStockChangeAlert !== originalConfig.is_stock_change_alert;
 
@@ -121,7 +120,7 @@ const SettingsPage = () => {
         body: JSON.stringify({
           selected_language: selectedLanguage,
           analysys_hour: analysisHour,
-          telegram_bot_connection_string: telegramBotString || null,
+          telegram_bot_token: telegramBotString || null,
           is_price_drop_alert: isPriceDropAlert,
           is_stock_change_alert: isStockChangeAlert
         })
