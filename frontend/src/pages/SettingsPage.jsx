@@ -354,7 +354,11 @@ const SettingsPage = () => {
           </Heading>
 
           <VStack gap={6} align="stretch">
-            <Stack gap={4} align="flex-start" direction={{ base: 'column', md: 'row' }}>
+            <Stack
+              gap={4}
+              align="flex-start"
+              direction={{ base: 'column', md: 'row' }}
+            >
               <Field
                 label="Telegram Bot Token"
                 helperText="Create a bot with @BotFather on Telegram and paste the token here"
