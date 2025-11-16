@@ -1,9 +1,411 @@
-import { useParams } from 'wouter';
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'wouter';
+import {
+  Box,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Spinner,
+  Card,
+  Flex,
+  Button,
+  Stack
+} from '@chakra-ui/react';
+import { Tag } from '@/components/ui/tag';
+import { LuArrowLeft, LuExternalLink } from 'react-icons/lu';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Legend
+} from 'recharts';
+
+const API_URL = 'http://localhost:8000';
 
 const ProductPage = () => {
   const params = useParams();
+  const productId = params.productId;
 
-  return <div>ProductPage: {params.productId}</div>;
+  const [product, setProduct] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [histWindowSize, setHistWindowSize] = useState(60);
+
+  const fetchConfig = async () => {
+    try {
+      const response = await fetch(`${API_URL}/config/`);
+      if (!response.ok) throw new Error('Failed to fetch config');
+      const data = await response.json();
+      setHistWindowSize(data.hist_window_size);
+    } catch (error) {
+      console.error('Error fetching config:', error);
+    }
+  };
+
+  const fetchProductDetail = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/products/${productId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Product not found');
+        }
+        throw new Error('Failed to fetch product details');
+      }
+      const data = await response.json();
+      setProduct(data);
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+    fetchProductDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]);
+
+  const formatPrice = (price) => {
+    if (price === null || price === undefined) return 'N/A';
+    return `$${price.toFixed(2)}`;
+  };
+
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatDateLong = (timestamp) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return 'red';
+      case 'medium':
+        return 'orange';
+      case 'low':
+        return 'blue';
+      default:
+        return 'gray';
+    }
+  };
+
+  const calculatePriceChange = () => {
+    if (!product || !product.current_price || !product.min_price) return null;
+    const change =
+      ((product.current_price - product.min_price) / product.min_price) * 100;
+    return change;
+  };
+
+  // Prepare chart data from the last hist_window_size records
+  const getChartData = () => {
+    if (
+      !product ||
+      !product.price_history ||
+      product.price_history.length === 0
+    ) {
+      return [];
+    }
+
+    // Get the last hist_window_size records
+    const recentHistory = product.price_history.slice(-histWindowSize);
+
+    return recentHistory.map((record) => ({
+      date: formatDate(record.timestamp),
+      timestamp: record.timestamp,
+      price: record.price
+    }));
+  };
+
+  // Calculate average price from chart data
+  const getAveragePrice = () => {
+    const chartData = getChartData();
+    if (chartData.length === 0) return null;
+
+    const sum = chartData.reduce((acc, record) => acc + record.price, 0);
+    return sum / chartData.length;
+  };
+
+  // Find the date when minimum price was reached
+  const getMinPriceDate = () => {
+    if (
+      !product ||
+      !product.price_history ||
+      product.price_history.length === 0
+    ) {
+      return null;
+    }
+
+    const recentHistory = product.price_history.slice(-histWindowSize);
+    const minPriceRecord = recentHistory.reduce(
+      (min, record) => (record.price < min.price ? record : min),
+      recentHistory[0]
+    );
+
+    return formatDate(minPriceRecord.timestamp);
+  };
+
+  const getMinPriceDateLong = () => {
+    if (
+      !product ||
+      !product.price_history ||
+      product.price_history.length === 0
+    ) {
+      return null;
+    }
+
+    const recentHistory = product.price_history.slice(-histWindowSize);
+    const minPriceRecord = recentHistory.reduce(
+      (min, record) => (record.price < min.price ? record : min),
+      recentHistory[0]
+    );
+
+    return formatDateLong(minPriceRecord.timestamp);
+  };
+
+  if (isLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <Spinner size="xl" />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box maxWidth="1200px" margin="0 auto" padding="6">
+        <Card.Root>
+          <Card.Body>
+            <VStack gap="4" align="center" py="8">
+              <Heading size="lg" color="red.500">
+                Error
+              </Heading>
+              <Text>{error}</Text>
+              <Link href="/">
+                <Button variant="outline">
+                  <LuArrowLeft />
+                  Back to Dashboard
+                </Button>
+              </Link>
+            </VStack>
+          </Card.Body>
+        </Card.Root>
+      </Box>
+    );
+  }
+
+  if (!product) {
+    return null;
+  }
+
+  const priceChange = calculatePriceChange();
+  const chartData = getChartData();
+  const averagePrice = getAveragePrice();
+  const minPriceDate = getMinPriceDate();
+
+  return (
+    <Box maxWidth="1200px" margin="0 auto" padding="6">
+      <VStack gap="6" align="stretch">
+        {/* Back button */}
+        <Link href="/">
+          <Button variant="ghost" size="sm">
+            <LuArrowLeft />
+            Back to Wishlist
+          </Button>
+        </Link>
+
+        {/* Product header */}
+        <Box>
+          <Heading size="2xl" mb="4">
+            {product.name}
+          </Heading>
+          <HStack gap="2" wrap="wrap">
+            <Tag size="md" style={{ backgroundColor: product.category_color }}>
+              {product.category_name}
+            </Tag>
+            <Tag size="md" colorPalette={getPriorityColor(product.priority)}>
+              {product.priority.charAt(0).toUpperCase() +
+                product.priority.slice(1).toLowerCase()}
+            </Tag>
+            <Tag size="md" colorPalette={product.is_in_stock ? 'green' : 'red'}>
+              {product.is_in_stock ? 'In Stock' : 'Out of Stock'}
+            </Tag>
+          </HStack>
+        </Box>
+
+        {/* Description */}
+        <Card.Root>
+          <Card.Body>
+            <Heading size="md" mb="3">
+              Description
+            </Heading>
+            <Text color="gray.600" lineHeight="tall">
+              {product.description}
+            </Text>
+          </Card.Body>
+        </Card.Root>
+
+        {/* Product URL */}
+        <Card.Root>
+          <Card.Body>
+            <Heading size="md" mb="3">
+              Product Link
+            </Heading>
+            <a href={product.url} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" colorPalette="blue">
+                <LuExternalLink />
+                View Product Online
+              </Button>
+            </a>
+          </Card.Body>
+        </Card.Root>
+
+        {/* Price information */}
+        <Stack direction={{ base: 'column', md: 'row' }} gap="4">
+          <Card.Root flex="1">
+            <Card.Body>
+              <Text fontSize="sm" color="gray.500" mb="1">
+                Current Price
+              </Text>
+              <Heading size="2xl">{formatPrice(product.current_price)}</Heading>
+            </Card.Body>
+          </Card.Root>
+
+          <Card.Root flex="1">
+            <Card.Body>
+              <Text fontSize="sm" color="gray.500" mb="1">
+                Min price in {histWindowSize} days
+              </Text>
+              <Flex direction="column" gap="1">
+                <Flex align="baseline" gap="2">
+                  <Heading size="2xl">{formatPrice(product.min_price)}</Heading>
+                  {priceChange !== null && (
+                    <Text
+                      fontSize="lg"
+                      fontWeight="semibold"
+                      color={priceChange > 0 ? 'red.500' : 'green.500'}
+                    >
+                      {priceChange > 0 ? '↑' : '↓'}{' '}
+                      {Math.abs(priceChange).toFixed(1)}%
+                    </Text>
+                  )}
+                </Flex>
+                {getMinPriceDateLong() && (
+                  <Text fontSize="xs" color="gray.500">
+                    Reached on {getMinPriceDateLong()}
+                  </Text>
+                )}
+              </Flex>
+            </Card.Body>
+          </Card.Root>
+        </Stack>
+
+        {/* Price history chart */}
+        <Card.Root>
+          <Card.Body>
+            <Heading size="md" mb="4">
+              Price History
+            </Heading>
+            {chartData.length > 0 ? (
+              <Box height="300px" width="100%">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis tickFormatter={(value) => `$${value.toFixed(0)}`} />
+                    <Tooltip
+                      formatter={(value) => [
+                        `$${Number(value).toFixed(2)}`,
+                        'Price'
+                      ]}
+                      contentStyle={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                    />
+                    <Legend verticalAlign="top" height={36} iconType="line" />
+
+                    {/* Average price line (horizontal, dashed, orange) */}
+                    {averagePrice && (
+                      <ReferenceLine
+                        y={averagePrice}
+                        stroke="#ED8936"
+                        strokeDasharray="5 5"
+                        strokeWidth={2}
+                        label={{
+                          value: `Avg: $${averagePrice.toFixed(2)}`,
+                          position: 'insideTopRight',
+                          fill: '#ED8936',
+                          fontSize: 12
+                        }}
+                      />
+                    )}
+
+                    {/* Min price date line (vertical, solid, green) */}
+                    {minPriceDate && (
+                      <ReferenceLine
+                        x={minPriceDate}
+                        stroke="#48BB78"
+                        strokeWidth={2}
+                        label={{
+                          value: 'Min Price',
+                          position: 'insideTopLeft',
+                          fill: '#48BB78',
+                          fontSize: 12
+                        }}
+                      />
+                    )}
+
+                    <Line
+                      type="monotone"
+                      dataKey="price"
+                      stroke="#3182CE"
+                      strokeWidth={2}
+                      dot={{ fill: '#3182CE', r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name="Price"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Box>
+            ) : (
+              <Text color="gray.500" textAlign="center" py="8">
+                No price history available yet
+              </Text>
+            )}
+          </Card.Body>
+        </Card.Root>
+      </VStack>
+    </Box>
+  );
 };
 
 export default ProductPage;
