@@ -24,6 +24,7 @@ class Product(SQLModel, table=True):
     priority: str = Field(index=True)  # high, medium, low
     category_id: int | None = Field(default=None, foreign_key="category.id"),
     description: str
+    currency: str
 
 
 class ProductHist(SQLModel, table=True):

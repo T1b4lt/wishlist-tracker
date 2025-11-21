@@ -52,6 +52,7 @@ class ProductCreate(SQLModel):
     priority: str
     category_id: int
     description: str
+    currency: str
 
 
 class ProductUpdate(SQLModel):
@@ -59,6 +60,7 @@ class ProductUpdate(SQLModel):
     url: str | None = None
     priority: str | None = None
     category_id: int | None = None
+    currency: str | None = None
 
 
 class ProductInfoRequest(BaseModel):
@@ -69,6 +71,7 @@ class ProductInfoResponse(BaseModel):
     name: str
     category: str
     description: str
+    currency: str
 
 
 class ProductDashboardSummary(BaseModel):
@@ -81,6 +84,7 @@ class ProductDashboardSummary(BaseModel):
     current_price: float | None
     price_change_60d: float | None
     is_in_stock: bool | None
+    currency: str
 
 
 class ProductHistResponse(BaseModel):
@@ -102,6 +106,7 @@ class ProductDetailResponse(BaseModel):
     min_price: float | None
     is_in_stock: bool | None
     price_history: list[ProductHistResponse]
+    currency: str
 
 
 sqlite_file_name = "db/database.db"
@@ -340,7 +345,7 @@ async def extract_product_info(request: ProductInfoRequest, session: SessionDep)
     # Call stagehand to extract product info
     product_info = await get_product_info(google_api_key, request.url, selected_language, category_names)
 
-    return ProductInfoResponse(name=product_info.name, category=product_info.category, description=product_info.description)
+    return ProductInfoResponse(name=product_info.name, category=product_info.category, description=product_info.description, currency=product_info.currency)
 
 
 # Product endpoints
@@ -418,7 +423,8 @@ def get_products_dashboard_summary(session: SessionDep) -> list[ProductDashboard
             priority=product.priority,
             current_price=current_price,
             price_change_60d=price_change_60d,
-            is_in_stock=is_in_stock
+            is_in_stock=is_in_stock,
+            currency=product.currency
         ))
 
     return summary_list
@@ -491,7 +497,8 @@ def get_product_detail(product_id: int, session: SessionDep) -> ProductDetailRes
         current_price=current_price,
         min_price=min_price,
         is_in_stock=is_in_stock,
-        price_history=price_history
+        price_history=price_history,
+        currency=product.currency
     )
 
 

@@ -119,7 +119,8 @@ async def fetch_and_store_product_status():
                                 product_url=product.url,
                                 old_price=last_product_hist.price,
                                 new_price=product_status.price,
-                                lang=selected_language
+                                lang=selected_language,
+                                currency=product.currency
                             )
                             logger.info(f"Price drop alert sent for {product.name}")
                         except Exception as e:
@@ -136,7 +137,8 @@ async def fetch_and_store_product_status():
                                 product_name=product.name,
                                 product_url=product.url,
                                 current_price=product_status.price,
-                                lang=selected_language
+                                lang=selected_language,
+                                currency=product.currency
                             )
                             logger.info(f"Stock alert sent for {product.name}")
                         except Exception as e:

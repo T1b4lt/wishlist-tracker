@@ -5,6 +5,17 @@ from dotenv import load_dotenv
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
+# Map common currency codes to their symbols
+currency_symbols = {
+    "EUR": "€",
+    "USD": "$",
+    "GBP": "£",
+    "JPY": "¥",
+    "CNY": "¥",
+    "CAD": "$",
+    "AUD": "$"
+}
+
 
 async def get_chat_id(bot_token: str) -> str:
     """
@@ -114,7 +125,8 @@ async def send_price_drop_alert(
     product_url: str,
     old_price: float,
     new_price: float,
-    lang: str
+    lang: str,
+    currency: str
 ):
     """
     Send a price drop alert notification to the specified chat ID.
@@ -127,7 +139,12 @@ async def send_price_drop_alert(
         old_price: The previous price
         new_price: The new (lower) price
         lang: Language code for localization ("english" or "spanish")
+        currency: Currency code (e.g., EUR, USD, GBP)
     """
+
+    # Get the currency symbol, default to currency code if not found
+    currency_symbol = currency_symbols.get(currency.upper(), currency)
+
     # Calculate price drop percentage
     price_drop_percentage = ((old_price - new_price) / old_price) * 100
 
@@ -143,8 +160,8 @@ async def send_price_drop_alert(
     escaped_product_name = escape_markdown(product_name)
 
     # Format prices with proper escaping
-    old_price_str = f"{old_price:.2f}€".replace('.', '\\.').replace('-', '\\-')
-    new_price_str = f"{new_price:.2f}€".replace('.', '\\.').replace('-', '\\-')
+    old_price_str = f"{old_price:.2f}{currency_symbol}".replace('.', '\\.').replace('-', '\\-')
+    new_price_str = f"{new_price:.2f}{currency_symbol}".replace('.', '\\.').replace('-', '\\-')
     percentage_str = f"{price_drop_percentage:.0f}%".replace('.', '\\.').replace('-', '\\-')
 
     # Define messages for different languages
@@ -197,7 +214,8 @@ async def send_stock_alert(
     product_name: str,
     product_url: str,
     current_price: float,
-    lang: str
+    lang: str,
+    currency: str
 ):
     """
     Send a stock availability alert notification to the specified chat ID.
@@ -209,7 +227,12 @@ async def send_stock_alert(
         product_url: The URL of the product
         current_price: The current price of the product
         lang: Language code for localization ("english" or "spanish")
+        currency: Currency code (e.g., EUR, USD, GBP)
     """
+
+    # Get the currency symbol, default to currency code if not found
+    currency_symbol = currency_symbols.get(currency.upper(), currency)
+
     # Escape special characters for MarkdownV2
     def escape_markdown(text: str) -> str:
         """Escape special characters for MarkdownV2 format."""
@@ -221,7 +244,7 @@ async def send_stock_alert(
     escaped_product_name = escape_markdown(product_name)
 
     # Format price with proper escaping
-    price_str = f"{current_price:.2f}€".replace('.', '\\.').replace('-', '\\-')
+    price_str = f"{current_price:.2f}{currency_symbol}".replace('.', '\\.').replace('-', '\\-')
 
     # Define messages for different languages
     messages = {

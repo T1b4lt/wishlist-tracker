@@ -116,7 +116,8 @@ def populate_test_data(engine):
             url="https://www.thomann.es/millenium_mps_850_e_drum_set_bundle.htm",
             category_id=electronica.id,
             priority="high",
-            description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar."
+            description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar.",
+            currency="EUR"
         )
 
         session.add(producto)

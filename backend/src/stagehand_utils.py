@@ -15,6 +15,7 @@ class ProductStatusExtraction(BaseModel):
 class ProductInfoExtraction(BaseModel):
     name: str
     category: str
+    currency: str
     description: str
 
 
@@ -61,10 +62,11 @@ async def get_product_info(google_api_key: str, url: str, language: str, categor
 
     # Extract the product information
     product_info = await page.extract(
-        f"""Extract the product name and category.
+        f"""Extract the product name, category, and currency.
         The name should be short and descriptive, including a short sequence of words like: brand, type, specs, etc.
         For description, provide a concise summary of the product's key features and uses.
         For categories, select one from the following list, the most accurate: {', '.join(categories)}
+        For currency, extract the currency code (e.g., EUR, USD, GBP) used for the product price.
         The product information should be provided in {language} language.""",
         schema=ProductInfoExtraction
     )
