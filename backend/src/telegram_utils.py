@@ -1,4 +1,7 @@
+import os
 import asyncio
+from dotenv import load_dotenv
+
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
@@ -267,4 +270,6 @@ async def send_stock_alert(
 if __name__ == "__main__":
     # To execute: python telegram_utils.py
     # Replace with your actual bot token and chat ID
-    asyncio.run(send_test_message("8438293186:AAFYZeaHNt8u5W96PCiVpulEEtwzOukjdI0", "5650836295", "english"))
+    load_dotenv(override=True)
+    telegram_bot_token = os.getenv("DSA_TELEGRAM")
+    asyncio.run(send_test_message(telegram_bot_token, "5650836295", "english"))
