@@ -8,6 +8,7 @@ import {
   Text,
   VStack,
   Spinner,
+  Link,
   createListCollection
 } from '@chakra-ui/react';
 import {
@@ -202,20 +203,17 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
         <DialogBody>
           <VStack gap={4} align="stretch">
             {/* Product URL */}
-            <Field label="Product URL" required>
+            <Field
+              label="Product URL"
+              helperText="We'll try to fetch the item details automatically."
+              required
+            >
               <Input
                 placeholder="https://example.com/product..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={isGenerating || isLoading}
               />
-              <Text
-                fontSize="sm"
-                color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                mt={1}
-              >
-                We'll try to fetch the item details automatically.
-              </Text>
             </Field>
 
             {/* Priority */}
@@ -315,94 +313,34 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                   </Field>
 
                   {/* Currency */}
-                  <Field label="Currency" required>
-                    <Flex gap={2}>
-                      <Box flex="1">
-                        <SelectRoot
-                          collection={createListCollection({
-                            items: [
-                              { label: 'EUR (€)', value: 'EUR' },
-                              { label: 'USD ($)', value: 'USD' },
-                              { label: 'GBP (£)', value: 'GBP' },
-                              { label: 'JPY (¥)', value: 'JPY' },
-                              { label: 'CNY (¥)', value: 'CNY' },
-                              { label: 'CAD ($)', value: 'CAD' },
-                              { label: 'AUD ($)', value: 'AUD' },
-                              { label: 'Custom...', value: 'CUSTOM' }
-                            ]
-                          })}
-                          value={
-                            [
-                              'EUR',
-                              'USD',
-                              'GBP',
-                              'JPY',
-                              'CNY',
-                              'CAD',
-                              'AUD'
-                            ].includes(currency)
-                              ? [currency]
-                              : ['CUSTOM']
-                          }
-                          onValueChange={(details) => {
-                            const value = details.value[0];
-                            if (value !== 'CUSTOM') {
-                              setCurrency(value);
-                            }
-                          }}
-                          disabled={isLoading}
-                          size="md"
+                  <Field
+                    label="Currency Code"
+                    helperText={
+                      <>
+                        Enter a 3-letter{' '}
+                        <Link
+                          href="https://en.wikipedia.org/wiki/ISO_4217#List_of_ISO_4217_currency_codes"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          color="blue.500"
+                          textDecoration="underline"
                         >
-                          <SelectTrigger>
-                            <SelectValueText placeholder="Select currency" />
-                          </SelectTrigger>
-                          <SelectContent portalled={false}>
-                            {[
-                              { label: 'EUR (€)', value: 'EUR' },
-                              { label: 'USD ($)', value: 'USD' },
-                              { label: 'GBP (£)', value: 'GBP' },
-                              { label: 'JPY (¥)', value: 'JPY' },
-                              { label: 'CNY (¥)', value: 'CNY' },
-                              { label: 'CAD ($)', value: 'CAD' },
-                              { label: 'AUD ($)', value: 'AUD' },
-                              { label: 'Custom...', value: 'CUSTOM' }
-                            ].map((item) => (
-                              <SelectItem key={item.value} item={item.value}>
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </SelectRoot>
-                      </Box>
-                      {![
-                        'EUR',
-                        'USD',
-                        'GBP',
-                        'JPY',
-                        'CNY',
-                        'CAD',
-                        'AUD'
-                      ].includes(currency) && (
-                        <Box flex="1">
-                          <Input
-                            placeholder="e.g., MXN, BRL"
-                            value={currency}
-                            onChange={(e) =>
-                              setCurrency(e.target.value.toUpperCase())
-                            }
-                            disabled={isLoading}
-                            maxLength={10}
-                          />
-                        </Box>
-                      )}
-                    </Flex>
-                    <Text
-                      fontSize="sm"
-                      color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                      mt={1}
-                    >
-                      Select a currency or enter a custom code
-                    </Text>
+                          ISO 4217 currency code
+                        </Link>{' '}
+                        (e.g., EUR, USD, GBP, JPY, MXN, BRL)
+                      </>
+                    }
+                    required
+                  >
+                    <Input
+                      placeholder="e.g., EUR, USD, GBP, MXN"
+                      value={currency}
+                      onChange={(e) =>
+                        setCurrency(e.target.value.toUpperCase().trim())
+                      }
+                      disabled={isLoading}
+                      maxLength={3}
+                    />
                   </Field>
                 </VStack>
               </Box>
