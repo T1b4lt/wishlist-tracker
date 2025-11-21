@@ -18,6 +18,7 @@ import { Tag } from '@/components/ui/tag';
 import NewProductModal from '@/components/NewProductModal';
 import DeleteProductDialog from '@/components/DeleteProductDialog';
 import { LuTrash2 } from 'react-icons/lu';
+import { getCurrencySymbol } from '@/lib/web_utils';
 
 const API_URL = 'http://localhost:8000';
 
@@ -130,9 +131,10 @@ const DashboardPage = () => {
     }
   };
 
-  const formatPrice = (price) => {
+  const formatPrice = (price, currency) => {
     if (price === null || price === undefined) return '-';
-    return `$${price.toFixed(2)}`;
+    const symbol = getCurrencySymbol(currency);
+    return `${symbol}${price.toFixed(2)}`;
   };
 
   const formatPriceChange = (priceChange) => {
@@ -256,7 +258,7 @@ const DashboardPage = () => {
                       </Table.Cell>
                       <Table.Cell textAlign="end">
                         <Text fontWeight="medium">
-                          {formatPrice(product.current_price)}
+                          {formatPrice(product.current_price, product.currency)}
                         </Text>
                       </Table.Cell>
                       <Table.Cell textAlign="end">

@@ -46,6 +46,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [currency, setCurrency] = useState('EUR');
   const [categories, setCategories] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
@@ -115,6 +116,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
       setName(data.name);
       setDescription(data.description);
       setCategory(data.category);
+      setCurrency(data.currency || 'EUR');
       setHasGenerated(true);
     } catch (error) {
       console.error('Error generating details:', error);
@@ -156,7 +158,8 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
         url: url.trim(),
         priority: priority,
         category_id: selectedCategory.id,
-        description: description.trim()
+        description: description.trim(),
+        currency: currency.trim()
       };
 
       await onSave(productData);
@@ -179,6 +182,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
     setName('');
     setDescription('');
     setCategory('');
+    setCurrency('EUR');
     setHasGenerated(false);
     onClose();
   };
@@ -308,6 +312,97 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                         ))}
                       </SelectContent>
                     </SelectRoot>
+                  </Field>
+
+                  {/* Currency */}
+                  <Field label="Currency" required>
+                    <Flex gap={2}>
+                      <Box flex="1">
+                        <SelectRoot
+                          collection={createListCollection({
+                            items: [
+                              { label: 'EUR (€)', value: 'EUR' },
+                              { label: 'USD ($)', value: 'USD' },
+                              { label: 'GBP (£)', value: 'GBP' },
+                              { label: 'JPY (¥)', value: 'JPY' },
+                              { label: 'CNY (¥)', value: 'CNY' },
+                              { label: 'CAD ($)', value: 'CAD' },
+                              { label: 'AUD ($)', value: 'AUD' },
+                              { label: 'Custom...', value: 'CUSTOM' }
+                            ]
+                          })}
+                          value={
+                            [
+                              'EUR',
+                              'USD',
+                              'GBP',
+                              'JPY',
+                              'CNY',
+                              'CAD',
+                              'AUD'
+                            ].includes(currency)
+                              ? [currency]
+                              : ['CUSTOM']
+                          }
+                          onValueChange={(details) => {
+                            const value = details.value[0];
+                            if (value !== 'CUSTOM') {
+                              setCurrency(value);
+                            }
+                          }}
+                          disabled={isLoading}
+                          size="md"
+                        >
+                          <SelectTrigger>
+                            <SelectValueText placeholder="Select currency" />
+                          </SelectTrigger>
+                          <SelectContent portalled={false}>
+                            {[
+                              { label: 'EUR (€)', value: 'EUR' },
+                              { label: 'USD ($)', value: 'USD' },
+                              { label: 'GBP (£)', value: 'GBP' },
+                              { label: 'JPY (¥)', value: 'JPY' },
+                              { label: 'CNY (¥)', value: 'CNY' },
+                              { label: 'CAD ($)', value: 'CAD' },
+                              { label: 'AUD ($)', value: 'AUD' },
+                              { label: 'Custom...', value: 'CUSTOM' }
+                            ].map((item) => (
+                              <SelectItem key={item.value} item={item.value}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </SelectRoot>
+                      </Box>
+                      {![
+                        'EUR',
+                        'USD',
+                        'GBP',
+                        'JPY',
+                        'CNY',
+                        'CAD',
+                        'AUD'
+                      ].includes(currency) && (
+                        <Box flex="1">
+                          <Input
+                            placeholder="e.g., MXN, BRL"
+                            value={currency}
+                            onChange={(e) =>
+                              setCurrency(e.target.value.toUpperCase())
+                            }
+                            disabled={isLoading}
+                            maxLength={10}
+                          />
+                        </Box>
+                      )}
+                    </Flex>
+                    <Text
+                      fontSize="sm"
+                      color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
+                      mt={1}
+                    >
+                      Select a currency or enter a custom code
+                    </Text>
                   </Field>
                 </VStack>
               </Box>

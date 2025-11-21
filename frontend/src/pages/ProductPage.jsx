@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { Tag } from '@/components/ui/tag';
 import { LuArrowLeft, LuExternalLink } from 'react-icons/lu';
+import { getCurrencySymbol } from '@/lib/web_utils';
 import {
   CartesianGrid,
   Line,
@@ -75,9 +76,10 @@ const ProductPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
-  const formatPrice = (price) => {
+  const formatPrice = (price, currency) => {
     if (price === null || price === undefined) return 'N/A';
-    return `$${price.toFixed(2)}`;
+    const symbol = getCurrencySymbol(currency);
+    return `${symbol}${price.toFixed(2)}`;
   };
 
   const formatDate = (timestamp) => {
@@ -293,7 +295,9 @@ const ProductPage = () => {
               <Text fontSize="sm" color="gray.500" mb="1">
                 Current Price
               </Text>
-              <Heading size="2xl">{formatPrice(product.current_price)}</Heading>
+              <Heading size="2xl">
+                {formatPrice(product.current_price, product.currency)}
+              </Heading>
             </Card.Body>
           </Card.Root>
 
@@ -304,7 +308,9 @@ const ProductPage = () => {
               </Text>
               <Flex direction="column" gap="1">
                 <Flex align="baseline" gap="2">
-                  <Heading size="2xl">{formatPrice(product.min_price)}</Heading>
+                  <Heading size="2xl">
+                    {formatPrice(product.min_price, product.currency)}
+                  </Heading>
                   {priceChange !== null && (
                     <Text
                       fontSize="lg"
@@ -338,10 +344,18 @@ const ProductPage = () => {
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
-                    <YAxis tickFormatter={(value) => `$${value.toFixed(0)}`} />
+                    <YAxis
+                      tickFormatter={(value) =>
+                        `${getCurrencySymbol(product.currency)}${value.toFixed(
+                          0
+                        )}`
+                      }
+                    />
                     <Tooltip
                       formatter={(value) => [
-                        `$${Number(value).toFixed(2)}`,
+                        `${getCurrencySymbol(product.currency)}${Number(
+                          value
+                        ).toFixed(2)}`,
                         'Price'
                       ]}
                       contentStyle={{
@@ -361,7 +375,9 @@ const ProductPage = () => {
                         strokeDasharray="5 5"
                         strokeWidth={2}
                         label={{
-                          value: `Avg: $${averagePrice.toFixed(2)}`,
+                          value: `Avg: ${getCurrencySymbol(
+                            product.currency
+                          )}${averagePrice.toFixed(2)}`,
                           position: 'insideTopRight',
                           fill: '#ED8936',
                           fontSize: 12
