@@ -104,6 +104,166 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
         print(f"Unexpected error: {e}")
 
 
+async def send_price_drop_alert(
+    bot_token: str,
+    chat_id: str,
+    product_name: str,
+    product_url: str,
+    old_price: float,
+    new_price: float,
+    lang: str
+):
+    """
+    Send a price drop alert notification to the specified chat ID.
+
+    Args:
+        bot_token: The Telegram bot token
+        chat_id: The chat ID to send the message to
+        product_name: The name of the product
+        product_url: The URL of the product
+        old_price: The previous price
+        new_price: The new (lower) price
+        lang: Language code for localization ("english" or "spanish")
+    """
+    # Calculate price drop percentage
+    price_drop_percentage = ((old_price - new_price) / old_price) * 100
+
+    # Escape special characters for MarkdownV2
+    # Characters that need escaping: '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'
+    def escape_markdown(text: str) -> str:
+        """Escape special characters for MarkdownV2 format."""
+        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        for char in special_chars:
+            text = text.replace(char, f'\\{char}')
+        return text
+
+    escaped_product_name = escape_markdown(product_name)
+
+    # Format prices with proper escaping
+    old_price_str = f"{old_price:.2f}€".replace('.', '\\.').replace('-', '\\-')
+    new_price_str = f"{new_price:.2f}€".replace('.', '\\.').replace('-', '\\-')
+    percentage_str = f"{price_drop_percentage:.0f}%".replace('.', '\\.').replace('-', '\\-')
+
+    # Define messages for different languages
+    messages = {
+        "english": (
+            f"📉 *Price Drop Alert*\\!\n\n"
+            f"Product: {escaped_product_name}\n"
+            f"Old Price: ~{old_price_str}~\n"
+            f"New Price: *{new_price_str}* \\({percentage_str}\\)\n"
+            f"*Great Deal\\!*"
+        ),
+        "spanish": (
+            f"📉 *Alerta de Bajada de Precio*\\!\n\n"
+            f"Producto: {escaped_product_name}\n"
+            f"Precio Anterior: ~{old_price_str}~\n"
+            f"Precio Nuevo: *{new_price_str}* \\({percentage_str}\\)\n"
+            f"*¡Gran Oferta\\!*"
+        )
+    }
+
+    # Get the appropriate message text, default to English if lang is not recognized
+    message_text = messages.get(lang.lower(), messages["english"])
+
+    # Create an inline keyboard with a button to the product URL
+    button_text = "🛒 View Product" if lang.lower() == "english" else "🛒 Ver Producto"
+    keyboard = [[InlineKeyboardButton(button_text, url=product_url)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    bot = Bot(token=bot_token)
+
+    try:
+        await bot.send_message(
+            chat_id=chat_id,
+            text=message_text,
+            parse_mode='MarkdownV2',
+            reply_markup=reply_markup
+        )
+        return True
+    except TelegramError as e:
+        print(f"✗ Error sending price drop alert: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ Unexpected error sending price drop alert: {e}")
+        return False
+
+
+async def send_stock_alert(
+    bot_token: str,
+    chat_id: str,
+    product_name: str,
+    product_url: str,
+    current_price: float,
+    lang: str
+):
+    """
+    Send a stock availability alert notification to the specified chat ID.
+
+    Args:
+        bot_token: The Telegram bot token
+        chat_id: The chat ID to send the message to
+        product_name: The name of the product
+        product_url: The URL of the product
+        current_price: The current price of the product
+        lang: Language code for localization ("english" or "spanish")
+    """
+    # Escape special characters for MarkdownV2
+    def escape_markdown(text: str) -> str:
+        """Escape special characters for MarkdownV2 format."""
+        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        for char in special_chars:
+            text = text.replace(char, f'\\{char}')
+        return text
+
+    escaped_product_name = escape_markdown(product_name)
+
+    # Format price with proper escaping
+    price_str = f"{current_price:.2f}€".replace('.', '\\.').replace('-', '\\-')
+
+    # Define messages for different languages
+    messages = {
+        "english": (
+            f"✅ *Stock Alert*\\!\n\n"
+            f"Product: {escaped_product_name}\n"
+            f"Status: *Back in Stock\\!*\n"
+            f"Current Price: *{price_str}*\n"
+            f"*Don't miss out\\!*"
+        ),
+        "spanish": (
+            f"✅ *Alerta de Stock*\\!\n\n"
+            f"Producto: {escaped_product_name}\n"
+            f"Estado: *¡Vuelve a estar en stock\\!*\n"
+            f"Precio Actual: *{price_str}*\n"
+            f"*¡No te lo pierdas\\!*"
+        )
+    }
+
+    # Get the appropriate message text, default to English if lang is not recognized
+    message_text = messages.get(lang.lower(), messages["english"])
+
+    # Create an inline keyboard with a button to the product URL
+    button_text = "🛒 View Product" if lang.lower() == "english" else "🛒 Ver Producto"
+    keyboard = [[InlineKeyboardButton(button_text, url=product_url)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    bot = Bot(token=bot_token)
+
+    try:
+        await bot.send_message(
+            chat_id=chat_id,
+            text=message_text,
+            parse_mode='MarkdownV2',
+            reply_markup=reply_markup
+        )
+        return True
+    except TelegramError as e:
+        print(f"✗ Error sending stock alert: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ Unexpected error sending stock alert: {e}")
+        return False
+
+
 if __name__ == "__main__":
     # To execute: python telegram_utils.py
     # Replace with your actual bot token and chat ID
