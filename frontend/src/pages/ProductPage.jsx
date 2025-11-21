@@ -79,7 +79,7 @@ const ProductPage = () => {
   const formatPrice = (price, currency) => {
     if (price === null || price === undefined) return 'N/A';
     const symbol = getCurrencySymbol(currency);
-    return `${symbol}${price.toFixed(2)}`;
+    return `${price.toFixed(2)} ${symbol}`;
   };
 
   const formatDate = (timestamp) => {
@@ -346,16 +346,16 @@ const ProductPage = () => {
                     <XAxis dataKey="date" />
                     <YAxis
                       tickFormatter={(value) =>
-                        `${getCurrencySymbol(product.currency)}${value.toFixed(
-                          0
+                        `${value.toFixed(0)} ${getCurrencySymbol(
+                          product.currency
                         )}`
                       }
                     />
                     <Tooltip
                       formatter={(value) => [
-                        `${getCurrencySymbol(product.currency)}${Number(
-                          value
-                        ).toFixed(2)}`,
+                        `${Number(value).toFixed(2)} ${getCurrencySymbol(
+                          product.currency
+                        )}`,
                         'Price'
                       ]}
                       contentStyle={{
@@ -375,9 +375,9 @@ const ProductPage = () => {
                         strokeDasharray="5 5"
                         strokeWidth={2}
                         label={{
-                          value: `Avg: ${getCurrencySymbol(
-                            product.currency
-                          )}${averagePrice.toFixed(2)}`,
+                          value: `Avg: ${averagePrice.toFixed(
+                            2
+                          )} ${getCurrencySymbol(product.currency)}`,
                           position: 'insideTopRight',
                           fill: '#ED8936',
                           fontSize: 12

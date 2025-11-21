@@ -134,7 +134,7 @@ const DashboardPage = () => {
   const formatPrice = (price, currency) => {
     if (price === null || price === undefined) return '-';
     const symbol = getCurrencySymbol(currency);
-    return `${symbol}${price.toFixed(2)}`;
+    return `${price.toFixed(2)} ${symbol}`;
   };
 
   const formatPriceChange = (priceChange) => {
