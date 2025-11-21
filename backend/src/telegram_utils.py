@@ -1,5 +1,5 @@
 import asyncio
-from telegram import Bot
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
 
@@ -54,19 +54,48 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
         chat_id: The chat ID to send the message to
         lang: Language code for localization ("english" or "spanish")
     """
-    # Define messages for different languages
+    # Define messages for different languages with MarkdownV2 formatting
+    # Note: In MarkdownV2, characters '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' must be escaped with the preceding character '\'.
     messages = {
-        "english": "Hello, I'm working!",
-        "spanish": "Hola, estoy funcionando"
+        "english": (
+            "🎉 *Wishlist Tracker Test Notification*\n\n"
+            "This is how you will receive alerts\\!\n\n"
+            "Example:\n"
+            "📉 *Price Drop Alert*\n"
+            "Product: Example Product\n"
+            "Old Price: ~100\\.00€~\n"
+            "New Price: *80\\.00€* \\(\\-20%\\)\n"
+            "*Great Deal\\!*"
+        ),
+        "spanish": (
+            "🎉 *Notificación de Prueba de Wishlist Tracker*\n\n"
+            "¡Así es como recibirás las alertas\\!\n\n"
+            "Ejemplo:\n"
+            "📉 *Alerta de Bajada de Precio*\n"
+            "Producto: Producto de Ejemplo\n"
+            "Precio Anterior: ~100\\.00€~\n"
+            "Precio Nuevo: *80\\.00€* \\(\\-20%\\)\n"
+            "*¡Gran Oferta\\!*"
+        )
     }
 
     # Get the appropriate message text, default to English if lang is not recognized
     message_text = messages.get(lang.lower(), messages["english"])
 
+    # Create an inline keyboard with a button to a fake URL
+    keyboard = [
+        [
+            InlineKeyboardButton("🛒 View Deal on Amazon", url="https://www.amazon.es")
+            if lang.lower() == "english" else
+            InlineKeyboardButton("🛒 Ver Oferta en Amazon", url="https://www.amazon.es")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     bot = Bot(token=bot_token)
 
     try:
-        await bot.send_message(chat_id=chat_id, text=message_text)
+        await bot.send_message(chat_id=chat_id, text=message_text, parse_mode='MarkdownV2', reply_markup=reply_markup)
         print(f"✓ Message sent successfully to chat_id: {chat_id}")
 
     except TelegramError as e:
