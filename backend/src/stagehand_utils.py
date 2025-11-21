@@ -37,7 +37,6 @@ async def get_product_info(google_api_key: str, url: str, language: str, categor
         local_browser_launch_options={
             "viewport": {"width": 1920, "height": 1080},
             "args": [
-                "--headless=True"
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-web-security",
@@ -74,6 +73,8 @@ async def get_product_info(google_api_key: str, url: str, language: str, categor
     # Close Stagehand
     await stagehand.close()
 
+    print(f"Extracted product info: {product_info}")
+
     return product_info
 
 
@@ -94,7 +95,6 @@ async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtr
         local_browser_launch_options={
             "viewport": {"width": 1920, "height": 1080},
             "args": [
-                "--headless=True"
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-web-security",
@@ -125,6 +125,8 @@ async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtr
 
     # Close Stagehand
     await stagehand.close()
+
+    print(f"Extracted product status: {product_status}")
 
     return product_status
 
