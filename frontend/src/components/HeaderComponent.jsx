@@ -19,16 +19,30 @@ import {
   DrawerRoot,
   DrawerTrigger
 } from '@/components/ui/drawer';
+import { useTranslation } from 'react-i18next';
 
 const HeaderComponent = () => {
   const [open, setOpen] = useState(false);
   const [location, setLocation] = useLocation();
   const { colorMode, toggleColorMode } = useColorMode();
+  const { t } = useTranslation();
 
   const navItems = [
-    { label: 'Dashboard', path: '/', icon: LuChartLine },
-    { label: 'Categories', path: '/categories', icon: LuLayoutDashboard },
-    { label: 'Settings', path: '/settings', icon: LuSettings }
+    {
+      label: t('components.header.nav.dashboard'),
+      path: '/',
+      icon: LuChartLine
+    },
+    {
+      label: t('components.header.nav.categories'),
+      path: '/categories',
+      icon: LuLayoutDashboard
+    },
+    {
+      label: t('components.header.nav.settings'),
+      path: '/settings',
+      icon: LuSettings
+    }
   ];
 
   const handleNavigation = (path) => {
@@ -58,14 +72,18 @@ const HeaderComponent = () => {
           >
             <DrawerBackdrop />
             <DrawerTrigger asChild>
-              <IconButton aria-label="Open menu" variant="ghost" size="md">
+              <IconButton
+                aria-label={t('components.header.openMenu')}
+                variant="ghost"
+                size="md"
+              >
                 <LuMenu size={20} />
               </IconButton>
             </DrawerTrigger>
             <DrawerContent offset={4}>
               <DrawerHeader>
                 <Text fontSize="xl" fontWeight="bold">
-                  Menu
+                  {t('components.header.menu')}
                 </Text>
               </DrawerHeader>
               <DrawerCloseTrigger />
@@ -107,13 +125,13 @@ const HeaderComponent = () => {
           </DrawerRoot>
 
           <Text fontSize="xl" fontWeight="bold">
-            Wishlist Tracker AI
+            {t('common.appName')}
           </Text>
         </Flex>
 
         {/* Right side: Theme toggle */}
         <IconButton
-          aria-label="Toggle color mode"
+          aria-label={t('components.header.toggleColorMode')}
           variant="ghost"
           size="md"
           onClick={toggleColorMode}

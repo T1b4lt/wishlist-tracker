@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'wouter';
 import {
   Box,
@@ -26,6 +26,7 @@ import {
   ReferenceLine,
   Legend
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 const API_URL = 'http://localhost:8000';
 
@@ -37,6 +38,11 @@ const ProductPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [histWindowSize, setHistWindowSize] = useState(60);
+  const { t, i18n } = useTranslation();
+  const locale = useMemo(
+    () => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'),
+    [i18n.language]
+  );
 
   const fetchConfig = async () => {
     try {
@@ -56,9 +62,9 @@ const ProductPage = () => {
       const response = await fetch(`${API_URL}/products/${productId}`);
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('Product not found');
+          throw new Error(t('pages.product.errors.notFound'));
         }
-        throw new Error('Failed to fetch product details');
+        throw new Error(t('pages.product.errors.fetchFailed'));
       }
       const data = await response.json();
       setProduct(data);
@@ -77,14 +83,16 @@ const ProductPage = () => {
   }, [productId]);
 
   const formatPrice = (price, currency) => {
-    if (price === null || price === undefined) return 'N/A';
+    if (price === null || price === undefined) {
+      return t('common.messages.notAvailable');
+    }
     const symbol = getCurrencySymbol(currency);
     return `${price.toFixed(2)} ${symbol}`;
   };
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -93,7 +101,7 @@ const ProductPage = () => {
 
   const formatDateLong = (timestamp) => {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale, {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
@@ -206,13 +214,13 @@ const ProductPage = () => {
           <Card.Body>
             <VStack gap="4" align="center" py="8">
               <Heading size="lg" color="red.500">
-                Error
+                {t('pages.product.error.title')}
               </Heading>
               <Text>{error}</Text>
               <Link href="/">
                 <Button variant="outline">
                   <LuArrowLeft />
-                  Back to Dashboard
+                  {t('common.actions.backToDashboard')}
                 </Button>
               </Link>
             </VStack>
@@ -238,7 +246,7 @@ const ProductPage = () => {
         <Link href="/">
           <Button variant="ghost" size="sm">
             <LuArrowLeft />
-            Back to Wishlist
+            {t('common.actions.backToWishlist')}
           </Button>
         </Link>
 
@@ -252,11 +260,23 @@ const ProductPage = () => {
               {product.category_name}
             </Tag>
             <Tag size="md" colorPalette={getPriorityColor(product.priority)}>
-              {product.priority.charAt(0).toUpperCase() +
-                product.priority.slice(1).toLowerCase()}
+              {(() => {
+                switch (product.priority.toLowerCase()) {
+                  case 'high':
+                    return t('common.priority.high');
+                  case 'medium':
+                    return t('common.priority.medium');
+                  case 'low':
+                    return t('common.priority.low');
+                  default:
+                    return product.priority;
+                }
+              })()}
             </Tag>
             <Tag size="md" colorPalette={product.is_in_stock ? 'green' : 'red'}>
-              {product.is_in_stock ? 'In Stock' : 'Out of Stock'}
+              {product.is_in_stock
+                ? t('common.status.inStock')
+                : t('common.status.outOfStock')}
             </Tag>
           </HStack>
         </Box>
@@ -265,7 +285,7 @@ const ProductPage = () => {
         <Card.Root>
           <Card.Body>
             <Heading size="md" mb="3">
-              Description
+              {t('pages.product.description')}
             </Heading>
             <Text color="gray.600" lineHeight="tall">
               {product.description}
@@ -277,12 +297,12 @@ const ProductPage = () => {
         <Card.Root>
           <Card.Body>
             <Heading size="md" mb="3">
-              Product Link
+              {t('pages.product.productLink')}
             </Heading>
             <a href={product.url} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" colorPalette="blue">
                 <LuExternalLink />
-                View Product Online
+                {t('common.actions.viewOnline')}
               </Button>
             </a>
           </Card.Body>
@@ -293,7 +313,7 @@ const ProductPage = () => {
           <Card.Root flex="1">
             <Card.Body>
               <Text fontSize="sm" color="gray.500" mb="1">
-                Current Price
+                {t('pages.product.price.current')}
               </Text>
               <Heading size="2xl">
                 {formatPrice(product.current_price, product.currency)}
@@ -304,7 +324,7 @@ const ProductPage = () => {
           <Card.Root flex="1">
             <Card.Body>
               <Text fontSize="sm" color="gray.500" mb="1">
-                Min price in {histWindowSize} days
+                {t('pages.product.price.min', { days: histWindowSize })}
               </Text>
               <Flex direction="column" gap="1">
                 <Flex align="baseline" gap="2">
@@ -324,7 +344,9 @@ const ProductPage = () => {
                 </Flex>
                 {getMinPriceDateLong() && (
                   <Text fontSize="xs" color="gray.500">
-                    Reached on {getMinPriceDateLong()}
+                    {t('pages.product.price.minReached', {
+                      date: getMinPriceDateLong()
+                    })}
                   </Text>
                 )}
               </Flex>
@@ -336,7 +358,7 @@ const ProductPage = () => {
         <Card.Root>
           <Card.Body>
             <Heading size="md" mb="4">
-              Price History
+              {t('pages.product.priceHistory.title')}
             </Heading>
             {chartData.length > 0 ? (
               <Box height="300px" width="100%">
@@ -356,7 +378,7 @@ const ProductPage = () => {
                         `${Number(value).toFixed(2)} ${getCurrencySymbol(
                           product.currency
                         )}`,
-                        'Price'
+                        t('pages.product.priceHistory.tooltipPrice')
                       ]}
                       contentStyle={{
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -365,7 +387,14 @@ const ProductPage = () => {
                         color: '#fff'
                       }}
                     />
-                    <Legend verticalAlign="top" height={36} iconType="line" />
+                    <Legend
+                      verticalAlign="top"
+                      height={36}
+                      iconType="line"
+                      formatter={() =>
+                        t('pages.product.priceHistory.legendPrice')
+                      }
+                    />
 
                     {/* Average price line (horizontal, dashed, orange) */}
                     {averagePrice && (
@@ -375,9 +404,10 @@ const ProductPage = () => {
                         strokeDasharray="5 5"
                         strokeWidth={2}
                         label={{
-                          value: `Avg: ${averagePrice.toFixed(
-                            2
-                          )} ${getCurrencySymbol(product.currency)}`,
+                          value: t('pages.product.priceHistory.avgReference', {
+                            value: averagePrice.toFixed(2),
+                            currency: getCurrencySymbol(product.currency)
+                          }),
                           position: 'insideTopRight',
                           fill: '#ED8936',
                           fontSize: 12
@@ -392,7 +422,7 @@ const ProductPage = () => {
                         stroke="#48BB78"
                         strokeWidth={2}
                         label={{
-                          value: 'Min Price',
+                          value: t('pages.product.priceHistory.minReference'),
                           position: 'insideTopLeft',
                           fill: '#48BB78',
                           fontSize: 12
@@ -407,14 +437,14 @@ const ProductPage = () => {
                       strokeWidth={2}
                       dot={{ fill: '#3182CE', r: 4 }}
                       activeDot={{ r: 6 }}
-                      name="Price"
+                      name={t('pages.product.priceHistory.legendPrice')}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </Box>
             ) : (
               <Text color="gray.500" textAlign="center" py="8">
-                No price history available yet
+                {t('pages.product.priceHistory.empty')}
               </Text>
             )}
           </Card.Body>

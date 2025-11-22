@@ -1,0 +1,337 @@
+{
+  "common": {
+    "appName": "Wishlist Tracker IA",
+    "language": {
+      "english": "Inglés",
+      "spanish": "Español"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "save": "Guardar",
+      "saveItem": "Guardar elemento",
+      "saving": "Guardando...",
+      "generateDetails": "Generar detalles",
+      "generating": "Generando...",
+      "getChatId": "Obtener Chat ID",
+      "testBot": "Probar bot",
+      "gotIt": "Entendido",
+      "ok": "Aceptar",
+      "addCategory": "Añadir categoría",
+      "addNewProduct": "Añadir nuevo producto",
+      "viewOnline": "Ver producto online",
+      "backToDashboard": "Volver al panel",
+      "backToWishlist": "Volver a la lista de deseos"
+    },
+    "status": {
+      "inStock": "En stock",
+      "outOfStock": "Sin stock"
+    },
+    "priority": {
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "placeholders": {
+      "selectLanguage": "Selecciona un idioma",
+      "selectCategory": "Selecciona una categoría",
+      "selectHour": "Selecciona una hora",
+      "googleApiKey": "Introduce tu clave de Google AI Studio",
+      "telegramBotToken": "Introduce el token de tu bot de Telegram",
+      "productUrl": "https://ejemplo.com/producto...",
+      "currencyCode": "p. ej., EUR, USD, GBP, MXN",
+      "categoryName": "p. ej. Electrónica"
+    },
+    "messages": {
+      "loading": "Cargando...",
+      "notAvailable": "N/D"
+    }
+  },
+  "components": {
+    "header": {
+      "menu": "Menú",
+      "nav": {
+        "dashboard": "Panel",
+        "categories": "Categorías",
+        "settings": "Ajustes"
+      },
+      "openMenu": "Abrir menú",
+      "toggleColorMode": "Cambiar modo de color"
+    },
+    "footer": {
+      "credits": "Desarrollado por {{author}} - <link>Github</link>"
+    },
+    "categoryModal": {
+      "titleCreate": "Crear nueva categoría",
+      "titleEdit": "Editar categoría",
+      "descriptionCreate": "Introduce un nombre y elige un color para tu nueva categoría.",
+      "descriptionEdit": "Introduce un nombre y elige un color para tu categoría.",
+      "fields": {
+        "name": "Nombre de la categoría",
+        "color": "Color"
+      },
+      "customColor": "O elige un color personalizado",
+      "placeholderName": "p. ej. Electrónica",
+      "buttons": {
+        "create": "Crear categoría",
+        "update": "Actualizar categoría"
+      }
+    },
+    "deleteProductDialog": {
+      "title": "Eliminar producto",
+      "description": "¿Seguro que quieres eliminar <strong>{{name}}</strong>?",
+      "warning": "Esta acción no se puede deshacer. Se eliminará el producto y todo su historial de precios."
+    },
+    "newProductModal": {
+      "title": "Añadir nuevo artículo a la lista",
+      "fields": {
+        "productUrl": {
+          "label": "URL del producto",
+          "helper": "Intentaremos obtener los detalles del artículo automáticamente."
+        },
+        "priority": "Prioridad",
+        "itemName": "Nombre del artículo",
+        "description": "Descripción",
+        "category": {
+          "label": "Categoría",
+          "placeholder": "Selecciona una categoría"
+        },
+        "currency": {
+          "label": "Código de moneda",
+          "helper": "Introduce un <link>código de moneda ISO 4217</link> de 3 letras (p. ej., EUR, USD, GBP, JPY, MXN, BRL)"
+        }
+      },
+      "ai": {
+        "title": "✨ Detalles generados por IA",
+        "description": "Revisa los detalles a continuación. Puedes editarlos antes de guardar."
+      },
+      "errors": {
+        "urlRequired": {
+          "title": "URL obligatoria",
+          "message": "Introduce primero la URL del producto"
+        },
+        "missingFields": {
+          "title": "Faltan campos",
+          "message": "Rellena todos los campos obligatorios"
+        },
+        "invalidCategory": {
+          "title": "Categoría no válida",
+          "message": "Selecciona una categoría válida"
+        },
+        "generationError": {
+          "title": "Error al generar",
+          "message": "No se pudo extraer la información del producto. Inténtalo de nuevo."
+        },
+        "saveError": {
+          "title": "Error al guardar",
+          "message": "No se pudo guardar el producto. Inténtalo de nuevo."
+        }
+      }
+    }
+  },
+  "pages": {
+    "dashboard": {
+      "hero": {
+        "title": "Añadir nuevo producto",
+        "subtitle": "Haz seguimiento de los precios y la disponibilidad de los productos que quieres comprar",
+        "button": "+ Añadir nuevo producto"
+      },
+      "table": {
+        "title": "Tu lista de deseos",
+        "columns": {
+          "name": "Nombre del producto",
+          "category": "Categoría",
+          "priority": "Prioridad",
+          "currentPrice": "Precio actual",
+          "priceChange": "Cambio de precio ({{days}}D)",
+          "stock": "Stock",
+          "actions": "Acciones"
+        },
+        "empty": {
+          "title": "Todavía no hay productos en tu lista de deseos",
+          "subtitle": "Haz clic en \"Añadir nuevo producto\" para empezar a seguir tu primer artículo"
+        }
+      },
+      "aria": {
+        "deleteProduct": "Eliminar producto"
+      }
+    },
+    "categories": {
+      "title": "Gestionar categorías",
+      "subtitle": "Organiza tus artículos en categorías personalizadas.",
+      "addSection": {
+        "title": "Añadir nueva categoría",
+        "button": "Añadir categoría"
+      },
+      "existingSection": {
+        "title": "Categorías existentes",
+        "loading": "Cargando categorías...",
+        "empty": "Aún no hay categorías. ¡Crea la primera para empezar!"
+      },
+      "deleteDialog": {
+        "title": "Eliminar categoría",
+        "message": "¿Seguro que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer."
+      },
+      "aria": {
+        "editCategory": "Editar categoría",
+        "deleteCategory": "Eliminar categoría"
+      }
+    },
+    "product": {
+      "error": {
+        "title": "Error"
+      },
+      "errors": {
+        "notFound": "Producto no encontrado",
+        "fetchFailed": "No se pudieron obtener los detalles del producto"
+      },
+      "description": "Descripción",
+      "productLink": "Enlace del producto",
+      "price": {
+        "current": "Precio actual",
+        "min": "Precio mínimo en {{days}} días",
+        "minReached": "Se alcanzó el {{date}}"
+      },
+      "priceHistory": {
+        "title": "Historial de precios",
+        "empty": "Todavía no hay historial de precios",
+        "legendPrice": "Precio",
+        "tooltipPrice": "Precio",
+        "avgReference": "Promedio: {{value}} {{currency}}",
+        "minReference": "Precio mínimo"
+      }
+    },
+    "settings": {
+      "title": "Ajustes",
+      "subtitle": "Configura las preferencias de la aplicación",
+      "sections": {
+        "general": "General",
+        "analysis": "Análisis",
+        "notifications": "Notificaciones"
+      },
+      "fields": {
+        "language": "Idioma",
+        "googleApiKey": {
+          "label": "Clave de Google AI Studio",
+          "helper": "Necesaria para extraer información de los productos a partir de URLs. Obtén tu clave en <link>Google AI Studio</link>."
+        },
+        "analysisHour": {
+          "label": "Hora de análisis",
+          "helper": "Hora del día (0-23) en la que se ejecutará el análisis diario"
+        },
+        "historicalWindow": {
+          "label": "Ventana histórica",
+          "helper": "Número de días que se usarán para calcular las tendencias de cambio de precio"
+        },
+        "telegramBotToken": {
+          "label": "Token del bot de Telegram",
+          "helper": "Crea un bot con @BotFather en Telegram y pega aquí el token"
+        },
+        "telegramChatId": {
+          "label": "Chat ID de Telegram",
+          "helper": "Este es tu chat ID único para recibir notificaciones"
+        }
+      },
+      "alerts": {
+        "priceDrop": {
+          "title": "Alertas de bajada de precio",
+          "subtitleConfigured": "Recibe notificaciones cuando bajen los precios de los productos",
+          "subtitleMissing": "Configura primero un token de bot de Telegram"
+        },
+        "stockChange": {
+          "title": "Alertas de stock",
+          "subtitleConfigured": "Recibe notificaciones cuando cambie el stock de los productos",
+          "subtitleMissing": "Configura primero un token de bot de Telegram"
+        }
+      },
+      "startBotModal": {
+        "title": "Inicia tu bot de Telegram",
+        "description": "No se encontró ningún chat ID. Para conectar tu bot de Telegram, sigue estos pasos:",
+        "stepsTitle": "Pasos:",
+        "steps": {
+          "one": "1. Abre Telegram y busca tu bot",
+          "two": "2. Envía el comando <strong>/start</strong> al bot",
+          "three": "3. Vuelve aquí y haz clic en \"Obtener Chat ID\" otra vez"
+        }
+      },
+      "loading": "Cargando ajustes...",
+      "histWindowOption": "{{days}} días"
+    },
+    "notFound": {
+      "title": "¡Ups! Página no encontrada",
+      "quote": "\"Ni nuestra IA pudo encontrar esta página. ¿Estará en la lista de deseos de otra persona?\" 🤔",
+      "actionPrimary": "Volver al inicio",
+      "actionSecondary": "¿Perdido? No pasa nada, a todos nos ocurre 😊"
+    }
+  },
+  "toasts": {
+    "categories": {
+      "loadError": {
+        "title": "Error al cargar las categorías",
+        "description": "No se pudieron cargar las categorías. Inténtalo de nuevo."
+      },
+      "createSuccess": {
+        "title": "Categoría creada",
+        "description": "{{name}} se ha creado correctamente."
+      },
+      "createError": {
+        "title": "Error al crear la categoría",
+        "description": "No se pudo crear la categoría. Inténtalo de nuevo."
+      },
+      "updateSuccess": {
+        "title": "Categoría actualizada",
+        "description": "{{name}} se ha actualizado correctamente."
+      },
+      "updateError": {
+        "title": "Error al actualizar la categoría",
+        "description": "No se pudo actualizar la categoría. Inténtalo de nuevo."
+      },
+      "deleteBlocked": {
+        "title": "No se puede eliminar la categoría",
+        "description": "Esta categoría tiene productos asociados. Elimínalos o reasígnalos primero."
+      },
+      "deleteSuccess": {
+        "title": "Categoría eliminada",
+        "description": "{{name}} se ha eliminado correctamente."
+      },
+      "deleteError": {
+        "title": "Error al eliminar la categoría",
+        "description": "No se pudo eliminar la categoría. Inténtalo de nuevo."
+      }
+    },
+    "settings": {
+      "loadError": {
+        "title": "Error al cargar los ajustes",
+        "description": "No se pudieron cargar los ajustes. Inténtalo de nuevo."
+      },
+      "botTokenMissing": {
+        "title": "Token del bot no configurado",
+        "description": "Guarda primero el token del bot antes de obtener el Chat ID."
+      },
+      "chatIdSaved": {
+        "title": "Chat ID guardado",
+        "description": "Tu Chat ID de Telegram se ha guardado correctamente."
+      },
+      "chatIdError": {
+        "title": "Error al obtener el Chat ID",
+        "description": "No se pudo recuperar el Chat ID. Inténtalo de nuevo."
+      },
+      "testMessageSuccess": {
+        "title": "Mensaje de prueba enviado",
+        "description": "Revisa tu Telegram para ver el mensaje de prueba."
+      },
+      "testMessageError": {
+        "title": "Error al enviar el mensaje de prueba",
+        "description": "No se pudo enviar el mensaje de prueba. Inténtalo de nuevo."
+      },
+      "saveSuccess": {
+        "title": "Ajustes guardados",
+        "description": "Tus ajustes se han guardado correctamente."
+      },
+      "saveError": {
+        "title": "Error al guardar los ajustes",
+        "description": "No se pudieron guardar los ajustes. Inténtalo de nuevo."
+      }
+    }
+  }
+}

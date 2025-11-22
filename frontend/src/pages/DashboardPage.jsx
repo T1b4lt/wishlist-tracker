@@ -19,6 +19,7 @@ import NewProductModal from '@/components/NewProductModal';
 import DeleteProductDialog from '@/components/DeleteProductDialog';
 import { LuTrash2 } from 'react-icons/lu';
 import { getCurrencySymbol } from '@/lib/web_utils';
+import { useTranslation } from 'react-i18next';
 
 const API_URL = 'http://localhost:8000';
 
@@ -30,6 +31,7 @@ const DashboardPage = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [histWindowSize, setHistWindowSize] = useState(60);
   const { colorMode } = useColorMode();
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchConfig();
@@ -131,6 +133,19 @@ const DashboardPage = () => {
     }
   };
 
+  const getPriorityLabel = (priority) => {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return t('common.priority.high');
+      case 'medium':
+        return t('common.priority.medium');
+      case 'low':
+        return t('common.priority.low');
+      default:
+        return priority;
+    }
+  };
+
   const formatPrice = (price, currency) => {
     if (price === null || price === undefined) return '-';
     const symbol = getCurrencySymbol(currency);
@@ -159,14 +174,14 @@ const DashboardPage = () => {
           <Flex justify="space-between" align="center">
             <Box>
               <Heading size="lg" mb={2}>
-                Add New Product
+                {t('pages.dashboard.hero.title')}
               </Heading>
               <Text color={colorMode === 'light' ? 'gray.600' : 'gray.400'}>
-                Track prices and availability of products you want to buy
+                {t('pages.dashboard.hero.subtitle')}
               </Text>
             </Box>
             <Button size="lg" onClick={() => setIsModalOpen(true)}>
-              + Add New Product
+              {t('pages.dashboard.hero.button')}
             </Button>
           </Flex>
         </Card.Root>
@@ -174,7 +189,7 @@ const DashboardPage = () => {
         {/* Products List Section */}
         <Box>
           <Heading size="lg" mb={4}>
-            Your Wishlist
+            {t('pages.dashboard.table.title')}
           </Heading>
 
           {isLoading ? (
@@ -188,13 +203,13 @@ const DashboardPage = () => {
                   fontSize="lg"
                   color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                 >
-                  No products in your wishlist yet
+                  {t('pages.dashboard.table.empty.title')}
                 </Text>
                 <Text
                   fontSize="sm"
                   color={colorMode === 'light' ? 'gray.500' : 'gray.500'}
                 >
-                  Click "Add New Product" to start tracking your first item
+                  {t('pages.dashboard.table.empty.subtitle')}
                 </Text>
               </VStack>
             </Card.Root>
@@ -203,20 +218,28 @@ const DashboardPage = () => {
               <Table.Root size="sm" variant="outline">
                 <Table.Header>
                   <Table.Row>
-                    <Table.ColumnHeader>Product Name</Table.ColumnHeader>
-                    <Table.ColumnHeader>Category</Table.ColumnHeader>
-                    <Table.ColumnHeader>Priority</Table.ColumnHeader>
-                    <Table.ColumnHeader textAlign="end">
-                      Current Price
+                    <Table.ColumnHeader>
+                      {t('pages.dashboard.table.columns.name')}
+                    </Table.ColumnHeader>
+                    <Table.ColumnHeader>
+                      {t('pages.dashboard.table.columns.category')}
+                    </Table.ColumnHeader>
+                    <Table.ColumnHeader>
+                      {t('pages.dashboard.table.columns.priority')}
                     </Table.ColumnHeader>
                     <Table.ColumnHeader textAlign="end">
-                      Price Change ({histWindowSize}D)
+                      {t('pages.dashboard.table.columns.currentPrice')}
+                    </Table.ColumnHeader>
+                    <Table.ColumnHeader textAlign="end">
+                      {t('pages.dashboard.table.columns.priceChange', {
+                        days: histWindowSize
+                      })}
                     </Table.ColumnHeader>
                     <Table.ColumnHeader textAlign="center">
-                      Stock
+                      {t('pages.dashboard.table.columns.stock')}
                     </Table.ColumnHeader>
                     <Table.ColumnHeader textAlign="center">
-                      Actions
+                      {t('pages.dashboard.table.columns.actions')}
                     </Table.ColumnHeader>
                   </Table.Row>
                 </Table.Header>
@@ -252,8 +275,7 @@ const DashboardPage = () => {
                           size="sm"
                           colorPalette={getPriorityColor(product.priority)}
                         >
-                          {product.priority.charAt(0).toUpperCase() +
-                            product.priority.slice(1)}
+                          {getPriorityLabel(product.priority)}
                         </Tag>
                       </Table.Cell>
                       <Table.Cell textAlign="end">
@@ -275,6 +297,18 @@ const DashboardPage = () => {
                         {product.is_in_stock === null && (
                           <Text color="gray.500">-</Text>
                         )}
+                        {product.is_in_stock !== null && (
+                          <Text
+                            fontSize="sm"
+                            color="gray.500"
+                            display="inline-block"
+                            ml={2}
+                          >
+                            {product.is_in_stock
+                              ? t('common.status.inStock')
+                              : t('common.status.outOfStock')}
+                          </Text>
+                        )}
                       </Table.Cell>
                       <Table.Cell textAlign="center">
                         <IconButton
@@ -282,7 +316,7 @@ const DashboardPage = () => {
                           variant="ghost"
                           colorPalette="red"
                           onClick={() => handleDeleteClick(product)}
-                          aria-label="Delete product"
+                          aria-label={t('pages.dashboard.aria.deleteProduct')}
                         >
                           <LuTrash2 />
                         </IconButton>

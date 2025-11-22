@@ -1,0 +1,337 @@
+{
+  "common": {
+    "appName": "Wishlist Tracker AI",
+    "language": {
+      "english": "English",
+      "spanish": "Spanish"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "save": "Save",
+      "saveItem": "Save Item",
+      "saving": "Saving...",
+      "generateDetails": "Generate Details",
+      "generating": "Generating...",
+      "getChatId": "Get Chat ID",
+      "testBot": "Test Bot",
+      "gotIt": "Got it",
+      "ok": "OK",
+      "addCategory": "Add Category",
+      "addNewProduct": "Add New Product",
+      "viewOnline": "View Product Online",
+      "backToDashboard": "Back to Dashboard",
+      "backToWishlist": "Back to Wishlist"
+    },
+    "status": {
+      "inStock": "In Stock",
+      "outOfStock": "Out of Stock"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "placeholders": {
+      "selectLanguage": "Select language",
+      "selectCategory": "Select category",
+      "selectHour": "Select hour",
+      "googleApiKey": "Enter your Google AI Studio API key",
+      "telegramBotToken": "Enter your Telegram bot token",
+      "productUrl": "https://example.com/product...",
+      "currencyCode": "e.g., EUR, USD, GBP, MXN",
+      "categoryName": "e.g. Electronics"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "notAvailable": "N/A"
+    }
+  },
+  "components": {
+    "header": {
+      "menu": "Menu",
+      "nav": {
+        "dashboard": "Dashboard",
+        "categories": "Categories",
+        "settings": "Settings"
+      },
+      "openMenu": "Open menu",
+      "toggleColorMode": "Toggle color mode"
+    },
+    "footer": {
+      "credits": "Developed by {{author}} - <link>Github</link>"
+    },
+    "categoryModal": {
+      "titleCreate": "Create New Category",
+      "titleEdit": "Edit Category",
+      "descriptionCreate": "Enter a name and choose a color for your new category.",
+      "descriptionEdit": "Enter a name and choose a color for your category.",
+      "fields": {
+        "name": "Category Name",
+        "color": "Color"
+      },
+      "customColor": "Or pick a custom color",
+      "placeholderName": "e.g. Electronics",
+      "buttons": {
+        "create": "Create Category",
+        "update": "Update Category"
+      }
+    },
+    "deleteProductDialog": {
+      "title": "Delete Product",
+      "description": "Are you sure you want to delete <strong>{{name}}</strong>?",
+      "warning": "This action cannot be undone. This will permanently delete the product and all its price history."
+    },
+    "newProductModal": {
+      "title": "Add New Wishlist Item",
+      "fields": {
+        "productUrl": {
+          "label": "Product URL",
+          "helper": "We'll try to fetch the item details automatically."
+        },
+        "priority": "Priority",
+        "itemName": "Item Name",
+        "description": "Description",
+        "category": {
+          "label": "Category",
+          "placeholder": "Select category"
+        },
+        "currency": {
+          "label": "Currency Code",
+          "helper": "Enter a 3-letter <link>ISO 4217 currency code</link> (e.g., EUR, USD, GBP, JPY, MXN, BRL)"
+        }
+      },
+      "ai": {
+        "title": "✨ AI Generated Details",
+        "description": "Review the details below. You can edit them before saving."
+      },
+      "errors": {
+        "urlRequired": {
+          "title": "URL Required",
+          "message": "Please enter a product URL first"
+        },
+        "missingFields": {
+          "title": "Missing Fields",
+          "message": "Please fill in all required fields"
+        },
+        "invalidCategory": {
+          "title": "Invalid Category",
+          "message": "Please select a valid category"
+        },
+        "generationError": {
+          "title": "Generation Error",
+          "message": "Failed to extract product info. Please try again."
+        },
+        "saveError": {
+          "title": "Save Error",
+          "message": "Failed to save product. Please try again."
+        }
+      }
+    }
+  },
+  "pages": {
+    "dashboard": {
+      "hero": {
+        "title": "Add New Product",
+        "subtitle": "Track prices and availability of products you want to buy",
+        "button": "+ Add New Product"
+      },
+      "table": {
+        "title": "Your Wishlist",
+        "columns": {
+          "name": "Product Name",
+          "category": "Category",
+          "priority": "Priority",
+          "currentPrice": "Current Price",
+          "priceChange": "Price Change ({{days}}D)",
+          "stock": "Stock",
+          "actions": "Actions"
+        },
+        "empty": {
+          "title": "No products in your wishlist yet",
+          "subtitle": "Click \"Add New Product\" to start tracking your first item"
+        }
+      },
+      "aria": {
+        "deleteProduct": "Delete product"
+      }
+    },
+    "categories": {
+      "title": "Manage Categories",
+      "subtitle": "Organize your wishlist items into custom categories.",
+      "addSection": {
+        "title": "Add New Category",
+        "button": "Add Category"
+      },
+      "existingSection": {
+        "title": "Existing Categories",
+        "loading": "Loading categories...",
+        "empty": "No categories yet. Create your first category to get started!"
+      },
+      "deleteDialog": {
+        "title": "Delete Category",
+        "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+      },
+      "aria": {
+        "editCategory": "Edit category",
+        "deleteCategory": "Delete category"
+      }
+    },
+    "product": {
+      "error": {
+        "title": "Error"
+      },
+      "errors": {
+        "notFound": "Product not found",
+        "fetchFailed": "Failed to fetch product details"
+      },
+      "description": "Description",
+      "productLink": "Product Link",
+      "price": {
+        "current": "Current Price",
+        "min": "Min price in {{days}} days",
+        "minReached": "Reached on {{date}}"
+      },
+      "priceHistory": {
+        "title": "Price History",
+        "empty": "No price history available yet",
+        "legendPrice": "Price",
+        "tooltipPrice": "Price",
+        "avgReference": "Avg: {{value}} {{currency}}",
+        "minReference": "Min Price"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Configure your application preferences",
+      "sections": {
+        "general": "General",
+        "analysis": "Analysis",
+        "notifications": "Notifications"
+      },
+      "fields": {
+        "language": "Language",
+        "googleApiKey": {
+          "label": "Google AI Studio API Key",
+          "helper": "Required for extracting product information from URLs. Get your key from <link>Google AI Studio</link>."
+        },
+        "analysisHour": {
+          "label": "Analysis Hour",
+          "helper": "The hour of the day (0-23) when the daily analysis will run"
+        },
+        "historicalWindow": {
+          "label": "Historical Window Size",
+          "helper": "Number of days to use for calculating price change trends"
+        },
+        "telegramBotToken": {
+          "label": "Telegram Bot Token",
+          "helper": "Create a bot with @BotFather on Telegram and paste the token here"
+        },
+        "telegramChatId": {
+          "label": "Telegram Chat ID",
+          "helper": "This is your unique chat ID for receiving notifications"
+        }
+      },
+      "alerts": {
+        "priceDrop": {
+          "title": "Price Drop Alerts",
+          "subtitleConfigured": "Receive notifications when product prices drop",
+          "subtitleMissing": "Configure a Telegram bot token first"
+        },
+        "stockChange": {
+          "title": "Stock Change Alerts",
+          "subtitleConfigured": "Receive notifications when product stock status changes",
+          "subtitleMissing": "Configure a Telegram bot token first"
+        }
+      },
+      "startBotModal": {
+        "title": "Start your Telegram bot",
+        "description": "No chat ID was found. To connect your Telegram bot, please follow these steps:",
+        "stepsTitle": "Steps:",
+        "steps": {
+          "one": "1. Open Telegram and search for your bot",
+          "two": "2. Send the command <strong>/start</strong> to the bot",
+          "three": "3. Come back here and click \"Get Chat ID\" again"
+        }
+      },
+      "loading": "Loading settings...",
+      "histWindowOption": "{{days}} days"
+    },
+    "notFound": {
+      "title": "Oops! Page Not Found",
+      "quote": "\"Even our AI couldn't track down this page. Maybe it's on someone else's wishlist?\" 🤔",
+      "actionPrimary": "Go Back Home",
+      "actionSecondary": "Lost? Don't worry, we all get lost sometimes 😊"
+    }
+  },
+  "toasts": {
+    "categories": {
+      "loadError": {
+        "title": "Error loading categories",
+        "description": "Failed to load categories. Please try again."
+      },
+      "createSuccess": {
+        "title": "Category created",
+        "description": "{{name}} has been created successfully."
+      },
+      "createError": {
+        "title": "Error creating category",
+        "description": "Failed to create category. Please try again."
+      },
+      "updateSuccess": {
+        "title": "Category updated",
+        "description": "{{name}} has been updated successfully."
+      },
+      "updateError": {
+        "title": "Error updating category",
+        "description": "Failed to update category. Please try again."
+      },
+      "deleteBlocked": {
+        "title": "Cannot delete category",
+        "description": "This category has associated products. Please remove or reassign them first."
+      },
+      "deleteSuccess": {
+        "title": "Category deleted",
+        "description": "{{name}} has been deleted successfully."
+      },
+      "deleteError": {
+        "title": "Error deleting category",
+        "description": "Failed to delete category. Please try again."
+      }
+    },
+    "settings": {
+      "loadError": {
+        "title": "Error loading settings",
+        "description": "Failed to load settings. Please try again."
+      },
+      "botTokenMissing": {
+        "title": "Bot token not configured",
+        "description": "Please save the bot token first before getting the chat ID."
+      },
+      "chatIdSaved": {
+        "title": "Chat ID saved",
+        "description": "Your Telegram chat ID has been saved successfully."
+      },
+      "chatIdError": {
+        "title": "Error getting chat ID",
+        "description": "Failed to retrieve chat ID. Please try again."
+      },
+      "testMessageSuccess": {
+        "title": "Test message sent",
+        "description": "Check your Telegram for the test message!"
+      },
+      "testMessageError": {
+        "title": "Error sending test message",
+        "description": "Failed to send test message. Please try again."
+      },
+      "saveSuccess": {
+        "title": "Settings saved",
+        "description": "Your settings have been saved successfully."
+      },
+      "saveError": {
+        "title": "Error saving settings",
+        "description": "Failed to save settings. Please try again."
+      }
+    }
+  }
+}

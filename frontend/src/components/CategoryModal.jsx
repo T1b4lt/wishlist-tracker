@@ -11,6 +11,7 @@ import {
   DialogCloseTrigger
 } from '@/components/ui/dialog';
 import { useColorMode } from '@/components/ui/color-mode';
+import { useTranslation } from 'react-i18next';
 
 const PREDEFINED_COLORS = [
   '#EF4444', // red
@@ -33,6 +34,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
   const [customColor, setCustomColor] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { colorMode } = useColorMode();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (category) {
@@ -77,7 +79,9 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {category ? 'Edit Category' : 'Create New Category'}
+            {category
+              ? t('components.categoryModal.titleEdit')
+              : t('components.categoryModal.titleCreate')}
           </DialogTitle>
         </DialogHeader>
         <DialogCloseTrigger />
@@ -87,17 +91,18 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
               fontSize="sm"
               color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
             >
-              Enter a name and choose a color for your{' '}
-              {category ? 'category' : 'new category'}.
+              {category
+                ? t('components.categoryModal.descriptionEdit')
+                : t('components.categoryModal.descriptionCreate')}
             </Text>
 
             {/* Category Name */}
             <Box>
               <Text fontWeight="medium" mb={2}>
-                Category Name
+                {t('components.categoryModal.fields.name')}
               </Text>
               <Input
-                placeholder="e.g. Electronics"
+                placeholder={t('components.categoryModal.placeholderName')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
@@ -107,7 +112,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
             {/* Color Selection */}
             <Box>
               <Text fontWeight="medium" mb={3}>
-                Color
+                {t('components.categoryModal.fields.color')}
               </Text>
               <Grid templateColumns="repeat(6, 1fr)" gap={3} mb={4}>
                 {PREDEFINED_COLORS.map((color) => (
@@ -159,7 +164,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
                   fontSize="sm"
                   color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                 >
-                  Or pick a custom color
+                  {t('components.categoryModal.customColor')}
                 </Text>
               </Flex>
             </Box>
@@ -172,14 +177,16 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
               onClick={handleClose}
               disabled={isLoading}
             >
-              Cancel
+              {t('common.actions.cancel')}
             </Button>
             <Button
               onClick={handleSave}
               disabled={!name.trim() || isLoading}
               loading={isLoading}
             >
-              {category ? 'Update Category' : 'Create Category'}
+              {category
+                ? t('components.categoryModal.buttons.update')
+                : t('components.categoryModal.buttons.create')}
             </Button>
           </Flex>
         </DialogFooter>

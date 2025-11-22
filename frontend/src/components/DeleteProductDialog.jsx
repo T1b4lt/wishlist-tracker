@@ -1,4 +1,4 @@
-import { Button, Portal } from '@chakra-ui/react';
+import { Button, Portal, Text } from '@chakra-ui/react';
 import {
   DialogRoot,
   DialogBackdrop,
@@ -11,36 +11,42 @@ import {
   DialogCloseTrigger
 } from '@/components/ui/dialog';
 import { CloseButton } from '@/components/ui/close-button';
+import { Trans, useTranslation } from 'react-i18next';
 
 const DeleteProductDialog = ({ isOpen, onClose, onConfirm, productName }) => {
+  const { t } = useTranslation();
+
   return (
     <DialogRoot open={isOpen} onOpenChange={(e) => !e.open && onClose()}>
       <Portal>
         <DialogBackdrop />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Product</DialogTitle>
+            <DialogTitle>
+              {t('components.deleteProductDialog.title')}
+            </DialogTitle>
           </DialogHeader>
           <DialogCloseTrigger asChild>
             <CloseButton size="sm" />
           </DialogCloseTrigger>
           <DialogBody>
-            <p>
-              Are you sure you want to delete <strong>{productName}</strong>?
-            </p>
-            <p style={{ marginTop: '8px' }}>
-              This action cannot be undone. This will permanently delete the
-              product and all its price history.
-            </p>
+            <Text>
+              <Trans
+                i18nKey="components.deleteProductDialog.description"
+                values={{ name: productName }}
+                components={{ strong: <strong /> }}
+              />
+            </Text>
+            <Text mt={2}>{t('components.deleteProductDialog.warning')}</Text>
           </DialogBody>
           <DialogFooter>
             <DialogActionTrigger asChild>
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t('common.actions.cancel')}
               </Button>
             </DialogActionTrigger>
             <Button colorPalette="red" onClick={onConfirm}>
-              Delete
+              {t('common.actions.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

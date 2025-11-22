@@ -9,10 +9,12 @@ import {
 } from '@chakra-ui/react';
 import { LuHouse } from 'react-icons/lu';
 import { useColorMode } from '@/components/ui/color-mode';
+import { useTranslation } from 'react-i18next';
 
 const NotFoundPage = () => {
   const [, navigate] = useLocation();
   const { colorMode } = useColorMode();
+  const { t } = useTranslation();
 
   return (
     <Container maxW="container.md" py={20}>
@@ -29,7 +31,7 @@ const NotFoundPage = () => {
         </Heading>
 
         {/* Main Message */}
-        <Heading size="xl">Oops! Page Not Found</Heading>
+        <Heading size="xl">{t('pages.notFound.title')}</Heading>
 
         {/* Funny Messages */}
         <Box
@@ -43,21 +45,20 @@ const NotFoundPage = () => {
             color={colorMode === 'light' ? 'gray.700' : 'gray.300'}
             fontStyle="italic"
           >
-            "Even our AI couldn't track down this page. Maybe it's on someone
-            else's wishlist?" 🤔
+            {t('pages.notFound.quote')}
           </Text>
         </Box>
 
         {/* Action Buttons */}
         <VStack gap={3} pt={4}>
           <Button size="lg" onClick={() => navigate('/')}>
-            <LuHouse /> Go Back Home
+            <LuHouse /> {t('pages.notFound.actionPrimary')}
           </Button>
           <Text
             fontSize="sm"
             color={colorMode === 'light' ? 'gray.500' : 'gray.500'}
           >
-            Lost? Don't worry, we all get lost sometimes 😊
+            {t('pages.notFound.actionSecondary')}
           </Text>
         </VStack>
       </VStack>

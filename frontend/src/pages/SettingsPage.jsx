@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -10,7 +10,8 @@ import {
   Flex,
   createListCollection,
   HStack,
-  Stack
+  Stack,
+  Link
 } from '@chakra-ui/react';
 import {
   LuSave,
@@ -40,16 +41,10 @@ import {
   DialogTitle,
   DialogCloseTrigger
 } from '@/components/ui/dialog';
+import { Trans, useTranslation } from 'react-i18next';
+import { persistLanguagePreference, SUPPORTED_LANGUAGES } from '@/i18n';
 
 const API_URL = 'http://localhost:8000';
-
-// Create collections for selects
-const languageCollection = createListCollection({
-  items: [
-    { label: 'English', value: 'english' },
-    { label: 'Spanish', value: 'spanish' }
-  ]
-});
 
 const hourCollection = createListCollection({
   items: Array.from({ length: 24 }, (_, i) => ({
@@ -58,15 +53,12 @@ const hourCollection = createListCollection({
   }))
 });
 
-const histWindowSizeOptions = [
-  { label: '30 days', value: '30' },
-  { label: '60 days', value: '60' },
-  { label: '90 days', value: '90' },
-  { label: '180 days', value: '180' }
-];
+const histWindowSizeValues = [30, 60, 90, 180];
 
 const SettingsPage = () => {
   const { colorMode } = useColorMode();
+  const { t, i18n } = useTranslation();
+  const linkColor = colorMode === 'light' ? 'blue.600' : 'blue.300';
   const [isLoading, setIsLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -89,7 +81,37 @@ const SettingsPage = () => {
   const [isSendingTestMessage, setIsSendingTestMessage] = useState(false);
   const [showStartBotModal, setShowStartBotModal] = useState(false);
 
-  // Fetch configuration
+  const languageCollection = useMemo(
+    () =>
+      createListCollection({
+        items: SUPPORTED_LANGUAGES.map((language) => ({
+          label: t(`common.language.${language}`),
+          value: language
+        }))
+      }),
+    [t]
+  );
+
+  const histWindowSizeOptions = useMemo(
+    () =>
+      histWindowSizeValues.map((value) => ({
+        label: t('pages.settings.histWindowOption', { days: value }),
+        value: value.toString()
+      })),
+    [t]
+  );
+
+  const applyLanguagePreference = useCallback(
+    (language, shouldPersist = false) => {
+      if (!language) return;
+      i18n.changeLanguage(language);
+      if (shouldPersist) {
+        persistLanguagePreference(language);
+      }
+    },
+    [i18n]
+  );
+
   const fetchConfig = async () => {
     try {
       const response = await fetch(`${API_URL}/config/`);
@@ -109,11 +131,12 @@ const SettingsPage = () => {
 
       // Store original values
       setOriginalConfig(data);
+      applyLanguagePreference(data.selected_language, true);
     } catch (error) {
       console.error('Error fetching configuration:', error);
       toaster.create({
-        title: 'Error loading settings',
-        description: 'Failed to load settings. Please try again.',
+        title: t('toasts.settings.loadError.title'),
+        description: t('toasts.settings.loadError.description'),
         type: 'error'
       });
     } finally {
@@ -158,9 +181,8 @@ const SettingsPage = () => {
 
       if (response.status === 400) {
         toaster.create({
-          title: 'Bot token not configured',
-          description:
-            'Please save the bot token first before getting the chat ID.',
+          title: t('toasts.settings.botTokenMissing.title'),
+          description: t('toasts.settings.botTokenMissing.description'),
           type: 'error'
         });
         return;
@@ -179,15 +201,16 @@ const SettingsPage = () => {
       await fetchConfig();
 
       toaster.create({
-        title: 'Chat ID saved',
-        description: 'Your Telegram chat ID has been saved successfully.',
+        title: t('toasts.settings.chatIdSaved.title'),
+        description: t('toasts.settings.chatIdSaved.description'),
         type: 'success'
       });
     } catch (error) {
       console.error('Error getting chat ID:', error);
       toaster.create({
-        title: 'Error getting chat ID',
-        description: 'Failed to retrieve chat ID. Please try again.',
+        title: t('toasts.settings.chatIdError.title'),
+        description:
+          error.message || t('toasts.settings.chatIdError.description'),
         type: 'error'
       });
     } finally {
@@ -209,16 +232,16 @@ const SettingsPage = () => {
       }
 
       toaster.create({
-        title: 'Test message sent',
-        description: 'Check your Telegram for the test message!',
+        title: t('toasts.settings.testMessageSuccess.title'),
+        description: t('toasts.settings.testMessageSuccess.description'),
         type: 'success'
       });
     } catch (error) {
       console.error('Error sending test message:', error);
       toaster.create({
-        title: 'Error sending test message',
+        title: t('toasts.settings.testMessageError.title'),
         description:
-          error.message || 'Failed to send test message. Please try again.',
+          error.message || t('toasts.settings.testMessageError.description'),
         type: 'error'
       });
     } finally {
@@ -249,17 +272,18 @@ const SettingsPage = () => {
       const data = await response.json();
       setOriginalConfig(data);
       setHasChanges(false);
+      applyLanguagePreference(data.selected_language, true);
 
       toaster.create({
-        title: 'Settings saved',
-        description: 'Your settings have been saved successfully.',
+        title: t('toasts.settings.saveSuccess.title'),
+        description: t('toasts.settings.saveSuccess.description'),
         type: 'success'
       });
     } catch (error) {
       console.error('Error saving configuration:', error);
       toaster.create({
-        title: 'Error saving settings',
-        description: 'Failed to save settings. Please try again.',
+        title: t('toasts.settings.saveError.title'),
+        description: t('toasts.settings.saveError.description'),
         type: 'error'
       });
     } finally {
@@ -270,7 +294,7 @@ const SettingsPage = () => {
   if (isLoading) {
     return (
       <Container maxW="container.xl" py={8}>
-        <Text>Loading settings...</Text>
+        <Text>{t('pages.settings.loading')}</Text>
       </Container>
     );
   }
@@ -281,10 +305,10 @@ const SettingsPage = () => {
         {/* Header */}
         <Box>
           <Heading size="2xl" mb={2}>
-            Settings
+            {t('pages.settings.title')}
           </Heading>
           <Text color={colorMode === 'light' ? 'gray.600' : 'gray.400'}>
-            Configure your application preferences
+            {t('pages.settings.subtitle')}
           </Text>
         </Box>
 
@@ -297,18 +321,25 @@ const SettingsPage = () => {
           bg={colorMode === 'light' ? 'white' : 'gray.900'}
         >
           <Heading size="lg" mb={4}>
-            General
+            {t('pages.settings.sections.general')}
           </Heading>
 
-          <Field label="Language" mb={4}>
+          <Field label={t('pages.settings.fields.language')} mb={4}>
             <SelectRoot
               collection={languageCollection}
               value={[selectedLanguage]}
-              onValueChange={(details) => setSelectedLanguage(details.value[0])}
+              onValueChange={(details) => {
+                const nextLanguage = details.value[0];
+                if (!nextLanguage) return;
+                setSelectedLanguage(nextLanguage);
+                applyLanguagePreference(nextLanguage);
+              }}
               size="md"
             >
               <SelectTrigger>
-                <SelectValueText placeholder="Select language" />
+                <SelectValueText
+                  placeholder={t('common.placeholders.selectLanguage')}
+                />
               </SelectTrigger>
               <SelectContent>
                 {languageCollection.items.map((item) => (
@@ -321,30 +352,29 @@ const SettingsPage = () => {
           </Field>
 
           <Field
-            label="Google AI Studio API Key"
+            label={t('pages.settings.fields.googleApiKey.label')}
             helperText={
-              <>
-                Required for extracting product information from URLs. Get your
-                key from{' '}
-                <a
-                  href="https://aistudio.google.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: colorMode === 'light' ? '#3182ce' : '#63b3ed',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  Google AI Studio
-                </a>
-                .
-              </>
+              <Trans
+                i18nKey="pages.settings.fields.googleApiKey.helper"
+                components={{
+                  link: (
+                    <Link
+                      href="https://aistudio.google.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      isExternal
+                      color={linkColor}
+                      textDecoration="underline"
+                    />
+                  )
+                }}
+              />
             }
           >
             <Input
               value={googleApiKey}
               onChange={(e) => setGoogleApiKey(e.target.value)}
-              placeholder="Enter your Google AI Studio API key"
+              placeholder={t('common.placeholders.googleApiKey')}
               type="password"
             />
           </Field>
@@ -359,12 +389,12 @@ const SettingsPage = () => {
           bg={colorMode === 'light' ? 'white' : 'gray.900'}
         >
           <Heading size="lg" mb={4}>
-            Analysis
+            {t('pages.settings.sections.analysis')}
           </Heading>
 
           <Field
-            label="Analysis Hour"
-            helperText="The hour of the day (0-23) when the daily analysis will run"
+            label={t('pages.settings.fields.analysisHour.label')}
+            helperText={t('pages.settings.fields.analysisHour.helper')}
           >
             <SelectRoot
               collection={hourCollection}
@@ -375,7 +405,9 @@ const SettingsPage = () => {
               size="md"
             >
               <SelectTrigger>
-                <SelectValueText placeholder="Select hour" />
+                <SelectValueText
+                  placeholder={t('common.placeholders.selectHour')}
+                />
               </SelectTrigger>
               <SelectContent>
                 {hourCollection.items.map((item) => (
@@ -388,14 +420,14 @@ const SettingsPage = () => {
           </Field>
 
           <Field
-            label="Historical Window Size"
-            helperText="Number of days to use for calculating price change trends"
+            label={t('pages.settings.fields.historicalWindow.label')}
+            helperText={t('pages.settings.fields.historicalWindow.helper')}
             mt={4}
           >
             <SegmentedControl
               items={histWindowSizeOptions}
               value={histWindowSize.toString()}
-              onValueChange={(e) => setHistWindowSize(parseInt(e.value))}
+              onValueChange={(e) => setHistWindowSize(parseInt(e.value, 10))}
               size="md"
             />
           </Field>
@@ -410,7 +442,7 @@ const SettingsPage = () => {
           bg={colorMode === 'light' ? 'white' : 'gray.900'}
         >
           <Heading size="lg" mb={4}>
-            Notifications
+            {t('pages.settings.sections.notifications')}
           </Heading>
 
           <VStack gap={6} align="stretch">
@@ -420,15 +452,15 @@ const SettingsPage = () => {
               direction={{ base: 'column', md: 'row' }}
             >
               <Field
-                label="Telegram Bot Token"
-                helperText="Create a bot with @BotFather on Telegram and paste the token here"
+                label={t('pages.settings.fields.telegramBotToken.label')}
+                helperText={t('pages.settings.fields.telegramBotToken.helper')}
                 flex={1}
               >
                 <HStack gap={2}>
                   <Input
                     value={telegramBotString}
                     onChange={(e) => setTelegramBotString(e.target.value)}
-                    placeholder="Enter your Telegram bot token"
+                    placeholder={t('common.placeholders.telegramBotToken')}
                     flex={1}
                   />
                   {telegramBotString && (
@@ -438,7 +470,7 @@ const SettingsPage = () => {
                       disabled={isGettingChatId}
                       size="md"
                     >
-                      <LuDownload /> Get Chat ID
+                      <LuDownload /> {t('common.actions.getChatId')}
                     </Button>
                   )}
                 </HStack>
@@ -446,8 +478,8 @@ const SettingsPage = () => {
 
               {telegramBotChatId && (
                 <Field
-                  label="Telegram Chat ID"
-                  helperText="This is your unique chat ID for receiving notifications"
+                  label={t('pages.settings.fields.telegramChatId.label')}
+                  helperText={t('pages.settings.fields.telegramChatId.helper')}
                   flex={1}
                 >
                   <HStack gap={2}>
@@ -459,7 +491,7 @@ const SettingsPage = () => {
                       size="md"
                       colorScheme="blue"
                     >
-                      <LuSend /> Test Bot
+                      <LuSend /> {t('common.actions.testBot')}
                     </Button>
                   </HStack>
                 </Field>
@@ -489,15 +521,15 @@ const SettingsPage = () => {
                 </Box>
                 <Box>
                   <Text fontWeight="medium" mb={1}>
-                    Price Drop Alerts
+                    {t('pages.settings.alerts.priceDrop.title')}
                   </Text>
                   <Text
                     fontSize="sm"
                     color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                   >
-                    {!telegramBotString
-                      ? 'Configure a Telegram bot token first'
-                      : 'Receive notifications when product prices drop'}
+                    {telegramBotString
+                      ? t('pages.settings.alerts.priceDrop.subtitleConfigured')
+                      : t('pages.settings.alerts.priceDrop.subtitleMissing')}
                   </Text>
                 </Box>
               </Flex>
@@ -532,15 +564,17 @@ const SettingsPage = () => {
                 </Box>
                 <Box>
                   <Text fontWeight="medium" mb={1}>
-                    Stock Change Alerts
+                    {t('pages.settings.alerts.stockChange.title')}
                   </Text>
                   <Text
                     fontSize="sm"
                     color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                   >
-                    {!telegramBotString
-                      ? 'Configure a Telegram bot token first'
-                      : 'Receive notifications when product stock status changes'}
+                    {telegramBotString
+                      ? t(
+                          'pages.settings.alerts.stockChange.subtitleConfigured'
+                        )
+                      : t('pages.settings.alerts.stockChange.subtitleMissing')}
                   </Text>
                 </Box>
               </Flex>
@@ -562,7 +596,7 @@ const SettingsPage = () => {
             disabled={!hasChanges || isSaving}
             loading={isSaving}
           >
-            <LuSave /> Save
+            <LuSave /> {t('common.actions.save')}
           </Button>
         </Flex>
       </VStack>
@@ -574,35 +608,37 @@ const SettingsPage = () => {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Start your Telegram bot</DialogTitle>
+            <DialogTitle>{t('pages.settings.startBotModal.title')}</DialogTitle>
           </DialogHeader>
           <DialogCloseTrigger />
           <DialogBody>
             <VStack gap={4} align="stretch">
-              <Text>
-                No chat ID was found. To connect your Telegram bot, please
-                follow these steps:
-              </Text>
+              <Text>{t('pages.settings.startBotModal.description')}</Text>
               <Box
                 p={4}
                 borderRadius="md"
                 bg={colorMode === 'light' ? 'gray.50' : 'gray.800'}
               >
                 <Text fontWeight="medium" mb={2}>
-                  Steps:
+                  {t('pages.settings.startBotModal.stepsTitle')}
                 </Text>
                 <VStack align="stretch" gap={2}>
-                  <Text>1. Open Telegram and search for your bot</Text>
+                  <Text>{t('pages.settings.startBotModal.steps.one')}</Text>
                   <Text>
-                    2. Send the command <strong>/start</strong> to the bot
+                    <Trans
+                      i18nKey="pages.settings.startBotModal.steps.two"
+                      components={{ strong: <strong /> }}
+                    />
                   </Text>
-                  <Text>3. Come back here and click "Get Chat ID" again</Text>
+                  <Text>{t('pages.settings.startBotModal.steps.three')}</Text>
                 </VStack>
               </Box>
             </VStack>
           </DialogBody>
           <DialogFooter>
-            <Button onClick={() => setShowStartBotModal(false)}>Got it</Button>
+            <Button onClick={() => setShowStartBotModal(false)}>
+              {t('common.actions.gotIt')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </DialogRoot>

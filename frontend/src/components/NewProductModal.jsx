@@ -8,7 +8,7 @@ import {
   Text,
   VStack,
   Spinner,
-  Link,
+  Link as ChakraLink,
   createListCollection
 } from '@chakra-ui/react';
 import {
@@ -32,14 +32,9 @@ import { Field } from '@/components/ui/field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useColorMode } from '@/components/ui/color-mode';
 import { LuSparkles } from 'react-icons/lu';
+import { Trans, useTranslation } from 'react-i18next';
 
 const API_URL = 'http://localhost:8000';
-
-const priorityOptions = [
-  { label: 'High', value: 'High' },
-  { label: 'Medium', value: 'Medium' },
-  { label: 'Low', value: 'Low' }
-];
 
 const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [url, setUrl] = useState('');
@@ -53,6 +48,15 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { colorMode } = useColorMode();
+  const { t } = useTranslation();
+  const priorityOptions = useMemo(
+    () => [
+      { label: t('common.priority.high'), value: 'High' },
+      { label: t('common.priority.medium'), value: 'Medium' },
+      { label: t('common.priority.low'), value: 'Low' }
+    ],
+    [t]
+  );
 
   // Error dialog state
   const [errorDialog, setErrorDialog] = useState({
@@ -92,8 +96,8 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
     if (!url.trim()) {
       setErrorDialog({
         isOpen: true,
-        title: 'URL Required',
-        message: 'Please enter a product URL first'
+        title: t('components.newProductModal.errors.urlRequired.title'),
+        message: t('components.newProductModal.errors.urlRequired.message')
       });
       return;
     }
@@ -123,8 +127,10 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
       console.error('Error generating details:', error);
       setErrorDialog({
         isOpen: true,
-        title: 'Generation Error',
-        message: error.message
+        title: t('components.newProductModal.errors.generationError.title'),
+        message:
+          error.message ||
+          t('components.newProductModal.errors.generationError.message')
       });
     } finally {
       setIsGenerating(false);
@@ -135,8 +141,8 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
     if (!url.trim() || !name.trim() || !category) {
       setErrorDialog({
         isOpen: true,
-        title: 'Missing Fields',
-        message: 'Please fill in all required fields'
+        title: t('components.newProductModal.errors.missingFields.title'),
+        message: t('components.newProductModal.errors.missingFields.message')
       });
       return;
     }
@@ -146,8 +152,8 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
     if (!selectedCategory) {
       setErrorDialog({
         isOpen: true,
-        title: 'Invalid Category',
-        message: 'Please select a valid category'
+        title: t('components.newProductModal.errors.invalidCategory.title'),
+        message: t('components.newProductModal.errors.invalidCategory.message')
       });
       return;
     }
@@ -169,8 +175,8 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
       console.error('Error saving product:', error);
       setErrorDialog({
         isOpen: true,
-        title: 'Save Error',
-        message: 'Failed to save product. Please try again.'
+        title: t('components.newProductModal.errors.saveError.title'),
+        message: t('components.newProductModal.errors.saveError.message')
       });
     } finally {
       setIsLoading(false);
@@ -197,19 +203,21 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
       <DialogBackdrop />
       <DialogContent maxW="600px">
         <DialogHeader>
-          <DialogTitle>Add New Wishlist Item</DialogTitle>
+          <DialogTitle>{t('components.newProductModal.title')}</DialogTitle>
         </DialogHeader>
         <DialogCloseTrigger />
         <DialogBody>
           <VStack gap={4} align="stretch">
             {/* Product URL */}
             <Field
-              label="Product URL"
-              helperText="We'll try to fetch the item details automatically."
+              label={t('components.newProductModal.fields.productUrl.label')}
+              helperText={t(
+                'components.newProductModal.fields.productUrl.helper'
+              )}
               required
             >
               <Input
-                placeholder="https://example.com/product..."
+                placeholder={t('common.placeholders.productUrl')}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={isGenerating || isLoading}
@@ -217,7 +225,10 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
             </Field>
 
             {/* Priority */}
-            <Field label="Priority" required>
+            <Field
+              label={t('components.newProductModal.fields.priority')}
+              required
+            >
               <SegmentedControl
                 items={priorityOptions}
                 value={priority}
@@ -238,12 +249,12 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
               {isGenerating ? (
                 <Flex align="center" gap={2}>
                   <Spinner size="sm" />
-                  <Text>Generating...</Text>
+                  <Text>{t('common.actions.generating')}</Text>
                 </Flex>
               ) : (
                 <Flex align="center" gap={2}>
                   <LuSparkles />
-                  <Text> Generate Details</Text>
+                  <Text>{t('common.actions.generateDetails')}</Text>
                 </Flex>
               )}
             </Button>
@@ -259,7 +270,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
               >
                 <Flex align="center" gap={2} mb={3}>
                   <Text fontSize="sm" fontWeight="bold" color="blue.500">
-                    ✨ AI Generated Details
+                    {t('components.newProductModal.ai.title')}
                   </Text>
                 </Flex>
                 <Text
@@ -267,12 +278,15 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                   color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                   mb={3}
                 >
-                  Review the details below. You can edit them before saving.
+                  {t('components.newProductModal.ai.description')}
                 </Text>
 
                 <VStack gap={3} align="stretch">
                   {/* Item Name */}
-                  <Field label="Item Name" required>
+                  <Field
+                    label={t('components.newProductModal.fields.itemName')}
+                    required
+                  >
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -281,7 +295,9 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                   </Field>
 
                   {/* Description */}
-                  <Field label="Description">
+                  <Field
+                    label={t('components.newProductModal.fields.description')}
+                  >
                     <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
@@ -291,7 +307,12 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                   </Field>
 
                   {/* Category */}
-                  <Field label="Category" required>
+                  <Field
+                    label={t(
+                      'components.newProductModal.fields.category.label'
+                    )}
+                    required
+                  >
                     <SelectRoot
                       collection={categoryCollection}
                       value={[category]}
@@ -300,7 +321,11 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                       size="md"
                     >
                       <SelectTrigger>
-                        <SelectValueText placeholder="Select category" />
+                        <SelectValueText
+                          placeholder={t(
+                            'components.newProductModal.fields.category.placeholder'
+                          )}
+                        />
                       </SelectTrigger>
                       <SelectContent portalled={false}>
                         {categoryCollection.items.map((item) => (
@@ -314,26 +339,29 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
 
                   {/* Currency */}
                   <Field
-                    label="Currency Code"
+                    label={t(
+                      'components.newProductModal.fields.currency.label'
+                    )}
                     helperText={
-                      <>
-                        Enter a 3-letter{' '}
-                        <Link
-                          href="https://en.wikipedia.org/wiki/ISO_4217#List_of_ISO_4217_currency_codes"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          color="blue.500"
-                          textDecoration="underline"
-                        >
-                          ISO 4217 currency code
-                        </Link>{' '}
-                        (e.g., EUR, USD, GBP, JPY, MXN, BRL)
-                      </>
+                      <Trans
+                        i18nKey="components.newProductModal.fields.currency.helper"
+                        components={{
+                          link: (
+                            <ChakraLink
+                              href="https://en.wikipedia.org/wiki/ISO_4217#List_of_ISO_4217_currency_codes"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              color="blue.500"
+                              textDecoration="underline"
+                            />
+                          )
+                        }}
+                      />
                     }
                     required
                   >
                     <Input
-                      placeholder="e.g., EUR, USD, GBP, MXN"
+                      placeholder={t('common.placeholders.currencyCode')}
                       value={currency}
                       onChange={(e) =>
                         setCurrency(e.target.value.toUpperCase().trim())
@@ -355,14 +383,16 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
               onClick={handleClose}
               disabled={isGenerating || isLoading}
             >
-              Cancel
+              {t('common.actions.cancel')}
             </Button>
             <Button
               colorScheme="blue"
               onClick={handleSave}
               disabled={!hasGenerated || isGenerating || isLoading}
             >
-              {isLoading ? 'Saving...' : 'Save Item'}
+              {isLoading
+                ? t('common.actions.saving')
+                : t('common.actions.saveItem')}
             </Button>
           </Flex>
         </DialogFooter>
@@ -389,7 +419,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
               onClick={() => setErrorDialog({ ...errorDialog, isOpen: false })}
               colorScheme="blue"
             >
-              OK
+              {t('common.actions.ok')}
             </Button>
           </DialogFooter>
         </DialogContent>

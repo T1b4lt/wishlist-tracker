@@ -24,6 +24,7 @@ import {
   DialogBackdrop,
   DialogCloseTrigger
 } from '@/components/ui/dialog';
+import { useTranslation, Trans } from 'react-i18next';
 
 const API_URL = 'http://localhost:8000';
 
@@ -40,6 +41,7 @@ const CategoriesPage = () => {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   const { colorMode } = useColorMode();
+  const { t } = useTranslation();
 
   // Fetch categories
   const fetchCategories = async () => {
@@ -51,8 +53,8 @@ const CategoriesPage = () => {
     } catch (error) {
       console.error('Error fetching categories:', error);
       toaster.create({
-        title: 'Error loading categories',
-        description: 'Failed to load categories. Please try again.',
+        title: t('toasts.categories.loadError.title'),
+        description: t('toasts.categories.loadError.description'),
         type: 'error'
       });
     } finally {
@@ -76,8 +78,10 @@ const CategoriesPage = () => {
       if (!response.ok) throw new Error('Failed to create category');
 
       toaster.create({
-        title: 'Category created',
-        description: `${categoryData.name} has been created successfully.`,
+        title: t('toasts.categories.createSuccess.title'),
+        description: t('toasts.categories.createSuccess.description', {
+          name: categoryData.name
+        }),
         type: 'success'
       });
 
@@ -85,8 +89,8 @@ const CategoriesPage = () => {
     } catch (error) {
       console.error('Error creating category:', error);
       toaster.create({
-        title: 'Error creating category',
-        description: 'Failed to create category. Please try again.',
+        title: t('toasts.categories.createError.title'),
+        description: t('toasts.categories.createError.description'),
         type: 'error'
       });
       throw error;
@@ -108,8 +112,10 @@ const CategoriesPage = () => {
       if (!response.ok) throw new Error('Failed to update category');
 
       toaster.create({
-        title: 'Category updated',
-        description: `${categoryData.name} has been updated successfully.`,
+        title: t('toasts.categories.updateSuccess.title'),
+        description: t('toasts.categories.updateSuccess.description', {
+          name: categoryData.name
+        }),
         type: 'success'
       });
 
@@ -117,8 +123,8 @@ const CategoriesPage = () => {
     } catch (error) {
       console.error('Error updating category:', error);
       toaster.create({
-        title: 'Error updating category',
-        description: 'Failed to update category. Please try again.',
+        title: t('toasts.categories.updateError.title'),
+        description: t('toasts.categories.updateError.description'),
         type: 'error'
       });
       throw error;
@@ -139,9 +145,8 @@ const CategoriesPage = () => {
 
       if (response.status === 400) {
         toaster.create({
-          title: 'Cannot delete category',
-          description:
-            'This category has associated products. Please remove or reassign them first.',
+          title: t('toasts.categories.deleteBlocked.title'),
+          description: t('toasts.categories.deleteBlocked.description'),
           type: 'error',
           duration: 5000
         });
@@ -153,8 +158,10 @@ const CategoriesPage = () => {
       if (!response.ok) throw new Error('Failed to delete category');
 
       toaster.create({
-        title: 'Category deleted',
-        description: `${categoryToDelete.name} has been deleted successfully.`,
+        title: t('toasts.categories.deleteSuccess.title'),
+        description: t('toasts.categories.deleteSuccess.description', {
+          name: categoryToDelete.name
+        }),
         type: 'success'
       });
 
@@ -162,8 +169,8 @@ const CategoriesPage = () => {
     } catch (error) {
       console.error('Error deleting category:', error);
       toaster.create({
-        title: 'Error deleting category',
-        description: 'Failed to delete category. Please try again.',
+        title: t('toasts.categories.deleteError.title'),
+        description: t('toasts.categories.deleteError.description'),
         type: 'error'
       });
     } finally {
@@ -216,10 +223,10 @@ const CategoriesPage = () => {
         {/* Header */}
         <Box>
           <Heading size="2xl" mb={2}>
-            Manage Categories
+            {t('pages.categories.title')}
           </Heading>
           <Text color={colorMode === 'light' ? 'gray.600' : 'gray.400'}>
-            Organize your wishlist items into custom categories.
+            {t('pages.categories.subtitle')}
           </Text>
         </Box>
 
@@ -233,10 +240,12 @@ const CategoriesPage = () => {
         >
           <Flex justify="space-between" align="center">
             <Box>
-              <Heading size="lg">Add New Category</Heading>
+              <Heading size="lg">
+                {t('pages.categories.addSection.title')}
+              </Heading>
             </Box>
             <Button size="lg" onClick={handleOpenCreateModal}>
-              <LuPlus /> Add Category
+              <LuPlus /> {t('pages.categories.addSection.button')}
             </Button>
           </Flex>
         </Box>
@@ -244,11 +253,11 @@ const CategoriesPage = () => {
         {/* Existing Categories */}
         <Box>
           <Heading size="lg" mb={4}>
-            Existing Categories
+            {t('pages.categories.existingSection.title')}
           </Heading>
 
           {isLoading ? (
-            <Text>Loading categories...</Text>
+            <Text>{t('pages.categories.existingSection.loading')}</Text>
           ) : categories.length === 0 ? (
             <Box
               p={8}
@@ -259,7 +268,7 @@ const CategoriesPage = () => {
               borderColor={colorMode === 'light' ? 'gray.300' : 'gray.600'}
             >
               <Text color={colorMode === 'light' ? 'gray.500' : 'gray.400'}>
-                No categories yet. Create your first category to get started!
+                {t('pages.categories.existingSection.empty')}
               </Text>
             </Box>
           ) : (
@@ -295,7 +304,7 @@ const CategoriesPage = () => {
                     </Flex>
                     <Flex gap={2}>
                       <IconButton
-                        aria-label="Edit category"
+                        aria-label={t('pages.categories.aria.editCategory')}
                         variant="ghost"
                         size="sm"
                         onClick={() => handleOpenEditModal(category)}
@@ -303,7 +312,7 @@ const CategoriesPage = () => {
                         <LuPencil />
                       </IconButton>
                       <IconButton
-                        aria-label="Delete category"
+                        aria-label={t('pages.categories.aria.deleteCategory')}
                         variant="ghost"
                         colorPalette="red"
                         size="sm"
@@ -336,25 +345,27 @@ const CategoriesPage = () => {
         <DialogBackdrop />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Category</DialogTitle>
+            <DialogTitle>
+              {t('pages.categories.deleteDialog.title')}
+            </DialogTitle>
           </DialogHeader>
           <DialogCloseTrigger />
           <DialogBody>
             <Text>
-              Are you sure you want to delete{' '}
-              <Text as="span" fontWeight="bold">
-                "{categoryToDelete?.name}"
-              </Text>
-              ? This action cannot be undone.
+              <Trans
+                i18nKey="pages.categories.deleteDialog.message"
+                values={{ name: categoryToDelete?.name }}
+                components={{ strong: <strong /> }}
+              />
             </Text>
           </DialogBody>
           <DialogFooter>
             <Flex gap={3}>
               <Button variant="outline" onClick={handleCloseDeleteModal}>
-                Cancel
+                {t('common.actions.cancel')}
               </Button>
               <Button colorPalette="red" onClick={handleConfirmDelete}>
-                Delete
+                {t('common.actions.delete')}
               </Button>
             </Flex>
           </DialogFooter>
