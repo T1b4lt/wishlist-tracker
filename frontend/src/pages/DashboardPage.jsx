@@ -18,7 +18,7 @@ import { Tag } from '@/components/ui/tag';
 import NewProductModal from '@/components/NewProductModal';
 import DeleteProductDialog from '@/components/DeleteProductDialog';
 import { LuTrash2 } from 'react-icons/lu';
-import { getCurrencySymbol } from '@/lib/web_utils';
+import { getCurrencySymbol, getPriorityLabel } from '@/lib/web_utils';
 import { useTranslation } from 'react-i18next';
 
 const API_URL = 'http://localhost:8000';
@@ -130,19 +130,6 @@ const DashboardPage = () => {
         return 'green';
       default:
         return 'gray';
-    }
-  };
-
-  const getPriorityLabel = (priority) => {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return t('common.priority.high');
-      case 'medium':
-        return t('common.priority.medium');
-      case 'low':
-        return t('common.priority.low');
-      default:
-        return priority;
     }
   };
 
@@ -275,7 +262,7 @@ const DashboardPage = () => {
                           size="sm"
                           colorPalette={getPriorityColor(product.priority)}
                         >
-                          {getPriorityLabel(product.priority)}
+                          {getPriorityLabel(product.priority, t)}
                         </Tag>
                       </Table.Cell>
                       <Table.Cell textAlign="end">

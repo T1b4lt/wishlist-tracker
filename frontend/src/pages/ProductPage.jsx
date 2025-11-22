@@ -14,7 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { Tag } from '@/components/ui/tag';
 import { LuArrowLeft, LuExternalLink } from 'react-icons/lu';
-import { getCurrencySymbol } from '@/lib/web_utils';
+import { getCurrencySymbol, getPriorityLabel } from '@/lib/web_utils';
 import {
   CartesianGrid,
   Line,
@@ -260,18 +260,7 @@ const ProductPage = () => {
               {product.category_name}
             </Tag>
             <Tag size="md" colorPalette={getPriorityColor(product.priority)}>
-              {(() => {
-                switch (product.priority.toLowerCase()) {
-                  case 'high':
-                    return t('common.priority.high');
-                  case 'medium':
-                    return t('common.priority.medium');
-                  case 'low':
-                    return t('common.priority.low');
-                  default:
-                    return product.priority;
-                }
-              })()}
+              {getPriorityLabel(product.priority, t)}
             </Tag>
             <Tag size="md" colorPalette={product.is_in_stock ? 'green' : 'red'}>
               {product.is_in_stock

@@ -15,3 +15,32 @@ export const getCurrencySymbol = (currency) => {
   };
   return currencySymbols[currency?.toUpperCase()] || currency || '$';
 };
+
+/**
+ * Get the translated label for a priority value
+ * @param {string} priority - Product priority value
+ * @param {Function} translate - i18n translate function
+ * @returns {string} Translated priority label or original value when missing
+ */
+export const getPriorityLabel = (priority, translate) => {
+  if (!priority) return '';
+
+  const keyMap = {
+    high: 'common.priority.high',
+    medium: 'common.priority.medium',
+    low: 'common.priority.low'
+  };
+
+  const normalizedPriority = priority.toLowerCase();
+  const translationKey = keyMap[normalizedPriority];
+
+  if (translationKey && typeof translate === 'function') {
+    return translate(translationKey);
+  }
+
+  if (translationKey) {
+    return normalizedPriority.charAt(0).toUpperCase() + normalizedPriority.slice(1);
+  }
+
+  return priority;
+};
