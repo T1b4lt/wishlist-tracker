@@ -10,7 +10,6 @@ import {
   DialogActionTrigger,
   DialogCloseTrigger
 } from '@/components/ui/dialog';
-import { CloseButton } from '@/components/ui/close-button';
 import { Trans, useTranslation } from 'react-i18next';
 
 const DeleteProductDialog = ({ isOpen, onClose, onConfirm, productName }) => {
@@ -26,9 +25,7 @@ const DeleteProductDialog = ({ isOpen, onClose, onConfirm, productName }) => {
               {t('components.deleteProductDialog.title')}
             </DialogTitle>
           </DialogHeader>
-          <DialogCloseTrigger asChild>
-            <CloseButton size="sm" />
-          </DialogCloseTrigger>
+          <DialogCloseTrigger />
           <DialogBody>
             <Text>
               <Trans
