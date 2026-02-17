@@ -1,6 +1,6 @@
+from sqlalchemy import event
 import os
 import sys
-
 
 from pydantic import BaseModel
 from typing import Annotated
@@ -14,8 +14,42 @@ from src.stagehand_utils import get_product_info
 from src.telegram_utils import get_chat_id, send_test_message
 
 
+# --- Config helpers ---
+
+def get_config_value(session: Session, key: str, default: str = "") -> str:
+    """Retrieve a configuration value from the database.
+
+    Args:
+        session (Session): The database session.
+        key (str): The configuration key to look up.
+        default (str): The default value if the key is not found.
+
+    Returns:
+        str: The configuration value, or the default.
+    """
+    config = session.exec(select(Config).where(Config.key == key)).first()
+    return config.value if config else default
+
+
+def set_config_value(session: Session, key: str, value: str) -> None:
+    """Create or update a configuration value in the database.
+
+    Args:
+        session (Session): The database session.
+        key (str): The configuration key.
+        value (str): The value to set.
+    """
+    config = session.exec(select(Config).where(Config.key == key)).first()
+    if config:
+        config.value = value
+    else:
+        session.add(Config(key=key, value=value))
+
+
+# --- Request / Response schemas ---
+
 class ConfigUpdate(BaseModel):
-    analysys_hour: int | None = None
+    analysis_hour: int | None = None
     hist_window_size: int | None = None
     is_price_drop_alert: bool | None = None
     is_stock_change_alert: bool | None = None
@@ -26,7 +60,7 @@ class ConfigUpdate(BaseModel):
 
 
 class ConfigResponse(BaseModel):
-    analysys_hour: int
+    analysis_hour: int
     hist_window_size: int
     is_price_drop_alert: bool
     is_stock_change_alert: bool
@@ -36,17 +70,17 @@ class ConfigResponse(BaseModel):
     google_api_key: str | None
 
 
-class CategoryCreate(SQLModel):
+class CategoryCreate(BaseModel):
     name: str
     color: str
 
 
-class CategoryUpdate(SQLModel):
+class CategoryUpdate(BaseModel):
     name: str | None = None
     color: str | None = None
 
 
-class ProductCreate(SQLModel):
+class ProductCreate(BaseModel):
     name: str
     url: str
     priority: str
@@ -55,7 +89,7 @@ class ProductCreate(SQLModel):
     currency: str
 
 
-class ProductUpdate(SQLModel):
+class ProductUpdate(BaseModel):
     name: str | None = None
     url: str | None = None
     priority: str | None = None
@@ -115,6 +149,17 @@ connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
 
 
+# Enable SQLite foreign key support for CASCADE deletes
+
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enable foreign key constraint enforcement in SQLite."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 def get_session():
     with Session(engine) as session:
         yield session
@@ -157,106 +202,67 @@ app.add_middleware(
 # Config endpoints
 @app.get("/config/")
 def get_config(session: SessionDep) -> ConfigResponse:
-    analysys_hour_config = session.exec(select(Config).where(Config.key == "analysys_hour")).first()
-    hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
-    is_price_drop_alert_config = session.exec(select(Config).where(Config.key == "is_price_drop_alert")).first()
-    is_stock_change_alert_config = session.exec(select(Config).where(Config.key == "is_stock_change_alert")).first()
-    telegram_bot_token_config = session.exec(
-        select(Config).where(Config.key == "telegram_bot_token")).first()
-    telegram_bot_chat_id_config = session.exec(
-        select(Config).where(Config.key == "telegram_bot_chat_id")).first()
-    selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
-    google_api_key_config = session.exec(select(Config).where(Config.key == "google_api_key")).first()
+    """Retrieve all application configuration values."""
+    token = get_config_value(session, "telegram_bot_token")
+    chat_id = get_config_value(session, "telegram_bot_chat_id")
+    google_key = get_config_value(session, "google_api_key")
 
     return ConfigResponse(
-        analysys_hour=int(analysys_hour_config.value) if analysys_hour_config else 12,
-        hist_window_size=int(hist_window_size_config.value) if hist_window_size_config else 60,
-        is_price_drop_alert=is_price_drop_alert_config.value.lower() == "true" if is_price_drop_alert_config else False,
-        is_stock_change_alert=is_stock_change_alert_config.value.lower() == "true" if is_stock_change_alert_config else False,
-        telegram_bot_token=telegram_bot_token_config.value if telegram_bot_token_config and telegram_bot_token_config.value else None,
-        telegram_bot_chat_id=telegram_bot_chat_id_config.value if telegram_bot_chat_id_config and telegram_bot_chat_id_config.value else None,
-        selected_language=selected_language_config.value if selected_language_config else "english",
-        google_api_key=google_api_key_config.value if google_api_key_config and google_api_key_config.value else None
+        analysis_hour=int(get_config_value(session, "analysis_hour", "12")),
+        hist_window_size=int(get_config_value(
+            session, "hist_window_size", "60")),
+        is_price_drop_alert=get_config_value(
+            session, "is_price_drop_alert", "false").lower() == "true",
+        is_stock_change_alert=get_config_value(
+            session, "is_stock_change_alert", "false").lower() == "true",
+        telegram_bot_token=token if token else None,
+        telegram_bot_chat_id=chat_id if chat_id else None,
+        selected_language=get_config_value(
+            session, "selected_language", "english"),
+        google_api_key=google_key if google_key else None,
     )
 
 
 @app.patch("/config/")
 def update_config(config_update: ConfigUpdate, session: SessionDep) -> ConfigResponse:
-    if config_update.analysys_hour is not None:
-        if config_update.analysys_hour < 0 or config_update.analysys_hour > 23:
-            raise HTTPException(status_code=400, detail="analysys_hour must be between 0 and 23")
-
-        analysys_hour_config = session.exec(select(Config).where(Config.key == "analysys_hour")).first()
-        if analysys_hour_config:
-            analysys_hour_config.value = str(config_update.analysys_hour)
-        else:
-            analysys_hour_config = Config(key="analysys_hour", value=str(config_update.analysys_hour))
-            session.add(analysys_hour_config)
+    """Partially update application configuration values."""
+    if config_update.analysis_hour is not None:
+        if config_update.analysis_hour < 0 or config_update.analysis_hour > 23:
+            raise HTTPException(
+                status_code=400, detail="analysis_hour must be between 0 and 23")
+        set_config_value(session, "analysis_hour",
+                         str(config_update.analysis_hour))
 
     if config_update.hist_window_size is not None:
         if config_update.hist_window_size < 30 or config_update.hist_window_size > 180:
-            raise HTTPException(status_code=401, detail="hist_window_size must be between 30 and 180")
-
-        hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
-        if hist_window_size_config:
-            hist_window_size_config.value = str(config_update.hist_window_size)
-        else:
-            hist_window_size_config = Config(key="hist_window_size", value=str(config_update.hist_window_size))
-            session.add(hist_window_size_config)
+            raise HTTPException(
+                status_code=400, detail="hist_window_size must be between 30 and 180")
+        set_config_value(session, "hist_window_size",
+                         str(config_update.hist_window_size))
 
     if config_update.is_price_drop_alert is not None:
-        is_price_drop_alert_config = session.exec(select(Config).where(Config.key == "is_price_drop_alert")).first()
-        if is_price_drop_alert_config:
-            is_price_drop_alert_config.value = str(config_update.is_price_drop_alert).lower()
-        else:
-            is_price_drop_alert_config = Config(key="is_price_drop_alert", value=str(
-                config_update.is_price_drop_alert).lower())
-            session.add(is_price_drop_alert_config)
+        set_config_value(session, "is_price_drop_alert", str(
+            config_update.is_price_drop_alert).lower())
 
     if config_update.is_stock_change_alert is not None:
-        is_stock_change_alert_config = session.exec(select(Config).where(Config.key == "is_stock_change_alert")).first()
-        if is_stock_change_alert_config:
-            is_stock_change_alert_config.value = str(config_update.is_stock_change_alert).lower()
-        else:
-            is_stock_change_alert_config = Config(key="is_stock_change_alert",
-                                                  value=str(config_update.is_stock_change_alert).lower())
-            session.add(is_stock_change_alert_config)
+        set_config_value(session, "is_stock_change_alert", str(
+            config_update.is_stock_change_alert).lower())
 
     if config_update.telegram_bot_token is not None:
-        telegram_bot_token_config = session.exec(
-            select(Config).where(Config.key == "telegram_bot_token")).first()
-        if telegram_bot_token_config:
-            telegram_bot_token_config.value = config_update.telegram_bot_token
-        else:
-            telegram_bot_token_config = Config(key="telegram_bot_token",
-                                               value=config_update.telegram_bot_token)
-            session.add(telegram_bot_token_config)
+        set_config_value(session, "telegram_bot_token",
+                         config_update.telegram_bot_token)
 
     if config_update.telegram_bot_chat_id is not None:
-        telegram_bot_chat_id_config = session.exec(
-            select(Config).where(Config.key == "telegram_bot_chat_id")).first()
-        if telegram_bot_chat_id_config:
-            telegram_bot_chat_id_config.value = config_update.telegram_bot_chat_id
-        else:
-            telegram_bot_chat_id_config = Config(key="telegram_bot_chat_id",
-                                                 value=config_update.telegram_bot_chat_id)
-            session.add(telegram_bot_chat_id_config)
+        set_config_value(session, "telegram_bot_chat_id",
+                         config_update.telegram_bot_chat_id)
 
     if config_update.selected_language is not None:
-        selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
-        if selected_language_config:
-            selected_language_config.value = config_update.selected_language
-        else:
-            selected_language_config = Config(key="selected_language", value=config_update.selected_language)
-            session.add(selected_language_config)
+        set_config_value(session, "selected_language",
+                         config_update.selected_language)
 
     if config_update.google_api_key is not None:
-        google_api_key_config = session.exec(select(Config).where(Config.key == "google_api_key")).first()
-        if google_api_key_config:
-            google_api_key_config.value = config_update.google_api_key
-        else:
-            google_api_key_config = Config(key="google_api_key", value=config_update.google_api_key)
-            session.add(google_api_key_config)
+        set_config_value(session, "google_api_key",
+                         config_update.google_api_key)
 
     session.commit()
 
@@ -329,18 +335,22 @@ async def extract_product_info(request: ProductInfoRequest, session: SessionDep)
     # Get all categories from the database
     categories = session.exec(select(Category)).all()
     category_names = [category.name for category in categories]
-    selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
+    selected_language_config = session.exec(
+        select(Config).where(Config.key == "selected_language")).first()
     selected_language = selected_language_config.value if selected_language_config else "english"
 
     # Get Google API key from config
-    google_api_key_config = session.exec(select(Config).where(Config.key == "google_api_key")).first()
+    google_api_key_config = session.exec(
+        select(Config).where(Config.key == "google_api_key")).first()
     if not google_api_key_config or not google_api_key_config.value:
-        raise HTTPException(status_code=400, detail="Google API key not configured. Please set it in Settings.")
+        raise HTTPException(
+            status_code=400, detail="Google API key not configured. Please set it in Settings.")
     google_api_key = google_api_key_config.value
 
     # If no categories exist, return an error
     if not category_names:
-        raise HTTPException(status_code=400, detail="No categories found in database. Please create categories first.")
+        raise HTTPException(
+            status_code=400, detail="No categories found in database. Please create categories first.")
 
     # Call stagehand to extract product info
     product_info = await get_product_info(google_api_key, request.url, selected_language, category_names)
@@ -373,8 +383,10 @@ def get_products_dashboard_summary(session: SessionDep) -> list[ProductDashboard
     - Stock status (from most recent ProductHist record)
     """
     # Get hist_window_size from config
-    hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
-    hist_window_size = int(hist_window_size_config.value) if hist_window_size_config else 60
+    hist_window_size_config = session.exec(
+        select(Config).where(Config.key == "hist_window_size")).first()
+    hist_window_size = int(
+        hist_window_size_config.value) if hist_window_size_config else 60
 
     products = session.exec(select(Product)).all()
     summary_list = []
@@ -404,15 +416,18 @@ def get_products_dashboard_summary(session: SessionDep) -> list[ProductDashboard
             # Calculate price change if we have more than 1 record
             if len(product_history) > 1:
                 # Get up to hist_window_size records (excluding the current one)
-                historical_records = product_history[1:hist_window_size + 1]  # Skip first (current), take next N
+                # Skip first (current), take next N
+                historical_records = product_history[1:hist_window_size + 1]
 
                 if historical_records:
                     # Calculate average price of historical records
-                    avg_price = sum(record.price for record in historical_records) / len(historical_records)
+                    avg_price = sum(
+                        record.price for record in historical_records) / len(historical_records)
 
                     # Calculate percentage change: ((current - avg) / avg) * 100
                     if avg_price > 0:
-                        price_change_60d = ((current_price - avg_price) / avg_price) * 100
+                        price_change_60d = (
+                            (current_price - avg_price) / avg_price) * 100
 
         summary_list.append(ProductDashboardSummary(
             id=product.id,
@@ -451,8 +466,10 @@ def get_product_detail(product_id: int, session: SessionDep) -> ProductDetailRes
     category_color = category.color if category else "gray"
 
     # Get hist_window_size from config
-    hist_window_size_config = session.exec(select(Config).where(Config.key == "hist_window_size")).first()
-    hist_window_size = int(hist_window_size_config.value) if hist_window_size_config else 60
+    hist_window_size_config = session.exec(
+        select(Config).where(Config.key == "hist_window_size")).first()
+    hist_window_size = int(
+        hist_window_size_config.value) if hist_window_size_config else 60
 
     # Get product history ordered by timestamp descending
     product_history = session.exec(
@@ -522,14 +539,7 @@ def delete_product(product_id: int, session: SessionDep):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Delete all ProductHist records associated with this product
-    product_history = session.exec(
-        select(ProductHist).where(ProductHist.product_id == product_id)
-    ).all()
-    for hist_record in product_history:
-        session.delete(hist_record)
-
-    # Delete the product
+    # Delete the product (ProductHist cascade-deleted via FK)
     session.delete(product)
     session.commit()
     return {"ok": True}
@@ -549,13 +559,15 @@ async def get_telegram_chat_id(session: SessionDep) -> dict:
         select(Config).where(Config.key == "telegram_bot_token")).first()
 
     if not telegram_bot_token_config or not telegram_bot_token_config.value:
-        raise HTTPException(status_code=400, detail="Telegram bot token not configured")
+        raise HTTPException(
+            status_code=400, detail="Telegram bot token not configured")
 
     # Get the chat ID using the telegram utility
     chat_id = await get_chat_id(telegram_bot_token_config.value)
 
     if not chat_id:
-        raise HTTPException(status_code=404, detail="No chat ID found. Please send a message to the bot first.")
+        raise HTTPException(
+            status_code=404, detail="No chat ID found. Please send a message to the bot first.")
 
     # Save the chat ID to the database
     telegram_bot_chat_id_config = session.exec(
@@ -564,7 +576,8 @@ async def get_telegram_chat_id(session: SessionDep) -> dict:
     if telegram_bot_chat_id_config:
         telegram_bot_chat_id_config.value = chat_id
     else:
-        telegram_bot_chat_id_config = Config(key="telegram_bot_chat_id", value=chat_id)
+        telegram_bot_chat_id_config = Config(
+            key="telegram_bot_chat_id", value=chat_id)
         session.add(telegram_bot_chat_id_config)
 
     session.commit()
@@ -585,7 +598,8 @@ async def send_telegram_test_message(session: SessionDep) -> dict:
         select(Config).where(Config.key == "telegram_bot_token")).first()
 
     if not telegram_bot_token_config or not telegram_bot_token_config.value:
-        raise HTTPException(status_code=400, detail="Telegram bot token not configured")
+        raise HTTPException(
+            status_code=400, detail="Telegram bot token not configured")
 
     # Get the chat ID from config
     telegram_bot_chat_id_config = session.exec(
@@ -596,7 +610,8 @@ async def send_telegram_test_message(session: SessionDep) -> dict:
             status_code=400, detail="Telegram chat ID not configured. Please call /telegram-chat-id first.")
 
     # Get the selected language
-    selected_language_config = session.exec(select(Config).where(Config.key == "selected_language")).first()
+    selected_language_config = session.exec(
+        select(Config).where(Config.key == "selected_language")).first()
     selected_language = selected_language_config.value if selected_language_config else "english"
 
     # Send the test message
@@ -608,4 +623,5 @@ async def send_telegram_test_message(session: SessionDep) -> dict:
         )
         return {"message": "Test message sent successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send test message: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to send test message: {str(e)}")

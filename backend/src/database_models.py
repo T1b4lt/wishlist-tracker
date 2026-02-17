@@ -2,6 +2,7 @@
 Database models for the Wishlist Tracker application.
 """
 
+from sqlalchemy import Column, ForeignKey, Integer
 from sqlmodel import Field, SQLModel
 
 
@@ -22,14 +23,17 @@ class Product(SQLModel, table=True):
     name: str = Field(index=True)
     url: str
     priority: str = Field(index=True)  # high, medium, low
-    category_id: int | None = Field(default=None, foreign_key="category.id"),
+    category_id: int | None = Field(default=None, foreign_key="category.id")
     description: str
     currency: str
 
 
 class ProductHist(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    product_id: int = Field(foreign_key="product.id", index=True)
+    product_id: int = Field(
+        sa_column=Column(Integer, ForeignKey(
+            "product.id", ondelete="CASCADE"), index=True),
+    )
     price: float
     is_in_stock: bool
     timestamp: int  # Unix timestamp in seconds

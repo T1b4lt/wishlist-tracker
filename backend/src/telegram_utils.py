@@ -1,4 +1,3 @@
-import os
 import asyncio
 from dotenv import load_dotenv
 
@@ -15,6 +14,22 @@ currency_symbols = {
     "CAD": "$",
     "AUD": "$"
 }
+
+
+def escape_markdown(text: str) -> str:
+    """Escape special characters for Telegram MarkdownV2 format.
+
+    Args:
+        text (str): The text to escape.
+
+    Returns:
+        str: The escaped text safe for MarkdownV2 parsing.
+    """
+    special_chars = ['_', '*', '[', ']',
+                     '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+    for char in special_chars:
+        text = text.replace(char, f'\\{char}')
+    return text
 
 
 async def get_chat_id(bot_token: str) -> str:
@@ -34,7 +49,8 @@ async def get_chat_id(bot_token: str) -> str:
         updates = await bot.get_updates(limit=1, timeout=10)
 
         if not updates:
-            print("No conversations found. The bot needs to receive at least one message first.")
+            print(
+                "No conversations found. The bot needs to receive at least one message first.")
             return None
 
         # Extract the chat ID from the most recent update
@@ -90,7 +106,8 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
     try:
         # Send initial test message
         await bot.send_message(chat_id=chat_id, text=message_text, parse_mode='MarkdownV2')
-        print(f"✓ Initial test message sent successfully to chat_id: {chat_id}")
+        print(
+            f"✓ Initial test message sent successfully to chat_id: {chat_id}")
 
         # Send example price drop alert
         await send_price_drop_alert(
@@ -103,7 +120,8 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
             lang=lang,
             currency="EUR"
         )
-        print(f"✓ Example price drop alert sent successfully to chat_id: {chat_id}")
+        print(
+            f"✓ Example price drop alert sent successfully to chat_id: {chat_id}")
 
         # Send example stock alert
         await send_stock_alert(
@@ -153,21 +171,15 @@ async def send_price_drop_alert(
     # Calculate price drop percentage
     price_drop_percentage = ((old_price - new_price) / old_price) * 100
 
-    # Escape special characters for MarkdownV2
-    # Characters that need escaping: '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'
-    def escape_markdown(text: str) -> str:
-        """Escape special characters for MarkdownV2 format."""
-        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-        for char in special_chars:
-            text = text.replace(char, f'\\{char}')
-        return text
-
     escaped_product_name = escape_markdown(product_name)
 
     # Format prices with proper escaping
-    old_price_str = f"{old_price:.2f}{currency_symbol}".replace('.', '\\.').replace('-', '\\-')
-    new_price_str = f"{new_price:.2f}{currency_symbol}".replace('.', '\\.').replace('-', '\\-')
-    percentage_str = f"{price_drop_percentage:.0f}%".replace('.', '\\.').replace('-', '\\-')
+    old_price_str = f"{old_price:.2f}{currency_symbol}".replace(
+        '.', '\\.').replace('-', '\\-')
+    new_price_str = f"{new_price:.2f}{currency_symbol}".replace(
+        '.', '\\.').replace('-', '\\-')
+    percentage_str = f"{price_drop_percentage:.0f}%".replace(
+        '.', '\\.').replace('-', '\\-')
 
     # Define messages for different languages
     messages = {
@@ -238,18 +250,11 @@ async def send_stock_alert(
     # Get the currency symbol, default to currency code if not found
     currency_symbol = currency_symbols.get(currency.upper(), currency)
 
-    # Escape special characters for MarkdownV2
-    def escape_markdown(text: str) -> str:
-        """Escape special characters for MarkdownV2 format."""
-        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-        for char in special_chars:
-            text = text.replace(char, f'\\{char}')
-        return text
-
     escaped_product_name = escape_markdown(product_name)
 
     # Format price with proper escaping
-    price_str = f"{current_price:.2f}{currency_symbol}".replace('.', '\\.').replace('-', '\\-')
+    price_str = f"{current_price:.2f}{currency_symbol}".replace(
+        '.', '\\.').replace('-', '\\-')
 
     # Define messages for different languages
     messages = {
@@ -298,6 +303,8 @@ async def send_stock_alert(
 if __name__ == "__main__":
     # To execute: python telegram_utils.py
     # Replace with your actual bot token and chat ID
+    import os
+
     load_dotenv(override=True)
     telegram_bot_token = os.getenv("DSA_TELEGRAM")
     asyncio.run(send_test_message(telegram_bot_token, "5650836295", "english"))

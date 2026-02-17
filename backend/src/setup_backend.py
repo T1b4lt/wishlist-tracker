@@ -1,10 +1,10 @@
 """
 Script to set up the backend database and optionally populate it with test data.
 
-Usage:
-    python src/setup_backend.py              # Create database and tables only
-    python src/setup_backend.py --populate   # Create database, tables, and add test data
-    python src/setup_backend.py -p           # Short form
+Usage (from backend/ directory):
+    python -m src.setup_backend              # Create database and tables only
+    python -m src.setup_backend --populate   # Create database, tables, and add test data
+    python -m src.setup_backend -p           # Short form
 """
 
 import os
@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from database_models import Config, Category, Product, ProductHist
+from src.database_models import Config, Category, Product, ProductHist
 
 
 def check_database_exists(db_path: str) -> bool:
@@ -60,10 +60,10 @@ def initialize_config(engine):
     """
     print("Initializing configuration...")
 
-    config_keys = ["analysys_hour", "hist_window_size", "is_price_drop_alert",
+    config_keys = ["analysis_hour", "hist_window_size", "is_price_drop_alert",
                    "is_stock_change_alert", "telegram_bot_token", "telegram_bot_chat_id", "selected_language", "google_api_key"]
     default_values = {
-        "analysys_hour": "12",
+        "analysis_hour": "12",
         "hist_window_size": "60",
         "is_price_drop_alert": "false",
         "is_stock_change_alert": "false",
@@ -75,7 +75,8 @@ def initialize_config(engine):
 
     with Session(engine) as session:
         for key in config_keys:
-            existing_config = session.exec(select(Config).where(Config.key == key)).first()
+            existing_config = session.exec(
+                select(Config).where(Config.key == key)).first()
             if not existing_config:
                 config = Config(key=key, value=default_values[key])
                 session.add(config)
@@ -107,7 +108,8 @@ def populate_test_data(engine):
         session.refresh(electronica)
 
         print(f"  ✓ Created category: {hogar.name} (ID: {hogar.id})")
-        print(f"  ✓ Created category: {electronica.name} (ID: {electronica.id})")
+        print(
+            f"  ✓ Created category: {electronica.name} (ID: {electronica.id})")
 
         # Create product
         print("Creating product...")
@@ -155,7 +157,7 @@ def populate_test_data(engine):
             session.add(price_hist)
 
         session.commit()
-        print(f"  ✓ Created 30 price history records")
+        print(f"  ✓ Created 60 price history records")
 
     print("✓ Test data populated successfully")
 
@@ -198,7 +200,7 @@ def main():
         print("\n=== Setup completed successfully! ===")
         if not args.populate:
             print("\nTo populate with test data, run:")
-            print("  python src/setup_backend.py --populate")
+            print("  python -m src.setup_backend --populate")
         print("\nYou can now start the API with:")
         print("  uvicorn src.api:app --reload")
 
