@@ -3,6 +3,7 @@ python-dotenv
 
 # Scrapping
 stagehand
+playwright
 
 # API
 fastapi[standard]
