@@ -121,7 +121,7 @@ const SettingsPage = () => {
 
       // Set all values
       setSelectedLanguage(data.selected_language);
-      setAnalysisHour(data.analysys_hour);
+      setAnalysisHour(data.analysis_hour);
       setHistWindowSize(data.hist_window_size);
       setGoogleApiKey(data.google_api_key || '');
       setTelegramBotString(data.telegram_bot_token || '');
@@ -154,7 +154,7 @@ const SettingsPage = () => {
 
     const changed =
       selectedLanguage !== originalConfig.selected_language ||
-      analysisHour !== originalConfig.analysys_hour ||
+      analysisHour !== originalConfig.analysis_hour ||
       histWindowSize !== originalConfig.hist_window_size ||
       googleApiKey !== (originalConfig.google_api_key || '') ||
       telegramBotString !== (originalConfig.telegram_bot_token || '') ||
@@ -258,7 +258,7 @@ const SettingsPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           selected_language: selectedLanguage,
-          analysys_hour: analysisHour,
+          analysis_hour: analysisHour,
           hist_window_size: histWindowSize,
           google_api_key: googleApiKey || null,
           telegram_bot_token: telegramBotString || null,
