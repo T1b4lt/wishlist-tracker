@@ -30,8 +30,10 @@ FastAPI with Python, SQLite for the database, Stagehand for AI agent scraping an
 2. Navigate to the backend directory: `cd backend`
 3. Create a virtual environment: `uv venv -p 3.11`
 4. Install the required packages: `pip install -r requirements.txt`
-5. Install playwright deps and browsers: `playwright install-deps & playwright install`
-6. Set up environment variables by creating a `.env` file based on the provided `.env.example`.
-7. Set up the database: `python src/setup_backend.py --populate` (use `--populate` or `-p` to add test data)
-8. Run the backend server: `uvicorn src.api:app --reload`
-9. WIP
+5. Install playwright deps and browsers: `playwright install-deps chromium & playwright install chromium`
+6. Set up the database: `python src/setup_backend.py --populate` (use `--populate` or `-p` to add test data)
+7. Run the backend server: `uvicorn src.api:app --reload`
+8. Navigate to the frontend directory: `cd ../frontend`
+9. Install the required packages: `npm install`
+10. Run the frontend development server: `npm run dev`
+11. Open your browser and go to `http://localhost:5173` to access the application.
