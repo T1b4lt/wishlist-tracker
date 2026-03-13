@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'wouter';
 import {
   Box,
@@ -27,8 +27,8 @@ import {
   Legend
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { API_URL } from '@/lib/api';
 
-const API_URL = 'http://localhost:8000';
 
 const ProductPage = () => {
   const params = useParams();
@@ -44,7 +44,7 @@ const ProductPage = () => {
     [i18n.language]
   );
 
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/config/`);
       if (!response.ok) throw new Error('Failed to fetch config');
@@ -53,9 +53,9 @@ const ProductPage = () => {
     } catch (error) {
       console.error('Error fetching config:', error);
     }
-  };
+  }, []);
 
-  const fetchProductDetail = async () => {
+  const fetchProductDetail = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -74,13 +74,12 @@ const ProductPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [productId, t]);
 
   useEffect(() => {
     fetchConfig();
     fetchProductDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId]);
+  }, [fetchConfig, fetchProductDetail]);
 
   const formatPrice = (price, currency) => {
     if (price === null || price === undefined) {

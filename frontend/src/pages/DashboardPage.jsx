@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -20,8 +20,8 @@ import DeleteProductDialog from '@/components/DeleteProductDialog';
 import { LuTrash2 } from 'react-icons/lu';
 import { getCurrencySymbol, getPriorityLabel } from '@/lib/web_utils';
 import { useTranslation } from 'react-i18next';
+import { API_URL } from '@/lib/api';
 
-const API_URL = 'http://localhost:8000';
 
 const DashboardPage = () => {
   const [products, setProducts] = useState([]);
@@ -33,12 +33,7 @@ const DashboardPage = () => {
   const { colorMode } = useColorMode();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    fetchConfig();
-    fetchProducts();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/config/`);
       if (!response.ok) throw new Error('Failed to fetch config');
@@ -47,9 +42,9 @@ const DashboardPage = () => {
     } catch (error) {
       console.error('Error fetching config:', error);
     }
-  };
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`${API_URL}/products/dashboard-summary`);
@@ -61,7 +56,13 @@ const DashboardPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchConfig();
+    fetchProducts();
+  }, [fetchConfig, fetchProducts]);
+
 
   const handleSaveProduct = async (productData) => {
     try {

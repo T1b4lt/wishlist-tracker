@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -33,8 +33,8 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useColorMode } from '@/components/ui/color-mode';
 import { LuSparkles } from 'react-icons/lu';
 import { Trans, useTranslation } from 'react-i18next';
+import { API_URL } from '@/lib/api';
 
-const API_URL = 'http://localhost:8000';
 
 const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [url, setUrl] = useState('');
@@ -74,14 +74,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
     [categories]
   );
 
-  // Fetch categories when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchCategories();
-    }
-  }, [isOpen]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/categories/`);
       if (!response.ok) throw new Error('Failed to fetch categories');
@@ -90,7 +83,14 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
-  };
+  }, []);
+
+  // Fetch categories when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen, fetchCategories]);
 
   const handleGenerateDetails = async () => {
     if (!url.trim()) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -25,8 +25,8 @@ import {
   DialogCloseTrigger
 } from '@/components/ui/dialog';
 import { useTranslation, Trans } from 'react-i18next';
+import { API_URL } from '@/lib/api';
 
-const API_URL = 'http://localhost:8000';
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([]);
@@ -44,7 +44,7 @@ const CategoriesPage = () => {
   const { t } = useTranslation();
 
   // Fetch categories
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/categories/`);
       if (!response.ok) throw new Error('Failed to fetch categories');
@@ -60,11 +60,11 @@ const CategoriesPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   // Create category
   const handleCreateCategory = async (categoryData) => {

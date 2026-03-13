@@ -43,8 +43,7 @@ import {
 } from '@/components/ui/dialog';
 import { Trans, useTranslation } from 'react-i18next';
 import { persistLanguagePreference, SUPPORTED_LANGUAGES } from '@/i18n';
-
-const API_URL = 'http://localhost:8000';
+import { API_URL } from '@/lib/api';
 
 const hourCollection = createListCollection({
   items: Array.from({ length: 24 }, (_, i) => ({
@@ -112,7 +111,7 @@ const SettingsPage = () => {
     [i18n]
   );
 
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/config/`);
       if (!response.ok) throw new Error('Failed to fetch configuration');
@@ -142,11 +141,11 @@ const SettingsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [applyLanguagePreference, t]);
 
   useEffect(() => {
     fetchConfig();
-  }, []);
+  }, [fetchConfig]);
 
   // Check if there are changes
   useEffect(() => {

@@ -55,6 +55,8 @@ Key highlights:
 
 ### Frontend
 
+> 💡 **Architecture & Best Practices**: The frontend adheres strictly to Vercel's React Best Practices for optimal performance. This includes centralized API configurations (`src/lib/api.js`), stable component references with `useCallback` to prevent unnecessary re-renders, and properly managed `useEffect` lifecycles.
+
 | Technology | Purpose |
 |---|---|
 | [Vite](https://vite.dev/) | Build tool and dev server |
