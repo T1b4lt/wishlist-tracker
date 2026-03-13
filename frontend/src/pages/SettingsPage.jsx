@@ -145,7 +145,8 @@ const SettingsPage = () => {
 
   useEffect(() => {
     fetchConfig();
-  }, [fetchConfig]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Check if there are changes
   useEffect(() => {
