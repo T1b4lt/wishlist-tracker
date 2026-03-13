@@ -134,7 +134,7 @@
       "hero": {
         "title": "Añadir nuevo producto",
         "subtitle": "Haz seguimiento de los precios y la disponibilidad de los productos que quieres comprar",
-        "button": "+ Añadir nuevo producto"
+        "button": "Añadir nuevo producto"
       },
       "table": {
         "title": "Tu lista de deseos",

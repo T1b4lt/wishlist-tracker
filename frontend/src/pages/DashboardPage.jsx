@@ -17,11 +17,17 @@ import { useColorMode } from '@/components/ui/color-mode';
 import { Tag } from '@/components/ui/tag';
 import NewProductModal from '@/components/NewProductModal';
 import DeleteProductDialog from '@/components/DeleteProductDialog';
-import { LuTrash2, LuPackagePlus } from 'react-icons/lu';
+import {
+  LuTrash2,
+  LuPackagePlus,
+  LuTrendingUp,
+  LuTrendingDown,
+  LuMinus,
+  LuPlus
+} from 'react-icons/lu';
 import { getPriorityLabel } from '@/lib/web_utils';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '@/lib/api';
-
 
 const DashboardPage = () => {
   const [products, setProducts] = useState([]);
@@ -32,7 +38,10 @@ const DashboardPage = () => {
   const [histWindowSize, setHistWindowSize] = useState(60);
   const { colorMode } = useColorMode();
   const { t, i18n } = useTranslation();
-  const locale = useMemo(() => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'), [i18n.language]);
+  const locale = useMemo(
+    () => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'),
+    [i18n.language]
+  );
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -63,7 +72,6 @@ const DashboardPage = () => {
     fetchConfig();
     fetchProducts();
   }, [fetchConfig, fetchProducts]);
-
 
   const handleSaveProduct = async (productData) => {
     try {
@@ -137,24 +145,46 @@ const DashboardPage = () => {
 
   const formatPrice = (price, currency) => {
     if (price === null || price === undefined) return '-';
-    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(price);
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency
+    }).format(price);
   };
 
   const formatPriceChange = (priceChange) => {
     if (priceChange === null || priceChange === undefined) return '-';
 
-    const color = priceChange > 0 ? 'red.500' : 'green.500';
+    const isPositive = priceChange > 0;
+    const isNegative = priceChange < 0;
+    const color = isPositive
+      ? 'red.500'
+      : isNegative
+        ? 'green.500'
+        : 'gray.500';
+    const Icon = isPositive
+      ? LuTrendingUp
+      : isNegative
+        ? LuTrendingDown
+        : LuMinus;
+
     const formattedChange = new Intl.NumberFormat(locale, {
       style: 'percent',
-      signDisplay: 'exceptZero',
+      signDisplay: 'never',
       minimumFractionDigits: 1,
       maximumFractionDigits: 1
-    }).format(priceChange / 100);
+    }).format(Math.abs(priceChange) / 100);
 
     return (
-      <Text color={color} fontWeight="medium">
-        {formattedChange}
-      </Text>
+      <Flex
+        align="center"
+        justify="flex-end"
+        color={color}
+        fontWeight="medium"
+        gap={1}
+      >
+        <Icon size={14} />
+        <Text>{formattedChange}</Text>
+      </Flex>
     );
   };
 
@@ -162,21 +192,42 @@ const DashboardPage = () => {
     <Box maxW="1400px" mx="auto" p={6}>
       <VStack gap={8} align="stretch">
         {/* Add New Product Section */}
-        <Card.Root bg={colorMode === 'light' ? 'white' : 'gray.800'} p={6}>
-          <Flex justify="space-between" align="center">
-            <Box>
-              <Heading size="lg" mb={2}>
+        <Box
+          borderRadius="2xl"
+          bgGradient={
+            colorMode === 'light'
+              ? 'to-r, blue.600, purple.600'
+              : 'to-r, blue.900, purple.900'
+          }
+          color="white"
+          p={{ base: 6, md: 8 }}
+          shadow="lg"
+        >
+          <Flex
+            justify="space-between"
+            align="center"
+            direction={{ base: 'column', md: 'row' }}
+            gap={4}
+          >
+            <Box textAlign={{ base: 'center', md: 'left' }}>
+              <Heading size="xl" mb={2} color="white">
                 {t('pages.dashboard.hero.title')}
               </Heading>
-              <Text color={colorMode === 'light' ? 'gray.600' : 'gray.400'}>
+              <Text color="whiteAlpha.800" fontSize="lg">
                 {t('pages.dashboard.hero.subtitle')}
               </Text>
             </Box>
-            <Button size="lg" onClick={() => setIsModalOpen(true)}>
+            <Button
+              size="lg"
+              variant="solid"
+              onClick={() => setIsModalOpen(true)}
+              shadow="md"
+            >
+              <LuPlus size={20} />
               {t('pages.dashboard.hero.button')}
             </Button>
           </Flex>
-        </Card.Root>
+        </Box>
 
         {/* Products List Section */}
         <Box>
@@ -189,10 +240,22 @@ const DashboardPage = () => {
               <Spinner size="xl" />
             </Flex>
           ) : products.length === 0 ? (
-            <Card.Root bg={colorMode === 'light' ? 'white' : 'gray.800'} p={12} variant="outline" borderStyle="dashed" borderWidth="2px">
+            <Card.Root
+              bg={colorMode === 'light' ? 'white' : 'gray.800'}
+              p={12}
+              variant="outline"
+              borderStyle="dashed"
+              borderWidth="2px"
+            >
               <VStack gap={4}>
-                <Circle size="48px" bg={colorMode === 'light' ? 'gray.100' : 'gray.700'}>
-                  <LuPackagePlus size={24} color={colorMode === 'light' ? '#718096' : '#A0AEC0'} />
+                <Circle
+                  size="48px"
+                  bg={colorMode === 'light' ? 'gray.100' : 'gray.700'}
+                >
+                  <LuPackagePlus
+                    size={24}
+                    color={colorMode === 'light' ? '#718096' : '#A0AEC0'}
+                  />
                 </Circle>
                 <Text
                   fontSize="xl"
@@ -210,8 +273,13 @@ const DashboardPage = () => {
               </VStack>
             </Card.Root>
           ) : (
-            <Card.Root bg={colorMode === 'light' ? 'white' : 'gray.800'} p={0}>
-              <Table.Root size="sm" variant="outline">
+            <Card.Root
+              bg={colorMode === 'light' ? 'white' : 'gray.800'}
+              p={0}
+              overflow="hidden"
+              shadow="sm"
+            >
+              <Table.Root size="md" variant="line">
                 <Table.Header>
                   <Table.Row>
                     <Table.ColumnHeader>
@@ -241,7 +309,12 @@ const DashboardPage = () => {
                 </Table.Header>
                 <Table.Body>
                   {products.map((product) => (
-                    <Table.Row key={product.id} _hover={{ bg: colorMode === 'light' ? 'gray.50' : 'whiteAlpha.100' }}>
+                    <Table.Row
+                      key={product.id}
+                      _hover={{
+                        bg: colorMode === 'light' ? 'gray.50' : 'whiteAlpha.100'
+                      }}
+                    >
                       <Table.Cell>
                         <Link href={`/product/${product.id}`}>
                           <Text
@@ -260,15 +333,28 @@ const DashboardPage = () => {
                       </Table.Cell>
                       <Table.Cell>
                         <Tag
-                          size="sm"
-                          style={{ backgroundColor: product.category_color }}
+                          size="md"
+                          variant="subtle"
+                          style={{
+                            backgroundColor:
+                              colorMode === 'dark'
+                                ? 'transparent'
+                                : product.category_color,
+                            borderColor: product.category_color,
+                            borderWidth: '1px',
+                            color:
+                              colorMode === 'dark'
+                                ? product.category_color
+                                : 'white'
+                          }}
                         >
                           {product.category_name}
                         </Tag>
                       </Table.Cell>
                       <Table.Cell>
                         <Tag
-                          size="sm"
+                          size="md"
+                          variant="subtle"
                           colorPalette={getPriorityColor(product.priority)}
                         >
                           {getPriorityLabel(product.priority, t)}

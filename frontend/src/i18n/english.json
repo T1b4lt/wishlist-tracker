@@ -134,7 +134,7 @@
       "hero": {
         "title": "Add New Product",
         "subtitle": "Track prices and availability of products you want to buy",
-        "button": "+ Add New Product"
+        "button": "Add New Product"
       },
       "table": {
         "title": "Your Wishlist",
