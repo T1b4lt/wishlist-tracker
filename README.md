@@ -36,18 +36,18 @@ Key highlights:
 
 ## ✨ Key Features
 
-| Feature | Description |
-|---|---|
-| **Product Management** | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low). |
-| **AI-Powered Extraction** | Automatically extract product name, category, description, currency, price, and stock status from any URL using Stagehand v3 + Gemini. |
-| **Price Tracking** | Historical price records stored daily, with configurable tracking window (30–180 days). |
-| **Interactive Dashboard** | Overview of all products with current price, price change trend (%), stock status, and category indicators. |
-| **Product Detail View** | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline. |
-| **Category System** | User-defined categories with custom colors for visual organization. |
-| **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product. |
-| **Configurable Settings** | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI. |
-| **Multi-Language (i18n)** | Full English and Spanish translations for the entire interface. |
-| **Dark Mode** | Theme toggle built into Chakra UI. |
+| Feature                    | Description                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                 |
+| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, price, and stock status from any URL using Stagehand v3 + Gemini. |
+| **Price Tracking**         | Historical price records stored daily, with configurable tracking window (30–180 days).                                                |
+| **Interactive Dashboard**  | Overview of all products with current price, price change trend (%), stock status, and category indicators.                            |
+| **Product Detail View**    | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline.                           |
+| **Category System**        | User-defined categories with custom colors for visual organization.                                                                    |
+| **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                        |
+| **Configurable Settings**  | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                          |
+| **Multi-Language (i18n)**  | Full English and Spanish translations for the entire interface.                                                                        |
+| **Dark Mode**              | Theme toggle built into Chakra UI.                                                                                                     |
 
 ---
 
@@ -55,30 +55,28 @@ Key highlights:
 
 ### Frontend
 
-> 💡 **Architecture & Best Practices**: The frontend adheres strictly to Vercel's React Best Practices for optimal performance. This includes centralized API configurations (`src/lib/api.js`), stable component references with `useCallback` to prevent unnecessary re-renders, and properly managed `useEffect` lifecycles.
-
-| Technology | Purpose |
-|---|---|
-| [Vite](https://vite.dev/) | Build tool and dev server |
-| [React 19](https://react.dev/) | UI library (functional components, hooks) |
-| [Chakra UI v3](https://www.chakra-ui.com/) | Component library and design system |
-| [Wouter](https://github.com/molefrog/wouter) | Lightweight client-side routing |
-| [Recharts](https://recharts.org/) | Interactive charting for price history |
-| [react-icons](https://react-icons.github.io/react-icons/) | Icon library |
-| [react-i18next](https://react.i18next.com/) | Internationalization framework |
-| [next-themes](https://github.com/pacocoursey/next-themes) | Theme management (dark/light mode) |
+| Technology                                                | Purpose                                   |
+| --------------------------------------------------------- | ----------------------------------------- |
+| [Vite](https://vite.dev/)                                 | Build tool and dev server                 |
+| [React 19](https://react.dev/)                            | UI library (functional components, hooks) |
+| [Chakra UI v3](https://www.chakra-ui.com/)                | Component library and design system       |
+| [Wouter](https://github.com/molefrog/wouter)              | Lightweight client-side routing           |
+| [Recharts](https://recharts.org/)                         | Interactive charting for price history    |
+| [react-icons](https://react-icons.github.io/react-icons/) | Icon library                              |
+| [react-i18next](https://react.i18next.com/)               | Internationalization framework            |
+| [next-themes](https://github.com/pacocoursey/next-themes) | Theme management (dark/light mode)        |
 
 ### Backend
 
-| Technology | Purpose |
-|---|---|
-| [FastAPI](https://fastapi.tiangolo.com/) | Async REST API framework |
-| [SQLModel](https://sqlmodel.tiangolo.com/) | ORM (SQLAlchemy + Pydantic) |
-| [SQLite](https://www.sqlite.org/) | Lightweight embedded database |
-| [Stagehand v3](https://github.com/browserbase/stagehand) | AI browser agent for web scraping |
-| [Google Gemini](https://ai.google.dev/) | LLM powering the AI extraction |
-| [python-telegram-bot](https://python-telegram-bot.readthedocs.io/) | Telegram Bot API integration |
-| [python-dotenv](https://pypi.org/project/python-dotenv/) | Environment variable management |
+| Technology                                                         | Purpose                           |
+| ------------------------------------------------------------------ | --------------------------------- |
+| [FastAPI](https://fastapi.tiangolo.com/)                           | Async REST API framework          |
+| [SQLModel](https://sqlmodel.tiangolo.com/)                         | ORM (SQLAlchemy + Pydantic)       |
+| [SQLite](https://www.sqlite.org/)                                  | Lightweight embedded database     |
+| [Stagehand v3](https://github.com/browserbase/stagehand)           | AI browser agent for web scraping |
+| [Google Gemini](https://ai.google.dev/)                            | LLM powering the AI extraction    |
+| [python-telegram-bot](https://python-telegram-bot.readthedocs.io/) | Telegram Bot API integration      |
+| [python-dotenv](https://pypi.org/project/python-dotenv/)           | Environment variable management   |
 
 ---
 
@@ -196,16 +194,16 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 4 tables:
 
 **Config keys** stored in the `Config` table:
 
-| Key | Default | Description |
-|---|---|---|
-| `analysis_hour` | `12` | Hour of the day (0–23) when the cronjob runs price analysis |
-| `hist_window_size` | `60` | Number of historical records used for trend calculations (30–180) |
-| `is_price_drop_alert` | `false` | Enable Telegram alerts on price drops |
-| `is_stock_change_alert` | `false` | Enable Telegram alerts on stock changes |
-| `telegram_bot_token` | `""` | Telegram Bot API token |
-| `telegram_bot_chat_id` | `""` | Telegram chat ID for notifications |
-| `selected_language` | `english` | UI language (`english` / `spanish`) |
-| `google_api_key` | `""` | Google API key for Gemini (used by Stagehand) |
+| Key                     | Default   | Description                                                       |
+| ----------------------- | --------- | ----------------------------------------------------------------- |
+| `analysis_hour`         | `12`      | Hour of the day (0–23) when the cronjob runs price analysis       |
+| `hist_window_size`      | `60`      | Number of historical records used for trend calculations (30–180) |
+| `is_price_drop_alert`   | `false`   | Enable Telegram alerts on price drops                             |
+| `is_stock_change_alert` | `false`   | Enable Telegram alerts on stock changes                           |
+| `telegram_bot_token`    | `""`      | Telegram Bot API token                                            |
+| `telegram_bot_chat_id`  | `""`      | Telegram chat ID for notifications                                |
+| `selected_language`     | `english` | UI language (`english` / `spanish`)                               |
+| `google_api_key`        | `""`      | Google API key for Gemini (used by Stagehand)                     |
 
 ---
 
@@ -215,43 +213,43 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 
 ### Configuration
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/config/` | Get all configuration values |
+| Method  | Endpoint   | Description                    |
+| ------- | ---------- | ------------------------------ |
+| `GET`   | `/config/` | Get all configuration values   |
 | `PATCH` | `/config/` | Partially update configuration |
 
 ### Categories
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/categories/` | Create a new category |
-| `GET` | `/categories/` | List all categories |
-| `GET` | `/categories/{id}` | Get a specific category |
-| `PATCH` | `/categories/{id}` | Update a category |
+| Method   | Endpoint           | Description                                 |
+| -------- | ------------------ | ------------------------------------------- |
+| `POST`   | `/categories/`     | Create a new category                       |
+| `GET`    | `/categories/`     | List all categories                         |
+| `GET`    | `/categories/{id}` | Get a specific category                     |
+| `PATCH`  | `/categories/{id}` | Update a category                           |
 | `DELETE` | `/categories/{id}` | Delete a category (fails if products exist) |
 
 ### Products
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/products/` | Create a new product |
-| `GET` | `/products/` | List all products |
-| `GET` | `/products/dashboard-summary` | Get enriched product list for dashboard view |
-| `GET` | `/products/{id}` | Get full product detail with price history |
-| `PATCH` | `/products/{id}` | Update a product |
-| `DELETE` | `/products/{id}` | Delete a product (cascades to price history) |
+| Method   | Endpoint                      | Description                                  |
+| -------- | ----------------------------- | -------------------------------------------- |
+| `POST`   | `/products/`                  | Create a new product                         |
+| `GET`    | `/products/`                  | List all products                            |
+| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view |
+| `GET`    | `/products/{id}`              | Get full product detail with price history   |
+| `PATCH`  | `/products/{id}`              | Update a product                             |
+| `DELETE` | `/products/{id}`              | Delete a product (cascades to price history) |
 
 ### AI Extraction
 
-| Method | Endpoint | Description |
-|---|---|---|
+| Method | Endpoint                 | Description                              |
+| ------ | ------------------------ | ---------------------------------------- |
 | `POST` | `/extract-product-info/` | AI-extract product info from a given URL |
 
 ### Telegram
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/telegram-chat-id` | Retrieve and save the bot's most recent chat ID |
+| Method | Endpoint                 | Description                                     |
+| ------ | ------------------------ | ----------------------------------------------- |
+| `GET`  | `/telegram-chat-id`      | Retrieve and save the bot's most recent chat ID |
 | `POST` | `/telegram-test-message` | Send a test notification to the configured chat |
 
 > 📄 Interactive API documentation is available at `http://localhost:8000/docs` (Swagger UI) and `http://localhost:8000/redoc` (ReDoc).
@@ -266,7 +264,7 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 - **Node.js 18+** and **npm**
 - **Google Chrome** installed on the system (required by Stagehand v3 for local browser scraping)
 - A **Google API key** with access to Gemini models
-- *(Optional)* A **Telegram Bot** token for notifications
+- _(Optional)_ A **Telegram Bot** token for notifications
 
 ### 1. Clone the Repository
 
@@ -312,7 +310,21 @@ npm run dev
 
 The app will be available at `http://localhost:5173`.
 
-### 4. Environment Variables
+### 4. Docker Setup
+
+You can run the entire application (Frontend, Backend, and Cronjob) using Docker.
+
+```bash
+# Build the Docker image
+docker build -t wishlist-tracker:latest .
+
+# Run the container (exposes the app on port 7755)
+docker run -d -p 7755:7755 --name wishlist-tracker-app wishlist-tracker:latest
+```
+
+The application will be available at `http://localhost:7755`.
+
+### 5. Environment Variables
 
 Create a `backend/.env` file with your credentials:
 
@@ -332,16 +344,16 @@ DSA_TELEGRAM=your_telegram_bot_token
 
 All application settings can be managed through the **Settings** page (`/settings`) in the web interface:
 
-| Setting | Description |
-|---|---|
-| **Google API Key** | Required for AI-powered product extraction (Gemini). |
-| **Analysis Hour** | Hour of the day (0–23) when the cronjob should run. |
-| **History Window** | Number of days used for price trend calculations (30–180). |
-| **Language** | Switch between English and Spanish. |
-| **Telegram Bot Token** | Your Telegram Bot API token (from [@BotFather](https://t.me/BotFather)). |
-| **Telegram Chat ID** | Auto-detected when you send a message to the bot. |
-| **Price Drop Alerts** | Toggle Telegram notifications for price drops. |
-| **Stock Change Alerts** | Toggle Telegram notifications when items return to stock. |
+| Setting                 | Description                                                              |
+| ----------------------- | ------------------------------------------------------------------------ |
+| **Google API Key**      | Required for AI-powered product extraction (Gemini).                     |
+| **Analysis Hour**       | Hour of the day (0–23) when the cronjob should run.                      |
+| **History Window**      | Number of days used for price trend calculations (30–180).               |
+| **Language**            | Switch between English and Spanish.                                      |
+| **Telegram Bot Token**  | Your Telegram Bot API token (from [@BotFather](https://t.me/BotFather)). |
+| **Telegram Chat ID**    | Auto-detected when you send a message to the bot.                        |
+| **Price Drop Alerts**   | Toggle Telegram notifications for price drops.                           |
+| **Stock Change Alerts** | Toggle Telegram notifications when items return to stock.                |
 
 ---
 
