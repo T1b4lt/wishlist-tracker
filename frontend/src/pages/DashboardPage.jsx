@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -17,8 +17,8 @@ import { useColorMode } from '@/components/ui/color-mode';
 import { Tag } from '@/components/ui/tag';
 import NewProductModal from '@/components/NewProductModal';
 import DeleteProductDialog from '@/components/DeleteProductDialog';
-import { LuTrash2 } from 'react-icons/lu';
-import { getCurrencySymbol, getPriorityLabel } from '@/lib/web_utils';
+import { LuTrash2, LuPackagePlus } from 'react-icons/lu';
+import { getPriorityLabel } from '@/lib/web_utils';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '@/lib/api';
 
@@ -31,7 +31,8 @@ const DashboardPage = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [histWindowSize, setHistWindowSize] = useState(60);
   const { colorMode } = useColorMode();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = useMemo(() => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'), [i18n.language]);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -136,20 +137,23 @@ const DashboardPage = () => {
 
   const formatPrice = (price, currency) => {
     if (price === null || price === undefined) return '-';
-    const symbol = getCurrencySymbol(currency);
-    return `${price.toFixed(2)} ${symbol}`;
+    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(price);
   };
 
   const formatPriceChange = (priceChange) => {
     if (priceChange === null || priceChange === undefined) return '-';
 
-    const sign = priceChange >= 0 ? '+' : '';
-    const color = priceChange >= 0 ? 'red.500' : 'green.500';
+    const color = priceChange > 0 ? 'red.500' : 'green.500';
+    const formattedChange = new Intl.NumberFormat(locale, {
+      style: 'percent',
+      signDisplay: 'exceptZero',
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }).format(priceChange / 100);
 
     return (
       <Text color={color} fontWeight="medium">
-        {sign}
-        {priceChange.toFixed(1)}%
+        {formattedChange}
       </Text>
     );
   };
@@ -185,10 +189,14 @@ const DashboardPage = () => {
               <Spinner size="xl" />
             </Flex>
           ) : products.length === 0 ? (
-            <Card.Root bg={colorMode === 'light' ? 'white' : 'gray.800'} p={8}>
-              <VStack gap={3}>
+            <Card.Root bg={colorMode === 'light' ? 'white' : 'gray.800'} p={12} variant="outline" borderStyle="dashed" borderWidth="2px">
+              <VStack gap={4}>
+                <Circle size="48px" bg={colorMode === 'light' ? 'gray.100' : 'gray.700'}>
+                  <LuPackagePlus size={24} color={colorMode === 'light' ? '#718096' : '#A0AEC0'} />
+                </Circle>
                 <Text
-                  fontSize="lg"
+                  fontSize="xl"
+                  fontWeight="medium"
                   color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
                 >
                   {t('pages.dashboard.table.empty.title')}
@@ -233,7 +241,7 @@ const DashboardPage = () => {
                 </Table.Header>
                 <Table.Body>
                   {products.map((product) => (
-                    <Table.Row key={product.id}>
+                    <Table.Row key={product.id} _hover={{ bg: colorMode === 'light' ? 'gray.50' : 'whiteAlpha.100' }}>
                       <Table.Cell>
                         <Link href={`/product/${product.id}`}>
                           <Text

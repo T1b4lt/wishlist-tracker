@@ -221,6 +221,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={isGenerating || isLoading}
+                autoComplete="off"
               />
             </Field>
 
@@ -263,10 +264,11 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
             {hasGenerated && (
               <Box
                 borderWidth="1px"
-                borderRadius="md"
-                borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
-                p={4}
+                borderRadius="lg"
+                borderColor={colorMode === 'light' ? 'blue.200' : 'blue.800'}
+                p={5}
                 bg={colorMode === 'light' ? 'blue.50' : 'blue.900/20'}
+                shadow="sm"
               >
                 <Flex align="center" gap={2} mb={3}>
                   <Text fontSize="sm" fontWeight="bold" color="blue.500">
@@ -291,6 +293,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       disabled={isLoading}
+                      autoComplete="off"
                     />
                   </Field>
 

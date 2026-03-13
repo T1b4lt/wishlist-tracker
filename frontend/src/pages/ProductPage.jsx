@@ -85,8 +85,7 @@ const ProductPage = () => {
     if (price === null || price === undefined) {
       return t('common.messages.notAvailable');
     }
-    const symbol = getCurrencySymbol(currency);
-    return `${price.toFixed(2)} ${symbol}`;
+    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(price);
   };
 
   const formatDate = (timestamp) => {
@@ -270,7 +269,7 @@ const ProductPage = () => {
         </Box>
 
         {/* Description */}
-        <Card.Root>
+        <Card.Root variant="elevated">
           <Card.Body>
             <Heading size="md" mb="3">
               {t('pages.product.description')}
@@ -282,7 +281,7 @@ const ProductPage = () => {
         </Card.Root>
 
         {/* Product URL */}
-        <Card.Root>
+        <Card.Root variant="elevated">
           <Card.Body>
             <Heading size="md" mb="3">
               {t('pages.product.productLink')}
@@ -298,7 +297,7 @@ const ProductPage = () => {
 
         {/* Price information */}
         <Stack direction={{ base: 'column', md: 'row' }} gap="4">
-          <Card.Root flex="1">
+          <Card.Root flex="1" variant="elevated">
             <Card.Body>
               <Text fontSize="sm" color="gray.500" mb="1">
                 {t('pages.product.price.current')}
@@ -309,7 +308,7 @@ const ProductPage = () => {
             </Card.Body>
           </Card.Root>
 
-          <Card.Root flex="1">
+          <Card.Root flex="1" variant="elevated">
             <Card.Body>
               <Text fontSize="sm" color="gray.500" mb="1">
                 {t('pages.product.price.min', { days: histWindowSize })}
@@ -343,7 +342,7 @@ const ProductPage = () => {
         </Stack>
 
         {/* Price history chart */}
-        <Card.Root>
+        <Card.Root variant="elevated">
           <Card.Body>
             <Heading size="md" mb="4">
               {t('pages.product.priceHistory.title')}

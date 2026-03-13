@@ -56,7 +56,9 @@ const HeaderComponent = () => {
       position="sticky"
       top={0}
       zIndex={10}
-      bg={colorMode === 'light' ? 'white' : 'gray.800'}
+      bg={colorMode === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(26, 32, 44, 0.8)'}
+      backdropFilter="blur(12px)"
+      WebkitBackdropFilter="blur(12px)"
       borderBottomWidth="1px"
       borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
       px={4}
