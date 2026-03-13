@@ -30,7 +30,7 @@ FastAPI with Python, SQLite for the database, Stagehand for AI agent scraping an
 2. Navigate to the backend directory: `cd backend`
 3. Create a virtual environment: `uv venv -p 3.11`
 4. Install the required packages: `pip install -r requirements.txt`
-5. Install playwright deps and browsers: `playwright install-deps chromium & playwright install chromium`
+5. Ensure Chrome is installed on your system (Stagehand v3 uses a local Chrome instance for AI-powered scraping)
 6. Set up the database: `python src/setup_backend.py --populate` (use `--populate` or `-p` to add test data)
 7. Run the backend server: `uvicorn src.api:app --reload`
 8. Navigate to the frontend directory: `cd ../frontend`
