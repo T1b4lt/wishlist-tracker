@@ -67,16 +67,20 @@ PRODUCT_INFO_SCHEMA: Dict[str, Any] = {
 }
 
 
+import os
+
 # --- Local browser configuration for Stagehand v3 ---
 # Chrome launch options for WSL/Linux environments.
-# The executablePath ensures Stagehand finds the correct Chrome binary,
-# and the args handle common WSL sandbox/GPU restrictions.
+# The executablePath ensures Stagehand finds the correct Chrome binary.
+# We read it from CHROME_PATH environment variable (which can point to
+# /usr/bin/chromium in Docker) and default to /usr/bin/google-chrome.
+# The args handle common WSL sandbox/GPU restrictions.
 
 LOCAL_BROWSER_CONFIG: Dict[str, Any] = {
     "type": "local",
     "launchOptions": {
         "headless": True,
-        "executablePath": "/usr/bin/google-chrome",
+        "executablePath": os.getenv("CHROME_PATH", "/usr/bin/google-chrome"),
         "args": [
             "--no-sandbox",
             "--disable-setuid-sandbox",
