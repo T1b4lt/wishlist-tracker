@@ -15,13 +15,16 @@ from datetime import datetime, timedelta
 
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from src.database_models import Config, Category, Product, ProductHist
+from src.core.config import CONFIG_DEFAULTS
+from src.models.database_models import Config, Category, Product, ProductHist
 
 
 def check_database_exists(db_path: str) -> bool:
     """Check if the database file already exists.
+
     Args:
         db_path (str): Path to the database file.
+
     Returns:
         bool: True if the database file exists, False otherwise.
     """
@@ -30,9 +33,11 @@ def check_database_exists(db_path: str) -> bool:
 
 def create_database_and_tables(db_path: str, sqlite_url: str):
     """Create the database file and all tables.
+
     Args:
         db_path (str): Path to the database file.
         sqlite_url (str): SQLite database URL.
+
     Returns:
         engine: The SQLModel engine connected to the database.
     """
@@ -55,32 +60,23 @@ def create_database_and_tables(db_path: str, sqlite_url: str):
 
 def initialize_config(engine):
     """Initialize default configuration values.
+
+    Uses CONFIG_DEFAULTS from core.config as the single source of truth
+    for default values.
+
     Args:
         engine: The SQLModel engine connected to the database.
     """
     print("Initializing configuration...")
 
-    config_keys = ["analysis_hour", "hist_window_size", "is_price_drop_alert",
-                   "is_stock_change_alert", "telegram_bot_token", "telegram_bot_chat_id", "selected_language", "google_api_key"]
-    default_values = {
-        "analysis_hour": "12",
-        "hist_window_size": "60",
-        "is_price_drop_alert": "false",
-        "is_stock_change_alert": "false",
-        "telegram_bot_token": "",
-        "telegram_bot_chat_id": "",
-        "selected_language": "english",
-        "google_api_key": ""
-    }
-
     with Session(engine) as session:
-        for key in config_keys:
+        for key, default_value in CONFIG_DEFAULTS.items():
             existing_config = session.exec(
                 select(Config).where(Config.key == key)).first()
             if not existing_config:
-                config = Config(key=key, value=default_values[key])
+                config = Config(key=key, value=default_value)
                 session.add(config)
-                display_value = default_values[key] if default_values[key] else "NULL"
+                display_value = default_value if default_value else "NULL"
                 print(f"  ✓ Set {key} = {display_value}")
 
         session.commit()
@@ -90,6 +86,7 @@ def initialize_config(engine):
 
 def populate_test_data(engine):
     """Populate the database with test data.
+
     Args:
         engine: The SQLModel engine connected to the database.
     """
@@ -136,16 +133,14 @@ def populate_test_data(engine):
         current_date = datetime.now()
 
         for days_ago in range(59, -1, -1):  # From 59 days ago to today
-            # Calculate timestamp for this day
             record_date = current_date - timedelta(days=days_ago)
             timestamp = int(record_date.timestamp())
 
-            # Generate a realistic price with some variation
-            # Price will fluctuate between base_price - 50 and base_price + 30
+            # Realistic price fluctuation
             price_variation = random.uniform(-50, 30)
             price = round(base_price + price_variation, 2)
 
-            # Randomly determine stock status (80% in stock, 20% out of stock)
+            # 80% chance of being in stock
             is_in_stock = random.random() < 0.8
 
             price_hist = ProductHist(
@@ -157,12 +152,13 @@ def populate_test_data(engine):
             session.add(price_hist)
 
         session.commit()
-        print(f"  ✓ Created 60 price history records")
+        print("  ✓ Created 60 price history records")
 
     print("✓ Test data populated successfully")
 
 
 def main():
+    """Main entry point for the setup script."""
     parser = argparse.ArgumentParser(
         description="Set up the backend database and optionally populate it with test data."
     )

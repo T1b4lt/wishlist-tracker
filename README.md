@@ -94,8 +94,26 @@ wishlist-tracker/
 │   ├── db/
 │   │   └── database.db               # SQLite database (auto-generated)
 │   └── src/
-│       ├── api.py                    # FastAPI application & all REST endpoints
-│       ├── database_models.py        # SQLModel table definitions
+│       ├── api.py                    # FastAPI app factory (routers + middleware)
+│       ├── core/                     # Shared infrastructure
+│       │   ├── database.py           # DB engine, session, SQLite pragma, lifespan
+│       │   └── config.py             # Config get/set helpers & default values
+│       ├── models/
+│       │   └── database_models.py    # SQLModel table definitions
+│       ├── schemas/                  # Pydantic request/response schemas
+│       │   ├── config.py             # ConfigUpdate, ConfigResponse
+│       │   ├── category.py           # CategoryCreate, CategoryUpdate
+│       │   └── product.py            # Product CRUD, Dashboard & Detail schemas
+│       ├── services/                 # Business logic layer
+│       │   ├── config_service.py     # Configuration read/update logic
+│       │   ├── category_service.py   # Category CRUD operations
+│       │   ├── product_service.py    # Product CRUD, dashboard, detail & AI extraction
+│       │   └── telegram_service.py   # Telegram chat ID & test message orchestration
+│       ├── routers/                  # FastAPI route definitions (thin controllers)
+│       │   ├── config_router.py      # GET/PATCH /config/
+│       │   ├── category_router.py    # CRUD /categories/
+│       │   ├── product_router.py     # CRUD /products/ + /extract-product-info/
+│       │   └── telegram_router.py    # /telegram-chat-id, /telegram-test-message
 │       ├── stagehand_utils.py        # Stagehand v3 AI scraping functions
 │       ├── telegram_utils.py         # Telegram notification helpers
 │       ├── product_status_cronjob.py # Daily price tracking script
