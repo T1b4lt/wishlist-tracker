@@ -21,6 +21,7 @@ class ProductUpdate(BaseModel):
     url: str | None = None
     priority: str | None = None
     category_id: int | None = None
+    description: str | None = None
     currency: str | None = None
 
 
@@ -56,6 +57,8 @@ class ProductDashboardSummary(BaseModel):
     price_change_60d: float | None
     is_in_stock: bool | None
     currency: str
+    recent_prices: list[float]
+    last_checked_at: int | None
 
 
 class ProductHistResponse(BaseModel):
@@ -82,3 +85,4 @@ class ProductDetailResponse(BaseModel):
     is_in_stock: bool | None
     price_history: list[ProductHistResponse]
     currency: str
+    last_checked_at: int | None

@@ -3,9 +3,9 @@ Category service — CRUD business logic for product categories.
 """
 
 from fastapi import HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 from src.models.database_models import Category, Product
-from src.schemas.category import CategoryCreate, CategoryUpdate
+from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 
 
 def create(session: Session, payload: CategoryCreate) -> Category:
@@ -25,27 +25,46 @@ def create(session: Session, payload: CategoryCreate) -> Category:
     return category
 
 
-def get_all(session: Session) -> list[Category]:
-    """Return all categories.
+def get_all(session: Session) -> list[CategoryResponse]:
+    """Return all categories, each enriched with its product count.
+
+    Uses a single grouped query for the counts (rather than one query per
+    category) to avoid N+1 lookups.
 
     Args:
         session (Session): Active database session.
 
     Returns:
-        list[Category]: All categories in the database.
+        list[CategoryResponse]: All categories with ``product_count``.
     """
-    return session.exec(select(Category)).all()
+    categories = session.exec(select(Category)).all()
+    counts = dict(
+        session.exec(
+            select(Product.category_id, func.count(Product.id)).group_by(
+                Product.category_id
+            )
+        ).all()
+    )
+    return [
+        CategoryResponse(
+            id=category.id,
+            name=category.name,
+            color=category.color,
+            product_count=counts.get(category.id, 0),
+        )
+        for category in categories
+    ]
 
 
-def get_by_id(session: Session, category_id: int) -> Category:
-    """Return a single category by ID.
+def get_by_id(session: Session, category_id: int) -> CategoryResponse:
+    """Return a single category by ID, enriched with its product count.
 
     Args:
         session (Session): Active database session.
         category_id (int): The category's primary key.
 
     Returns:
-        Category: The requested category.
+        CategoryResponse: The requested category with ``product_count``.
 
     Raises:
         HTTPException: 404 if the category does not exist.
@@ -53,7 +72,19 @@ def get_by_id(session: Session, category_id: int) -> Category:
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    return category
+
+    product_count = session.exec(
+        select(func.count())
+        .select_from(Product)
+        .where(Product.category_id == category_id)
+    ).one()
+
+    return CategoryResponse(
+        id=category.id,
+        name=category.name,
+        color=category.color,
+        product_count=product_count,
+    )
 
 
 def update(session: Session, category_id: int, payload: CategoryUpdate) -> Category:

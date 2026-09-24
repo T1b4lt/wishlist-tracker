@@ -110,7 +110,7 @@ wishlist-tracker/
 │       │   └── database_models.py    # SQLModel table definitions
 │       ├── schemas/                  # Pydantic request/response schemas
 │       │   ├── config.py             # ConfigUpdate, ConfigResponse
-│       │   ├── category.py           # CategoryCreate, CategoryUpdate
+│       │   ├── category.py           # CategoryCreate, CategoryUpdate, CategoryResponse
 │       │   └── product.py            # Product CRUD, Dashboard & Detail schemas
 │       ├── services/                 # Business logic layer
 │       │   ├── config_service.py     # Configuration read/update logic

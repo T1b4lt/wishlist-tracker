@@ -147,6 +147,28 @@ def _compute_price_change(
     return ((current_price - avg_price) / avg_price) * 100
 
 
+# Hard ceiling on how many points the dashboard sparkline ever receives,
+# regardless of how large the configured history window is.
+MAX_RECENT_PRICES = 60
+
+
+def _get_recent_prices(history: list, window_size: int) -> list[float]:
+    """Return recent prices in chronological order, capped at 60 points.
+
+    Args:
+        history (list): Product history ordered newest-first.
+        window_size (int): Configured history window size.
+
+    Returns:
+        list[float]: Prices of the last ``min(window_size, 60)`` records,
+            oldest first (chronological order), or ``[]`` if there is no
+            history.
+    """
+    cap = min(window_size, MAX_RECENT_PRICES)
+    recent_records = history[:cap]
+    return [record.price for record in reversed(recent_records)]
+
+
 def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
     """Build the enriched dashboard summary for all products.
 
@@ -179,13 +201,17 @@ def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
         current_price = None
         price_change_60d = None
         is_in_stock = None
+        last_checked_at = None
 
         if product_history:
             current_price = product_history[0].price
             is_in_stock = product_history[0].is_in_stock
+            last_checked_at = product_history[0].timestamp
             price_change_60d = _compute_price_change(
                 current_price, product_history, hist_window_size
             )
+
+        recent_prices = _get_recent_prices(product_history, hist_window_size)
 
         summary_list.append(
             ProductDashboardSummary(
@@ -199,6 +225,8 @@ def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
                 price_change_60d=price_change_60d,
                 is_in_stock=is_in_stock,
                 currency=product.currency,
+                recent_prices=recent_prices,
+                last_checked_at=last_checked_at,
             )
         )
 
@@ -239,10 +267,12 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
     current_price = None
     min_price = None
     is_in_stock = None
+    last_checked_at = None
 
     if product_history:
         current_price = product_history[0].price
         is_in_stock = product_history[0].is_in_stock
+        last_checked_at = product_history[0].timestamp
 
         recent_records = product_history[:hist_window_size]
         if recent_records:
@@ -272,6 +302,7 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
         is_in_stock=is_in_stock,
         price_history=price_history,
         currency=product.currency,
+        last_checked_at=last_checked_at,
     )
 
 

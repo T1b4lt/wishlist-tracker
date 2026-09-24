@@ -5,7 +5,7 @@ Category router — CRUD endpoints for /categories/.
 from fastapi import APIRouter
 from src.core.database import SessionDep
 from src.models.database_models import Category
-from src.schemas.category import CategoryCreate, CategoryUpdate
+from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from src.services import category_service
 
 router = APIRouter(tags=["categories"])
@@ -13,19 +13,23 @@ router = APIRouter(tags=["categories"])
 
 @router.post("/categories/")
 def create_category(payload: CategoryCreate, session: SessionDep) -> Category:
-    """Create a new category."""
+    """Create a new category.
+
+    Returns the plain ``Category`` (no ``product_count``): a freshly
+    created category always has zero products.
+    """
     return category_service.create(session, payload)
 
 
 @router.get("/categories/")
-def read_categories(session: SessionDep) -> list[Category]:
-    """List all categories."""
+def read_categories(session: SessionDep) -> list[CategoryResponse]:
+    """List all categories, each including its ``product_count``."""
     return category_service.get_all(session)
 
 
 @router.get("/categories/{category_id}")
-def read_category(category_id: int, session: SessionDep) -> Category:
-    """Retrieve a single category by ID."""
+def read_category(category_id: int, session: SessionDep) -> CategoryResponse:
+    """Retrieve a single category by ID, including its ``product_count``."""
     return category_service.get_by_id(session, category_id)
 
 

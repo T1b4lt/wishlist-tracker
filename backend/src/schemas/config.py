@@ -27,3 +27,4 @@ class ConfigResponse(BaseModel):
     telegram_bot_chat_id: str | None
     selected_language: str
     google_api_key: str | None
+    telegram_status: str

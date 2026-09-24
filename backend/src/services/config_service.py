@@ -11,6 +11,26 @@ from src.core.config import get_config_value, set_config_value
 from src.schemas.config import ConfigResponse, ConfigUpdate
 
 
+def _compute_telegram_status(token: str | None, chat_id: str | None) -> str:
+    """Derive the Telegram connection status from the stored credentials.
+
+    This is never persisted; it is recomputed on every read from the
+    current token/chat id values.
+
+    Args:
+        token (str | None): The stored Telegram bot token, if any.
+        chat_id (str | None): The stored Telegram chat id, if any.
+
+    Returns:
+        str: One of ``"not_configured"``, ``"token_only"`` or ``"connected"``.
+    """
+    if token and chat_id:
+        return "connected"
+    if token:
+        return "token_only"
+    return "not_configured"
+
+
 def get_all_config(session: Session) -> ConfigResponse:
     """Build a full ConfigResponse from the database.
 
@@ -39,6 +59,7 @@ def get_all_config(session: Session) -> ConfigResponse:
         telegram_bot_chat_id=chat_id if chat_id else None,
         selected_language=get_config_value(session, "selected_language", "english"),
         google_api_key=google_key if google_key else None,
+        telegram_status=_compute_telegram_status(token, chat_id),
     )
 
 
