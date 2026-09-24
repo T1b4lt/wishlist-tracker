@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -44,11 +44,13 @@ import {
   DialogCloseTrigger
 } from '@/components/ui/dialog';
 import { Trans, useTranslation } from 'react-i18next';
-import { persistLanguagePreference, SUPPORTED_LANGUAGES } from '@/i18n';
+import { SUPPORTED_LANGUAGES } from '@/i18n';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { API_URL } from '@/lib/api';
+import { telegram as telegramApi } from '@/lib/api';
+import { useConfigStore } from '@/stores/configStore';
+import { ErrorState, LoadingState } from '@/components/common';
 
 const hourCollection = createListCollection({
   items: Array.from({ length: 24 }, (_, i) => ({
@@ -60,10 +62,15 @@ const hourCollection = createListCollection({
 const histWindowSizeValues = [30, 60, 90, 180];
 
 const SettingsPage = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   useDocumentTitle(t('pages.settings.title'));
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const configStatus = useConfigStore((state) => state.status);
+  const config = useConfigStore((state) => state.config);
+  const configError = useConfigStore((state) => state.error);
+  const fetchConfig = useConfigStore((state) => state.fetch);
+  const saveConfig = useConfigStore((state) => state.save);
 
   // Configuration states
   const [selectedLanguage, setSelectedLanguage] = useState('english');
@@ -74,9 +81,6 @@ const SettingsPage = () => {
   const [telegramBotChatId, setTelegramBotChatId] = useState('');
   const [isPriceDropAlert, setIsPriceDropAlert] = useState(false);
   const [isStockChangeAlert, setIsStockChangeAlert] = useState(false);
-
-  // Original values to track changes
-  const [originalConfig, setOriginalConfig] = useState({});
 
   // UI states for Telegram functionality
   const [isGettingChatId, setIsGettingChatId] = useState(false);
@@ -104,68 +108,40 @@ const SettingsPage = () => {
     [t]
   );
 
-  const applyLanguagePreference = useCallback(
-    (language, shouldPersist = false) => {
-      if (!language) return;
-      i18n.changeLanguage(language);
-      if (shouldPersist) {
-        persistLanguagePreference(language);
-      }
-    },
-    [i18n]
-  );
-
-  const fetchConfig = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/config/`);
-      if (!response.ok) throw new Error('Failed to fetch configuration');
-
-      const data = await response.json();
-
-      // Set all values
-      setSelectedLanguage(data.selected_language);
-      setAnalysisHour(data.analysis_hour);
-      setHistWindowSize(data.hist_window_size);
-      setGoogleApiKey(data.google_api_key || '');
-      setTelegramBotString(data.telegram_bot_token || '');
-      setTelegramBotChatId(data.telegram_bot_chat_id || '');
-      setIsPriceDropAlert(data.is_price_drop_alert);
-      setIsStockChangeAlert(data.is_stock_change_alert);
-
-      // Store original values. The app language keeps coming from
-      // localStorage; Settings must not switch it silently on load.
-      setOriginalConfig(data);
-    } catch (error) {
-      console.error('Error fetching configuration:', error);
-      toaster.create({
-        title: t('toasts.settings.loadError.title'),
-        description: t('toasts.settings.loadError.description'),
-        type: 'error'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
-    // Fetch-on-mount: state is updated from the async request, not synchronously
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchConfig();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchConfig]);
+
+  // Sync the form fields from the store's config whenever it (re)loads: the
+  // initial fetch, a save (the store returns the freshly-saved config), or a
+  // forced refetch (e.g. after getting a Telegram chat id). Done during
+  // render (instead of in an effect) to avoid an extra render pass:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [syncedConfig, setSyncedConfig] = useState(null);
+  if (config && syncedConfig !== config) {
+    setSyncedConfig(config);
+    setSelectedLanguage(config.selected_language);
+    setAnalysisHour(config.analysis_hour);
+    setHistWindowSize(config.hist_window_size);
+    setGoogleApiKey(config.google_api_key || '');
+    setTelegramBotString(config.telegram_bot_token || '');
+    setTelegramBotChatId(config.telegram_bot_chat_id || '');
+    setIsPriceDropAlert(config.is_price_drop_alert);
+    setIsStockChangeAlert(config.is_stock_change_alert);
+  }
 
   // Derive whether the form differs from the last loaded/saved configuration
   const hasChanges = useMemo(() => {
-    if (!originalConfig.selected_language) return false; // Wait for original config to load
+    if (!config) return false; // Wait for the config to load
 
     return (
-      selectedLanguage !== originalConfig.selected_language ||
-      analysisHour !== originalConfig.analysis_hour ||
-      histWindowSize !== originalConfig.hist_window_size ||
-      googleApiKey !== (originalConfig.google_api_key || '') ||
-      telegramBotString !== (originalConfig.telegram_bot_token || '') ||
-      isPriceDropAlert !== originalConfig.is_price_drop_alert ||
-      isStockChangeAlert !== originalConfig.is_stock_change_alert
+      selectedLanguage !== config.selected_language ||
+      analysisHour !== config.analysis_hour ||
+      histWindowSize !== config.hist_window_size ||
+      googleApiKey !== (config.google_api_key || '') ||
+      telegramBotString !== (config.telegram_bot_token || '') ||
+      isPriceDropAlert !== config.is_price_drop_alert ||
+      isStockChangeAlert !== config.is_stock_change_alert
     );
   }, [
     selectedLanguage,
@@ -175,16 +151,25 @@ const SettingsPage = () => {
     telegramBotString,
     isPriceDropAlert,
     isStockChangeAlert,
-    originalConfig
+    config
   ]);
 
   // Get Telegram Chat ID
   const handleGetChatId = async () => {
     setIsGettingChatId(true);
     try {
-      const response = await fetch(`${API_URL}/telegram-chat-id`);
+      await telegramApi.getChatId();
 
-      if (response.status === 400) {
+      // Refresh config to get the saved chat_id
+      await fetchConfig(true);
+
+      toaster.create({
+        title: t('toasts.settings.chatIdSaved.title'),
+        description: t('toasts.settings.chatIdSaved.description'),
+        type: 'success'
+      });
+    } catch (error) {
+      if (error.status === 400) {
         toaster.create({
           title: t('toasts.settings.botTokenMissing.title'),
           description: t('toasts.settings.botTokenMissing.description'),
@@ -193,24 +178,11 @@ const SettingsPage = () => {
         return;
       }
 
-      if (response.status === 404) {
+      if (error.status === 404) {
         setShowStartBotModal(true);
         return;
       }
 
-      if (!response.ok) {
-        throw new Error('Failed to get chat ID');
-      }
-
-      // Refresh config to get the saved chat_id
-      await fetchConfig();
-
-      toaster.create({
-        title: t('toasts.settings.chatIdSaved.title'),
-        description: t('toasts.settings.chatIdSaved.description'),
-        type: 'success'
-      });
-    } catch (error) {
       console.error('Error getting chat ID:', error);
       toaster.create({
         title: t('toasts.settings.chatIdError.title'),
@@ -227,14 +199,7 @@ const SettingsPage = () => {
   const handleSendTestMessage = async () => {
     setIsSendingTestMessage(true);
     try {
-      const response = await fetch(`${API_URL}/telegram-test-message`, {
-        method: 'POST'
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Failed to send test message');
-      }
+      await telegramApi.sendTestMessage();
 
       toaster.create({
         title: t('toasts.settings.testMessageSuccess.title'),
@@ -258,25 +223,15 @@ const SettingsPage = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(`${API_URL}/config/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          selected_language: selectedLanguage,
-          analysis_hour: analysisHour,
-          hist_window_size: histWindowSize,
-          google_api_key: googleApiKey || null,
-          telegram_bot_token: telegramBotString || null,
-          is_price_drop_alert: isPriceDropAlert,
-          is_stock_change_alert: isStockChangeAlert
-        })
+      await saveConfig({
+        selected_language: selectedLanguage,
+        analysis_hour: analysisHour,
+        hist_window_size: histWindowSize,
+        google_api_key: googleApiKey || null,
+        telegram_bot_token: telegramBotString || null,
+        is_price_drop_alert: isPriceDropAlert,
+        is_stock_change_alert: isStockChangeAlert
       });
-
-      if (!response.ok) throw new Error('Failed to save configuration');
-
-      const data = await response.json();
-      setOriginalConfig(data);
-      applyLanguagePreference(data.selected_language, true);
 
       toaster.create({
         title: t('toasts.settings.saveSuccess.title'),
@@ -295,10 +250,22 @@ const SettingsPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (configStatus === 'error' && !config) {
     return (
       <PageContainer>
-        <Text>{t('pages.settings.loading')}</Text>
+        <ErrorState
+          title={t('toasts.settings.loadError.title')}
+          message={configError ?? t('toasts.settings.loadError.description')}
+          onRetry={() => fetchConfig(true)}
+        />
+      </PageContainer>
+    );
+  }
+
+  if (!config) {
+    return (
+      <PageContainer>
+        <LoadingState label={t('pages.settings.loading')} minH="200px" />
       </PageContainer>
     );
   }

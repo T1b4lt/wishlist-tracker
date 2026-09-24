@@ -122,10 +122,6 @@
         "generationError": {
           "title": "Error al generar",
           "message": "No se pudo extraer la información del producto. Inténtalo de nuevo."
-        },
-        "saveError": {
-          "title": "Error al guardar",
-          "message": "No se pudo guardar el producto. Inténtalo de nuevo."
         }
       }
     }
@@ -170,6 +166,10 @@
       "deleteDialog": {
         "title": "Eliminar categoría",
         "message": "¿Seguro que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer."
+      },
+      "error": {
+        "title": "No pudimos cargar tus categorías",
+        "message": "Ocurrió un problema al obtener tus categorías. Inténtalo de nuevo."
       },
       "aria": {
         "editCategory": "Editar categoría",
@@ -269,6 +269,24 @@
     }
   },
   "toasts": {
+    "products": {
+      "createSuccess": {
+        "title": "Producto añadido",
+        "description": "{{name}} se ha añadido a tu lista de deseos."
+      },
+      "createError": {
+        "title": "Error al añadir el producto",
+        "description": "No se pudo añadir el producto. Inténtalo de nuevo."
+      },
+      "deleteSuccess": {
+        "title": "Producto eliminado",
+        "description": "{{name}} se ha eliminado correctamente."
+      },
+      "deleteError": {
+        "title": "Error al eliminar el producto",
+        "description": "No se pudo eliminar el producto. Inténtalo de nuevo."
+      }
+    },
     "categories": {
       "loadError": {
         "title": "Error al cargar las categorías",

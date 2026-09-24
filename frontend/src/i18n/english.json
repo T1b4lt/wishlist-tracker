@@ -122,10 +122,6 @@
         "generationError": {
           "title": "Generation Error",
           "message": "Failed to extract product info. Please try again."
-        },
-        "saveError": {
-          "title": "Save Error",
-          "message": "Failed to save product. Please try again."
         }
       }
     }
@@ -170,6 +166,10 @@
       "deleteDialog": {
         "title": "Delete Category",
         "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+      },
+      "error": {
+        "title": "We couldn't load your categories",
+        "message": "Something went wrong while fetching your categories. Please try again."
       },
       "aria": {
         "editCategory": "Edit category",
@@ -269,6 +269,24 @@
     }
   },
   "toasts": {
+    "products": {
+      "createSuccess": {
+        "title": "Product added",
+        "description": "{{name}} has been added to your wishlist."
+      },
+      "createError": {
+        "title": "Error adding product",
+        "description": "Failed to add the product. Please try again."
+      },
+      "deleteSuccess": {
+        "title": "Product deleted",
+        "description": "{{name}} has been deleted successfully."
+      },
+      "deleteError": {
+        "title": "Error deleting product",
+        "description": "Failed to delete the product. Please try again."
+      }
+    },
     "categories": {
       "loadError": {
         "title": "Error loading categories",

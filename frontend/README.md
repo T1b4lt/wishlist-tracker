@@ -17,6 +17,27 @@ Shared test infrastructure lives in `src/test/`:
 - `src/test/renderWithProviders.jsx`: renders a component wrapped in the
   Chakra UI provider and the i18n instance, for component tests.
 
+## State
+
+Server state (products, categories, config) lives in [Zustand](https://zustand.docs.pmnd.rs)
+stores under `src/stores/` (one file per store, tests beside them):
+
+- `productsStore.js`: dashboard summary `items` and per-product `details`
+  (keyed by id), with `fetchSummary`, `create`, `update`, `remove` and
+  `fetchDetail` actions. Mutations refetch the summary on success.
+- `categoriesStore.js`: the categories `items` list, with `fetch`, `create`,
+  `update` and `remove` actions.
+- `configStore.js`: the application `config`, with `fetch(force)` and
+  `save(patch)`. This is the single source of truth for the UI language:
+  every successful `fetch()`/`save()` applies `config.selected_language`
+  via i18next and persists it, so pages can all call `fetch()` on mount and
+  only the first one actually hits the network.
+
+Each store exposes `status` (`'idle' | 'loading' | 'success' | 'error'`) and
+`error` alongside its data, backed by the API modules in `src/lib/api/`.
+Pages render `ErrorState`/`EmptyState`/skeletons/`ConfirmDialog` from
+`src/components/common/` off that state instead of calling `fetch` directly.
+
 ## Theme
 
 The Chakra UI v3 theme lives in `src/theme/` and is exported as `system`

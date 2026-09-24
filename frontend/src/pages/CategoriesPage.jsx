@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -6,32 +6,24 @@ import {
   Grid,
   Heading,
   IconButton,
-  Text,
-  VStack
+  Text
 } from '@chakra-ui/react';
-import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTrash2, LuShapes } from 'react-icons/lu';
 import CategoryModal from '../components/CategoryModal';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { toaster } from '@/components/ui/toaster';
 import {
-  DialogRoot,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-  DialogBackdrop,
-  DialogCloseTrigger
-} from '@/components/ui/dialog';
+  EmptyState,
+  ErrorState,
+  SkeletonCards,
+  ConfirmDialog
+} from '@/components/common';
 import { useTranslation, Trans } from 'react-i18next';
-import { API_URL } from '@/lib/api';
+import { useCategoriesStore } from '@/stores/categoriesStore';
 
 const CategoriesPage = () => {
-  const [categories, setCategories] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
   // Category Create/Edit Modal states
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -39,47 +31,28 @@ const CategoriesPage = () => {
   // Delete Confirmation Modal states
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { t } = useTranslation();
 
   useDocumentTitle(t('pages.categories.title'));
 
-  // Fetch categories
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/categories/`);
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      const data = await response.json();
-      setCategories(data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toaster.create({
-        title: t('toasts.categories.loadError.title'),
-        description: t('toasts.categories.loadError.description'),
-        type: 'error'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [t]);
+  const categories = useCategoriesStore((state) => state.items);
+  const status = useCategoriesStore((state) => state.status);
+  const error = useCategoriesStore((state) => state.error);
+  const fetchCategories = useCategoriesStore((state) => state.fetch);
+  const createCategory = useCategoriesStore((state) => state.create);
+  const updateCategory = useCategoriesStore((state) => state.update);
+  const removeCategory = useCategoriesStore((state) => state.remove);
 
   useEffect(() => {
-    // Fetch-on-mount: state is updated from the async request, not synchronously
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCategories();
   }, [fetchCategories]);
 
   // Create category
   const handleCreateCategory = async (categoryData) => {
     try {
-      const response = await fetch(`${API_URL}/categories/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(categoryData)
-      });
-
-      if (!response.ok) throw new Error('Failed to create category');
-
+      await createCategory(categoryData);
       toaster.create({
         title: t('toasts.categories.createSuccess.title'),
         description: t('toasts.categories.createSuccess.description', {
@@ -87,33 +60,21 @@ const CategoriesPage = () => {
         }),
         type: 'success'
       });
-
-      fetchCategories();
-    } catch (error) {
-      console.error('Error creating category:', error);
+    } catch (err) {
+      console.error('Error creating category:', err);
       toaster.create({
         title: t('toasts.categories.createError.title'),
         description: t('toasts.categories.createError.description'),
         type: 'error'
       });
-      throw error;
+      throw err;
     }
   };
 
   // Update category
   const handleUpdateCategory = async (categoryData) => {
     try {
-      const response = await fetch(
-        `${API_URL}/categories/${editingCategory.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(categoryData)
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to update category');
-
+      await updateCategory(editingCategory.id, categoryData);
       toaster.create({
         title: t('toasts.categories.updateSuccess.title'),
         description: t('toasts.categories.updateSuccess.description', {
@@ -121,16 +82,14 @@ const CategoriesPage = () => {
         }),
         type: 'success'
       });
-
-      fetchCategories();
-    } catch (error) {
-      console.error('Error updating category:', error);
+    } catch (err) {
+      console.error('Error updating category:', err);
       toaster.create({
         title: t('toasts.categories.updateError.title'),
         description: t('toasts.categories.updateError.description'),
         type: 'error'
       });
-      throw error;
+      throw err;
     }
   };
 
@@ -138,28 +97,9 @@ const CategoriesPage = () => {
   const handleConfirmDelete = async () => {
     if (!categoryToDelete) return;
 
+    setIsDeleting(true);
     try {
-      const response = await fetch(
-        `${API_URL}/categories/${categoryToDelete.id}`,
-        {
-          method: 'DELETE'
-        }
-      );
-
-      if (response.status === 400) {
-        toaster.create({
-          title: t('toasts.categories.deleteBlocked.title'),
-          description: t('toasts.categories.deleteBlocked.description'),
-          type: 'error',
-          duration: 5000
-        });
-        setIsDeleteModalOpen(false);
-        setCategoryToDelete(null);
-        return;
-      }
-
-      if (!response.ok) throw new Error('Failed to delete category');
-
+      await removeCategory(categoryToDelete.id);
       toaster.create({
         title: t('toasts.categories.deleteSuccess.title'),
         description: t('toasts.categories.deleteSuccess.description', {
@@ -167,18 +107,28 @@ const CategoriesPage = () => {
         }),
         type: 'success'
       });
-
-      fetchCategories();
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      toaster.create({
-        title: t('toasts.categories.deleteError.title'),
-        description: t('toasts.categories.deleteError.description'),
-        type: 'error'
-      });
-    } finally {
       setIsDeleteModalOpen(false);
       setCategoryToDelete(null);
+    } catch (err) {
+      if (err.status === 400) {
+        toaster.create({
+          title: t('toasts.categories.deleteBlocked.title'),
+          description: t('toasts.categories.deleteBlocked.description'),
+          type: 'error',
+          duration: 5000
+        });
+      } else {
+        console.error('Error deleting category:', err);
+        toaster.create({
+          title: t('toasts.categories.deleteError.title'),
+          description: t('toasts.categories.deleteError.description'),
+          type: 'error'
+        });
+      }
+      setIsDeleteModalOpen(false);
+      setCategoryToDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -220,6 +170,8 @@ const CategoriesPage = () => {
     }
   };
 
+  const isLoading = status === 'loading' && categories.length === 0;
+
   return (
     <PageContainer>
       <PageHeader
@@ -231,83 +183,75 @@ const CategoriesPage = () => {
           </Button>
         }
       />
-      <VStack gap={8} align="stretch">
-        {/* Existing Categories */}
-        <Box>
-          <Heading size="lg" mb={4}>
-            {t('pages.categories.existingSection.title')}
-          </Heading>
+      <Box>
+        <Heading size="lg" mb={4}>
+          {t('pages.categories.existingSection.title')}
+        </Heading>
 
-          {isLoading ? (
-            <Text>{t('pages.categories.existingSection.loading')}</Text>
-          ) : categories.length === 0 ? (
-            <Box
-              p={8}
-              textAlign="center"
-              borderRadius="lg"
-              borderWidth="1px"
-              borderStyle="dashed"
-              borderColor="border.emphasized"
-            >
-              <Text color="fg.muted">
-                {t('pages.categories.existingSection.empty')}
-              </Text>
-            </Box>
-          ) : (
-            <Grid
-              templateColumns="repeat(auto-fill, minmax(300px, 1fr))"
-              gap={4}
-            >
-              {categories.map((category) => (
-                <Box
-                  key={category.id}
-                  p={5}
-                  borderRadius="lg"
-                  borderWidth="1px"
-                  borderColor="border"
-                  bg="bg.panel"
-                  _hover={{ borderColor: 'border.emphasized' }}
-                  transition="all 0.2s"
-                >
-                  <Flex justify="space-between" align="center">
-                    <Flex align="center" gap={3} flex={1}>
-                      <Box
-                        w="12px"
-                        h="12px"
-                        borderRadius="full"
-                        bg={category.color}
-                        flexShrink={0}
-                      />
-                      <Text fontWeight="bold" fontSize="lg">
-                        {category.name}
-                      </Text>
-                    </Flex>
-                    <Flex gap={2}>
-                      <IconButton
-                        aria-label={t('pages.categories.aria.editCategory')}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenEditModal(category)}
-                      >
-                        <LuPencil />
-                      </IconButton>
-                      <IconButton
-                        aria-label={t('pages.categories.aria.deleteCategory')}
-                        variant="ghost"
-                        colorPalette="red"
-                        size="sm"
-                        onClick={() => handleOpenDeleteModal(category)}
-                      >
-                        <LuTrash2 />
-                      </IconButton>
-                    </Flex>
+        {status === 'error' ? (
+          <ErrorState
+            title={t('pages.categories.error.title')}
+            message={error ?? t('pages.categories.error.message')}
+            onRetry={fetchCategories}
+          />
+        ) : isLoading ? (
+          <SkeletonCards count={6} />
+        ) : categories.length === 0 ? (
+          <EmptyState
+            icon={LuShapes}
+            title={t('pages.categories.existingSection.empty')}
+          />
+        ) : (
+          <Grid templateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
+            {categories.map((category) => (
+              <Box
+                key={category.id}
+                p={5}
+                borderRadius="lg"
+                borderWidth="1px"
+                borderColor="border"
+                bg="bg.panel"
+                _hover={{ borderColor: 'border.emphasized' }}
+                transition="all 0.2s"
+              >
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={3} flex={1}>
+                    <Box
+                      w="12px"
+                      h="12px"
+                      borderRadius="full"
+                      bg={category.color}
+                      flexShrink={0}
+                    />
+                    <Text fontWeight="bold" fontSize="lg">
+                      {category.name}
+                    </Text>
                   </Flex>
-                </Box>
-              ))}
-            </Grid>
-          )}
-        </Box>
-      </VStack>
+                  <Flex gap={2}>
+                    <IconButton
+                      aria-label={t('pages.categories.aria.editCategory')}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenEditModal(category)}
+                    >
+                      <LuPencil />
+                    </IconButton>
+                    <IconButton
+                      aria-label={t('pages.categories.aria.deleteCategory')}
+                      variant="ghost"
+                      colorPalette="red"
+                      size="sm"
+                      onClick={() => handleOpenDeleteModal(category)}
+                    >
+                      <LuTrash2 />
+                    </IconButton>
+                  </Flex>
+                </Flex>
+              </Box>
+            ))}
+          </Grid>
+        )}
+      </Box>
 
       {/* Category Create/Edit Modal */}
       <CategoryModal
@@ -317,40 +261,25 @@ const CategoriesPage = () => {
         category={editingCategory}
       />
 
-      {/* Delete Confirmation Modal */}
-      <DialogRoot
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
         open={isDeleteModalOpen}
-        onOpenChange={(e) => !e.open && handleCloseDeleteModal()}
-      >
-        <DialogBackdrop />
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t('pages.categories.deleteDialog.title')}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogCloseTrigger />
-          <DialogBody>
-            <Text>
-              <Trans
-                i18nKey="pages.categories.deleteDialog.message"
-                values={{ name: categoryToDelete?.name }}
-                components={{ strong: <strong /> }}
-              />
-            </Text>
-          </DialogBody>
-          <DialogFooter>
-            <Flex gap={3}>
-              <Button variant="outline" onClick={handleCloseDeleteModal}>
-                {t('common.actions.cancel')}
-              </Button>
-              <Button colorPalette="red" onClick={handleConfirmDelete}>
-                {t('common.actions.delete')}
-              </Button>
-            </Flex>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title={t('pages.categories.deleteDialog.title')}
+        body={
+          <Text>
+            <Trans
+              i18nKey="pages.categories.deleteDialog.message"
+              values={{ name: categoryToDelete?.name }}
+              components={{ strong: <strong /> }}
+            />
+          </Text>
+        }
+        confirmLabel={t('common.actions.delete')}
+        destructive
+        isLoading={isDeleting}
+      />
     </PageContainer>
   );
 };

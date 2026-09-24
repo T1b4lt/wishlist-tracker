@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, Link } from 'wouter';
 import {
   Box,
@@ -6,14 +6,11 @@ import {
   Text,
   VStack,
   HStack,
-  Spinner,
   Card,
-  Circle,
   Flex,
   Button,
   Stack
 } from '@chakra-ui/react';
-import { Tag } from '@/components/ui/tag';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -22,15 +19,19 @@ import {
   LuExternalLink,
   LuTrendingUp,
   LuTrendingDown,
-  LuMinus,
-  LuRefreshCw
+  LuMinus
 } from 'react-icons/lu';
-import { getCurrencySymbol, getPriorityLabel } from '@/lib/web_utils';
-import { getTrend } from '@/lib/format';
+import { getCurrencySymbol } from '@/lib/web_utils';
+import { formatDate, formatPrice, getLocale, getTrend } from '@/lib/format';
+import {
+  ErrorState,
+  LoadingState,
+  PriorityBadge,
+  CategoryTag,
+  StockStatus
+} from '@/components/common';
 import {
   CartesianGrid,
-  Line,
-  LineChart,
   XAxis,
   YAxis,
   Tooltip,
@@ -41,21 +42,25 @@ import {
   Area
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import { API_URL } from '@/lib/api';
+import { useConfigStore } from '@/stores/configStore';
+import { useProductsStore } from '@/stores/productsStore';
 
 const ProductPage = () => {
   const params = useParams();
   const productId = params.productId;
-
-  const [product, setProduct] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [histWindowSize, setHistWindowSize] = useState(60);
   const { t, i18n } = useTranslation();
-  const locale = useMemo(
-    () => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'),
-    [i18n.language]
-  );
+  const locale = useMemo(() => getLocale(i18n.language), [i18n.language]);
+
+  const config = useConfigStore((state) => state.config);
+  const fetchConfig = useConfigStore((state) => state.fetch);
+  const histWindowSize = config?.hist_window_size ?? 60;
+
+  const detail = useProductsStore((state) => state.details[productId]);
+  const fetchDetail = useProductsStore((state) => state.fetchDetail);
+
+  const status = detail?.status ?? 'idle';
+  const product = detail?.data ?? null;
+  const isLoading = status === 'loading' || status === 'idle';
 
   useDocumentTitle(
     product?.name ??
@@ -64,85 +69,13 @@ const ProductPage = () => {
         : t('pages.product.error.title'))
   );
 
-  const fetchConfig = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/config/`);
-      if (!response.ok) throw new Error('Failed to fetch config');
-      const data = await response.json();
-      setHistWindowSize(data.hist_window_size);
-    } catch (error) {
-      console.error('Error fetching config:', error);
-    }
-  }, []);
-
-  const fetchProductDetail = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_URL}/products/${productId}`);
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(t('pages.product.errors.notFound'));
-        }
-        throw new Error(t('pages.product.errors.fetchFailed'));
-      }
-      const data = await response.json();
-      setProduct(data);
-    } catch (error) {
-      console.error('Error fetching product:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [productId, t]);
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   useEffect(() => {
-    // Fetch-on-mount: state is updated from the async request, not synchronously
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchConfig();
-    fetchProductDetail();
-  }, [fetchConfig, fetchProductDetail]);
-
-  const formatPrice = (price, currency) => {
-    if (price === null || price === undefined) {
-      return t('common.messages.notAvailable');
-    }
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency
-    }).format(price);
-  };
-
-  const formatDate = (timestamp) => {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString(locale, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const formatDateLong = (timestamp) => {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return 'red';
-      case 'medium':
-        return 'orange';
-      case 'low':
-        return 'green';
-      default:
-        return 'gray';
-    }
-  };
+    fetchDetail(productId);
+  }, [fetchDetail, productId]);
 
   const calculatePriceChange = () => {
     if (!product || !product.current_price || !product.min_price) return null;
@@ -165,7 +98,7 @@ const ProductPage = () => {
     const recentHistory = product.price_history.slice(-histWindowSize);
 
     return recentHistory.map((record) => ({
-      date: formatDate(record.timestamp),
+      date: formatDate(record.timestamp, locale),
       timestamp: record.timestamp,
       price: record.price
     }));
@@ -196,7 +129,7 @@ const ProductPage = () => {
       recentHistory[0]
     );
 
-    return formatDate(minPriceRecord.timestamp);
+    return formatDate(minPriceRecord.timestamp, locale);
   };
 
   const getMinPriceDateLong = () => {
@@ -214,55 +147,39 @@ const ProductPage = () => {
       recentHistory[0]
     );
 
-    return formatDateLong(minPriceRecord.timestamp);
+    return formatDate(minPriceRecord.timestamp, locale, 'long');
   };
 
   if (isLoading) {
     return (
       <PageContainer>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="400px"
-        >
-          <Spinner size="xl" />
-        </Box>
+        <LoadingState minH="400px" />
       </PageContainer>
     );
   }
 
-  if (error) {
+  if (status === 'error' || !product) {
     return (
       <PageContainer>
         <Card.Root>
           <Card.Body>
-            <VStack gap="4" align="center" py="8">
-              <Heading size="lg" color="fg.error">
-                {t('pages.product.error.title')}
-              </Heading>
-              <Text>{error}</Text>
-              <HStack gap="3">
-                <Button variant="solid" onClick={fetchProductDetail}>
-                  <LuRefreshCw />
-                  {t('common.actions.retry')}
+            <ErrorState
+              title={t('pages.product.error.title')}
+              message={detail?.error ?? t('pages.product.errors.fetchFailed')}
+              onRetry={() => fetchDetail(productId)}
+            />
+            <Flex justify="center" mt={2}>
+              <Link href="/">
+                <Button variant="outline">
+                  <LuArrowLeft />
+                  {t('common.actions.backToDashboard')}
                 </Button>
-                <Link href="/">
-                  <Button variant="outline">
-                    <LuArrowLeft />
-                    {t('common.actions.backToDashboard')}
-                  </Button>
-                </Link>
-              </HStack>
-            </VStack>
+              </Link>
+            </Flex>
           </Card.Body>
         </Card.Root>
       </PageContainer>
     );
-  }
-
-  if (!product) {
-    return null;
   }
 
   const priceChange = calculatePriceChange();
@@ -298,29 +215,12 @@ const ProductPage = () => {
       />
       <VStack gap="6" align="stretch">
         <HStack gap="3" wrap="wrap">
-          <Tag
-            size="md"
-            variant="subtle"
-            startElement={<Circle size="8px" bg={product.category_color} />}
-          >
-            {product.category_name}
-          </Tag>
-          <Tag
-            size="md"
-            variant="subtle"
-            colorPalette={getPriorityColor(product.priority)}
-          >
-            {getPriorityLabel(product.priority, t)}
-          </Tag>
-          <Tag
-            size="md"
-            variant="subtle"
-            colorPalette={product.is_in_stock ? 'green' : 'red'}
-          >
-            {product.is_in_stock
-              ? t('common.status.inStock')
-              : t('common.status.outOfStock')}
-          </Tag>
+          <CategoryTag
+            name={product.category_name}
+            color={product.category_color}
+          />
+          <PriorityBadge priority={product.priority} />
+          <StockStatus inStock={product.is_in_stock} />
         </HStack>
 
         {/* Stats Section */}
@@ -345,7 +245,7 @@ const ProductPage = () => {
                   {t('pages.product.price.current')}
                 </Text>
                 <Heading size="3xl" color="fg">
-                  {formatPrice(product.current_price, product.currency)}
+                  {formatPrice(product.current_price, product.currency, locale)}
                 </Heading>
               </Box>
 
@@ -362,7 +262,7 @@ const ProductPage = () => {
                 </Text>
                 <Flex align="baseline" gap="3">
                   <Heading size="xl">
-                    {formatPrice(product.min_price, product.currency)}
+                    {formatPrice(product.min_price, product.currency, locale)}
                   </Heading>
                   {priceChange !== null && (
                     <Flex
@@ -408,7 +308,7 @@ const ProductPage = () => {
                 </Text>
                 <Heading size="xl" color="fg.muted">
                   {averagePrice
-                    ? formatPrice(averagePrice, product.currency)
+                    ? formatPrice(averagePrice, product.currency, locale)
                     : '-'}
                 </Heading>
               </Box>

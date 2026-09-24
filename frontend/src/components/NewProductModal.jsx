@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -32,7 +32,8 @@ import { Field } from '@/components/ui/field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { LuSparkles } from 'react-icons/lu';
 import { Trans, useTranslation } from 'react-i18next';
-import { API_URL } from '@/lib/api';
+import { products as productsApi } from '@/lib/api';
+import { useCategoriesStore } from '@/stores/categoriesStore';
 
 const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [url, setUrl] = useState('');
@@ -41,7 +42,8 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [currency, setCurrency] = useState('EUR');
-  const [categories, setCategories] = useState([]);
+  const categories = useCategoriesStore((state) => state.items);
+  const fetchCategories = useCategoriesStore((state) => state.fetch);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,22 +73,9 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
     [categories]
   );
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/categories/`);
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      const data = await response.json();
-      setCategories(data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  }, []);
-
   // Fetch categories when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Fetch-on-mount: state is updated from the async request, not synchronously
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchCategories();
     }
   }, [isOpen, fetchCategories]);
@@ -103,20 +92,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
 
     setIsGenerating(true);
     try {
-      const response = await fetch(`${API_URL}/extract-product-info/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ url: url.trim() })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to extract product info');
-      }
-
-      const data = await response.json();
+      const data = await productsApi.extractInfo(url.trim());
       setName(data.name);
       setDescription(data.description);
       setCategory(data.category);
@@ -171,12 +147,9 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
       await onSave(productData);
       handleClose();
     } catch (error) {
+      // The caller (page) already reports mutation failures via a toast;
+      // just keep the modal open with the entered data so the user can retry.
       console.error('Error saving product:', error);
-      setErrorDialog({
-        isOpen: true,
-        title: t('components.newProductModal.errors.saveError.title'),
-        message: t('components.newProductModal.errors.saveError.message')
-      });
     } finally {
       setIsLoading(false);
     }
