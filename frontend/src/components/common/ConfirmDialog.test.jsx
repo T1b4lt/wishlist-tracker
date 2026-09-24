@@ -45,7 +45,7 @@ describe('ConfirmDialog', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onClose when the cancel button is clicked', async () => {
+  it('calls onClose exactly once when the cancel button is clicked', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
@@ -62,7 +62,47 @@ describe('ConfirmDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(onClose).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose exactly once when the close button is clicked', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        onClose={onClose}
+        onConfirm={vi.fn()}
+        title="Delete category"
+        body="Are you sure?"
+        confirmLabel="Delete"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose exactly once when Escape is pressed', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        onClose={onClose}
+        onConfirm={vi.fn()}
+        title="Delete category"
+        body="Are you sure?"
+        confirmLabel="Delete"
+      />
+    );
+
+    await user.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('does not render dialog content when closed', () => {

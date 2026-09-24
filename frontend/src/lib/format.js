@@ -69,10 +69,10 @@ const DATE_STYLE_PRESETS = {
  * @param {'short'|'long'|Intl.DateTimeFormatOptions} [style] - `'short'` (e.g.
  *   "Mar 5, 2024", the default) or `'long'` (e.g. "5 March 2024"), or an
  *   explicit `Intl.DateTimeFormatOptions` object.
- * @returns {string} The formatted date, or `'-'` when `ts` is missing.
+ * @returns {string} The formatted date, or `'-'` when `ts` is missing or invalid.
  */
 export const formatDate = (ts, locale, style = 'short') => {
-  if (ts === null || ts === undefined) {
+  if (ts === null || ts === undefined || Number.isNaN(ts)) {
     return '-';
   }
   const options =
@@ -101,10 +101,10 @@ const RELATIVE_UNITS = [
  * @param {string} locale - An `Intl` locale tag, see `getLocale`.
  * @param {number} [now] - Seconds since epoch to compare against. Defaults to
  *   the current time; pass an explicit value in tests for deterministic output.
- * @returns {string} The formatted relative time, or `'-'` when `ts` is missing.
+ * @returns {string} The formatted relative time, or `'-'` when `ts` is missing or invalid.
  */
 export const formatRelative = (ts, locale, now = Date.now() / 1000) => {
-  if (ts === null || ts === undefined) {
+  if (ts === null || ts === undefined || Number.isNaN(ts)) {
     return '-';
   }
 

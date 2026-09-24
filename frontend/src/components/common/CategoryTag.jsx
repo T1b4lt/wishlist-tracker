@@ -17,6 +17,7 @@ export const CategoryTag = ({ name, color, ...rest }) => (
   <Tag
     size="md"
     variant="subtle"
+    colorPalette="gray"
     startElement={<Circle size="8px" bg={color} />}
     {...rest}
   >

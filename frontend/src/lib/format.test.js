@@ -25,6 +25,15 @@ describe('formatPrice', () => {
     expect(formatPrice(19.9, 'EUR', 'es-ES')).toBe('19,90 €');
   });
 
+  it('formats a different currency code', () => {
+    expect(formatPrice(19.9, 'USD', 'en-US')).toBe('$19.90');
+  });
+
+  it('formats zero and negative values', () => {
+    expect(formatPrice(0, 'EUR', 'en-US')).toBe('€0.00');
+    expect(formatPrice(-19.9, 'EUR', 'en-US')).toBe('-€19.90');
+  });
+
   it('returns "-" when the value is null, undefined or NaN', () => {
     expect(formatPrice(null, 'EUR', 'en-US')).toBe('-');
     expect(formatPrice(undefined, 'EUR', 'en-US')).toBe('-');
@@ -36,6 +45,11 @@ describe('formatPercent', () => {
   it('formats a percentage number (e.g. -3.2 for -3.2%)', () => {
     expect(formatPercent(-3.2, 'en-US')).toBe('-3.2%');
     expect(formatPercent(12, 'en-US')).toBe('12.0%');
+  });
+
+  it('formats zero and a larger negative value with the default signDisplay', () => {
+    expect(formatPercent(0, 'en-US')).toBe('0.0%');
+    expect(formatPercent(-12, 'en-US')).toBe('-12.0%');
   });
 
   it('supports signDisplay', () => {
@@ -70,9 +84,10 @@ describe('formatDate', () => {
     expect(formatDate(ts, 'en-US', { year: 'numeric' })).toBe('2024');
   });
 
-  it('returns "-" when given no timestamp', () => {
+  it('returns "-" when given no timestamp or an invalid one', () => {
     expect(formatDate(null, 'en-US')).toBe('-');
     expect(formatDate(undefined, 'en-US')).toBe('-');
+    expect(formatDate(NaN, 'en-US')).toBe('-');
   });
 });
 
@@ -94,8 +109,9 @@ describe('formatRelative', () => {
     expect(formatRelative(fewSecondsAgo, 'en-US', now)).toBe('5 seconds ago');
   });
 
-  it('returns "-" when given no timestamp', () => {
+  it('returns "-" when given no timestamp or an invalid one', () => {
     expect(formatRelative(null, 'en-US', now)).toBe('-');
+    expect(formatRelative(NaN, 'en-US', now)).toBe('-');
   });
 });
 

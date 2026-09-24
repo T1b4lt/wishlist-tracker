@@ -20,8 +20,10 @@ import { useTranslation } from 'react-i18next';
  *
  * @param {object} props
  * @param {boolean} props.open
- * @param {() => void} props.onClose - Called when the dialog is dismissed
- *   (backdrop click, close button or the cancel button).
+ * @param {() => void} props.onClose - Called exactly once when the dialog is
+ *   dismissed (backdrop click, Escape, the close button or the cancel
+ *   button), all of which route through `onOpenChange` below rather than
+ *   also firing their own `onClick`, so `onClose` never double-fires.
  * @param {() => void} props.onConfirm
  * @param {string} props.title
  * @param {import('react').ReactNode} props.body - Rendered as-is inside the
@@ -61,7 +63,7 @@ export const ConfirmDialog = ({
           </DialogBody>
           <DialogFooter>
             <DialogActionTrigger asChild>
-              <Button variant="outline" onClick={onClose} disabled={isLoading}>
+              <Button variant="outline" disabled={isLoading}>
                 {cancelLabel ?? t('common.actions.cancel')}
               </Button>
             </DialogActionTrigger>
