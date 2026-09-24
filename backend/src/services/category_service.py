@@ -2,11 +2,8 @@
 Category service — CRUD business logic for product categories.
 """
 
-from typing import List
-
 from fastapi import HTTPException
 from sqlmodel import Session, select
-
 from src.models.database_models import Category, Product
 from src.schemas.category import CategoryCreate, CategoryUpdate
 
@@ -28,7 +25,7 @@ def create(session: Session, payload: CategoryCreate) -> Category:
     return category
 
 
-def get_all(session: Session) -> List[Category]:
+def get_all(session: Session) -> list[Category]:
     """Return all categories.
 
     Args:
@@ -109,8 +106,7 @@ def delete(session: Session, category_id: int) -> dict:
 
     if products_with_category:
         raise HTTPException(
-            status_code=400,
-            detail="Cannot delete category with associated products"
+            status_code=400, detail="Cannot delete category with associated products"
         )
 
     session.delete(category)

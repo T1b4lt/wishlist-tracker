@@ -1,8 +1,8 @@
-from typing import Any, Dict, List
+import os
+from typing import Any
+
 from pydantic import BaseModel
-
 from stagehand import AsyncStagehand
-
 
 # --- Extraction result models ---
 # These Pydantic models define the expected shape of extracted data.
@@ -28,46 +28,44 @@ class ProductInfoExtraction(BaseModel):
 
 # --- JSON Schemas for Stagehand v3 extract() ---
 
-PRODUCT_STATUS_SCHEMA: Dict[str, Any] = {
+PRODUCT_STATUS_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "price": {
             "type": "number",
-            "description": "The current price of the product as a float number"
+            "description": "The current price of the product as a float number",
         },
         "is_in_stock": {
             "type": "boolean",
-            "description": "Whether the product is currently in stock"
-        }
+            "description": "Whether the product is currently in stock",
+        },
     },
-    "required": ["price", "is_in_stock"]
+    "required": ["price", "is_in_stock"],
 }
 
-PRODUCT_INFO_SCHEMA: Dict[str, Any] = {
+PRODUCT_INFO_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "name": {
             "type": "string",
-            "description": "Short, descriptive product name (brand, type, specs)"
+            "description": "Short, descriptive product name (brand, type, specs)",
         },
         "category": {
             "type": "string",
-            "description": "The most accurate product category from the provided list"
+            "description": "The most accurate product category from the provided list",
         },
         "currency": {
             "type": "string",
-            "description": "Currency code (e.g., EUR, USD, GBP) used for the product price"
+            "description": "Currency code (e.g., EUR, USD, GBP) used for the product price",
         },
         "description": {
             "type": "string",
-            "description": "Concise summary of the product's key features and uses"
-        }
+            "description": "Concise summary of the product's key features and uses",
+        },
     },
-    "required": ["name", "category", "currency", "description"]
+    "required": ["name", "category", "currency", "description"],
 }
 
-
-import os
 
 # --- Local browser configuration for Stagehand v3 ---
 # Chrome launch options for WSL/Linux environments.
@@ -76,7 +74,7 @@ import os
 # /usr/bin/chromium in Docker) and default to /usr/bin/google-chrome.
 # The args handle common WSL sandbox/GPU restrictions.
 
-LOCAL_BROWSER_CONFIG: Dict[str, Any] = {
+LOCAL_BROWSER_CONFIG: dict[str, Any] = {
     "type": "local",
     "launchOptions": {
         "headless": True,
@@ -95,10 +93,7 @@ LOCAL_BROWSER_CONFIG: Dict[str, Any] = {
 
 
 async def get_product_info(
-    google_api_key: str,
-    url: str,
-    language: str,
-    categories: List[str]
+    google_api_key: str, url: str, language: str, categories: list[str]
 ) -> ProductInfoExtraction:
     """Fetch the product information from the given URL using Stagehand v3.
 
@@ -160,10 +155,7 @@ async def get_product_info(
             await session.end()
 
 
-async def get_product_status(
-    google_api_key: str,
-    url: str
-) -> ProductStatusExtraction:
+async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtraction:
     """Fetch the price and stock status of a product from the given URL using Stagehand v3.
 
     Uses a local browser session managed by the Stagehand embedded server.
@@ -216,8 +208,8 @@ async def get_product_status(
 
 
 if __name__ == "__main__":
-    import os
     import asyncio
+    import os
 
     from dotenv import load_dotenv
 
@@ -227,6 +219,7 @@ if __name__ == "__main__":
     test_categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
     google_api_key = os.getenv("ASD_GOOGLE")
 
-    asyncio.run(get_product_info(google_api_key,
-                test_url, test_language, test_categories))
+    asyncio.run(
+        get_product_info(google_api_key, test_url, test_language, test_categories)
+    )
     asyncio.run(get_product_status(google_api_key, test_url))

@@ -8,13 +8,12 @@ the engine creation and SQLite pragma setup.
 
 import os
 import sys
+from contextlib import asynccontextmanager
 from typing import Annotated
 
-from contextlib import asynccontextmanager
 from fastapi import Depends
 from sqlalchemy import event
 from sqlmodel import Session, create_engine
-
 
 # --- Database path and engine ---
 

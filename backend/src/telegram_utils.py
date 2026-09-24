@@ -1,6 +1,6 @@
 import asyncio
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
@@ -12,7 +12,7 @@ currency_symbols = {
     "JPY": "¥",
     "CNY": "¥",
     "CAD": "$",
-    "AUD": "$"
+    "AUD": "$",
 }
 
 
@@ -25,10 +25,28 @@ def escape_markdown(text: str) -> str:
     Returns:
         str: The escaped text safe for MarkdownV2 parsing.
     """
-    special_chars = ['_', '*', '[', ']',
-                     '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+    special_chars = [
+        "_",
+        "*",
+        "[",
+        "]",
+        "(",
+        ")",
+        "~",
+        "`",
+        ">",
+        "#",
+        "+",
+        "-",
+        "=",
+        "|",
+        "{",
+        "}",
+        ".",
+        "!",
+    ]
     for char in special_chars:
-        text = text.replace(char, f'\\{char}')
+        text = text.replace(char, f"\\{char}")
     return text
 
 
@@ -50,7 +68,8 @@ async def get_chat_id(bot_token: str) -> str:
 
         if not updates:
             print(
-                "No conversations found. The bot needs to receive at least one message first.")
+                "No conversations found. The bot needs to receive at least one message first."
+            )
             return None
 
         # Extract the chat ID from the most recent update
@@ -95,7 +114,7 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
             "🎉 *Notificación de Prueba de Wishlist Tracker*\n\n"
             "¡Todo está funcionando correctamente\\!\n"
             "A partir de ahora, recibirás alertas como los ejemplos a continuación\\."
-        )
+        ),
     }
 
     # Get the appropriate message text
@@ -105,9 +124,10 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
 
     try:
         # Send initial test message
-        await bot.send_message(chat_id=chat_id, text=message_text, parse_mode='MarkdownV2')
-        print(
-            f"✓ Initial test message sent successfully to chat_id: {chat_id}")
+        await bot.send_message(
+            chat_id=chat_id, text=message_text, parse_mode="MarkdownV2"
+        )
+        print(f"✓ Initial test message sent successfully to chat_id: {chat_id}")
 
         # Send example price drop alert
         await send_price_drop_alert(
@@ -118,10 +138,9 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
             old_price=20.0,
             new_price=10.0,
             lang=lang,
-            currency="EUR"
+            currency="EUR",
         )
-        print(
-            f"✓ Example price drop alert sent successfully to chat_id: {chat_id}")
+        print(f"✓ Example price drop alert sent successfully to chat_id: {chat_id}")
 
         # Send example stock alert
         await send_stock_alert(
@@ -131,7 +150,7 @@ async def send_test_message(bot_token: str, chat_id: str, lang: str):
             product_url="https://www.amazon.es",
             current_price=10.0,
             lang=lang,
-            currency="EUR"
+            currency="EUR",
         )
         print(f"✓ Example stock alert sent successfully to chat_id: {chat_id}")
 
@@ -149,7 +168,7 @@ async def send_price_drop_alert(
     old_price: float,
     new_price: float,
     lang: str,
-    currency: str
+    currency: str,
 ):
     """
     Send a price drop alert notification to the specified chat ID.
@@ -174,12 +193,15 @@ async def send_price_drop_alert(
     escaped_product_name = escape_markdown(product_name)
 
     # Format prices with proper escaping
-    old_price_str = f"{old_price:.2f}{currency_symbol}".replace(
-        '.', '\\.').replace('-', '\\-')
-    new_price_str = f"{new_price:.2f}{currency_symbol}".replace(
-        '.', '\\.').replace('-', '\\-')
-    percentage_str = f"{price_drop_percentage:.0f}%".replace(
-        '.', '\\.').replace('-', '\\-')
+    old_price_str = f"{old_price:.2f}{currency_symbol}".replace(".", "\\.").replace(
+        "-", "\\-"
+    )
+    new_price_str = f"{new_price:.2f}{currency_symbol}".replace(".", "\\.").replace(
+        "-", "\\-"
+    )
+    percentage_str = f"{price_drop_percentage:.0f}%".replace(".", "\\.").replace(
+        "-", "\\-"
+    )
 
     # Define messages for different languages
     messages = {
@@ -196,7 +218,7 @@ async def send_price_drop_alert(
             f"Precio Anterior: ~{old_price_str}~\n"
             f"Precio Nuevo: *{new_price_str}* \\({percentage_str}\\)\n"
             f"*¡Gran Oferta\\!*"
-        )
+        ),
     }
 
     # Get the appropriate message text, default to English if lang is not recognized
@@ -213,8 +235,8 @@ async def send_price_drop_alert(
         await bot.send_message(
             chat_id=chat_id,
             text=message_text,
-            parse_mode='MarkdownV2',
-            reply_markup=reply_markup
+            parse_mode="MarkdownV2",
+            reply_markup=reply_markup,
         )
         return True
     except TelegramError as e:
@@ -232,7 +254,7 @@ async def send_stock_alert(
     product_url: str,
     current_price: float,
     lang: str,
-    currency: str
+    currency: str,
 ):
     """
     Send a stock availability alert notification to the specified chat ID.
@@ -253,8 +275,9 @@ async def send_stock_alert(
     escaped_product_name = escape_markdown(product_name)
 
     # Format price with proper escaping
-    price_str = f"{current_price:.2f}{currency_symbol}".replace(
-        '.', '\\.').replace('-', '\\-')
+    price_str = f"{current_price:.2f}{currency_symbol}".replace(".", "\\.").replace(
+        "-", "\\-"
+    )
 
     # Define messages for different languages
     messages = {
@@ -271,7 +294,7 @@ async def send_stock_alert(
             f"Estado: *¡Vuelve a estar en stock\\!*\n"
             f"Precio Actual: *{price_str}*\n"
             f"*¡No te lo pierdas\\!*"
-        )
+        ),
     }
 
     # Get the appropriate message text, default to English if lang is not recognized
@@ -288,8 +311,8 @@ async def send_stock_alert(
         await bot.send_message(
             chat_id=chat_id,
             text=message_text,
-            parse_mode='MarkdownV2',
-            reply_markup=reply_markup
+            parse_mode="MarkdownV2",
+            reply_markup=reply_markup,
         )
         return True
     except TelegramError as e:

@@ -5,11 +5,8 @@ Contains the complex aggregation logic that was previously embedded in the
 API route handlers (price change calculation, min price, etc.).
 """
 
-from typing import List
-
 from fastapi import HTTPException
 from sqlmodel import Session, select
-
 from src.core.config import get_config_value
 from src.models.database_models import Category, Product, ProductHist
 from src.schemas.product import (
@@ -22,7 +19,6 @@ from src.schemas.product import (
     ProductUpdate,
 )
 from src.stagehand_utils import get_product_info
-
 
 # --- CRUD operations ---
 
@@ -44,7 +40,7 @@ def create(session: Session, payload: ProductCreate) -> Product:
     return product
 
 
-def get_all(session: Session) -> List[Product]:
+def get_all(session: Session) -> list[Product]:
     """Return all products.
 
     Args:
@@ -140,19 +136,18 @@ def _compute_price_change(
     if len(history) <= 1:
         return None
 
-    historical_records = history[1:window_size + 1]
+    historical_records = history[1 : window_size + 1]
     if not historical_records:
         return None
 
-    avg_price = sum(r.price for r in historical_records) / \
-        len(historical_records)
+    avg_price = sum(r.price for r in historical_records) / len(historical_records)
     if avg_price <= 0:
         return None
 
     return ((current_price - avg_price) / avg_price) * 100
 
 
-def get_dashboard_summary(session: Session) -> List[ProductDashboardSummary]:
+def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
     """Build the enriched dashboard summary for all products.
 
     For each product this includes the current price, a price-change
@@ -166,7 +161,7 @@ def get_dashboard_summary(session: Session) -> List[ProductDashboardSummary]:
     """
     hist_window_size = _get_hist_window_size(session)
     products = session.exec(select(Product)).all()
-    summary_list: List[ProductDashboardSummary] = []
+    summary_list: list[ProductDashboardSummary] = []
 
     for product in products:
         # Category info
@@ -192,18 +187,20 @@ def get_dashboard_summary(session: Session) -> List[ProductDashboardSummary]:
                 current_price, product_history, hist_window_size
             )
 
-        summary_list.append(ProductDashboardSummary(
-            id=product.id,
-            name=product.name,
-            category_id=product.category_id,
-            category_name=category_name,
-            category_color=category_color,
-            priority=product.priority,
-            current_price=current_price,
-            price_change_60d=price_change_60d,
-            is_in_stock=is_in_stock,
-            currency=product.currency,
-        ))
+        summary_list.append(
+            ProductDashboardSummary(
+                id=product.id,
+                name=product.name,
+                category_id=product.category_id,
+                category_name=category_name,
+                category_color=category_color,
+                priority=product.priority,
+                current_price=current_price,
+                price_change_60d=price_change_60d,
+                is_in_stock=is_in_stock,
+                currency=product.currency,
+            )
+        )
 
     return summary_list
 
@@ -311,8 +308,7 @@ async def extract_product_info(
         )
 
     # Language preference
-    selected_language = get_config_value(
-        session, "selected_language", "english")
+    selected_language = get_config_value(session, "selected_language", "english")
 
     # Google API key
     google_api_key = get_config_value(session, "google_api_key")

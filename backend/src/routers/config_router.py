@@ -3,7 +3,6 @@ Configuration router — GET/PATCH /config/ endpoints.
 """
 
 from fastapi import APIRouter
-
 from src.core.database import SessionDep
 from src.schemas.config import ConfigResponse, ConfigUpdate
 from src.services import config_service

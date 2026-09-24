@@ -7,16 +7,15 @@ Usage (from backend/ directory):
     python -m src.setup_backend -p           # Short form
 """
 
-import os
-import sys
 import argparse
+import os
 import random
+import sys
 from datetime import datetime, timedelta
 
 from sqlmodel import Session, SQLModel, create_engine, select
-
 from src.core.config import CONFIG_DEFAULTS
-from src.models.database_models import Config, Category, Product, ProductHist
+from src.models.database_models import Category, Config, Product, ProductHist
 
 
 def check_database_exists(db_path: str) -> bool:
@@ -72,7 +71,8 @@ def initialize_config(engine):
     with Session(engine) as session:
         for key, default_value in CONFIG_DEFAULTS.items():
             existing_config = session.exec(
-                select(Config).where(Config.key == key)).first()
+                select(Config).where(Config.key == key)
+            ).first()
             if not existing_config:
                 config = Config(key=key, value=default_value)
                 session.add(config)
@@ -105,8 +105,7 @@ def populate_test_data(engine):
         session.refresh(electronica)
 
         print(f"  ✓ Created category: {hogar.name} (ID: {hogar.id})")
-        print(
-            f"  ✓ Created category: {electronica.name} (ID: {electronica.id})")
+        print(f"  ✓ Created category: {electronica.name} (ID: {electronica.id})")
 
         # Create product
         print("Creating product...")
@@ -116,7 +115,7 @@ def populate_test_data(engine):
             category_id=electronica.id,
             priority="high",
             description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar.",
-            currency="EUR"
+            currency="EUR",
         )
 
         session.add(producto)
@@ -147,7 +146,7 @@ def populate_test_data(engine):
                 product_id=producto.id,
                 price=price,
                 is_in_stock=is_in_stock,
-                timestamp=timestamp
+                timestamp=timestamp,
             )
             session.add(price_hist)
 
@@ -163,9 +162,10 @@ def main():
         description="Set up the backend database and optionally populate it with test data."
     )
     parser.add_argument(
-        "-p", "--populate",
+        "-p",
+        "--populate",
         action="store_true",
-        help="Populate the database with test data after creation"
+        help="Populate the database with test data after creation",
     )
 
     args = parser.parse_args()
@@ -179,7 +179,9 @@ def main():
     # Check if database already exists
     if check_database_exists(db_path):
         print(f"⚠ Database already exists at: {db_path}")
-        print("If you want to recreate it, please delete the existing database file first.")
+        print(
+            "If you want to recreate it, please delete the existing database file first."
+        )
         sys.exit(0)
 
     try:

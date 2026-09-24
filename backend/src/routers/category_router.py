@@ -2,10 +2,7 @@
 Category router — CRUD endpoints for /categories/.
 """
 
-from typing import List
-
 from fastapi import APIRouter
-
 from src.core.database import SessionDep
 from src.models.database_models import Category
 from src.schemas.category import CategoryCreate, CategoryUpdate
@@ -21,7 +18,7 @@ def create_category(payload: CategoryCreate, session: SessionDep) -> Category:
 
 
 @router.get("/categories/")
-def read_categories(session: SessionDep) -> List[Category]:
+def read_categories(session: SessionDep) -> list[Category]:
     """List all categories."""
     return category_service.get_all(session)
 

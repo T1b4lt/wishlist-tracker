@@ -7,7 +7,6 @@ validation rules before persisting changes.
 
 from fastapi import HTTPException
 from sqlmodel import Session
-
 from src.core.config import get_config_value, set_config_value
 from src.schemas.config import ConfigResponse, ConfigUpdate
 
@@ -27,16 +26,18 @@ def get_all_config(session: Session) -> ConfigResponse:
 
     return ConfigResponse(
         analysis_hour=int(get_config_value(session, "analysis_hour", "12")),
-        hist_window_size=int(get_config_value(
-            session, "hist_window_size", "60")),
+        hist_window_size=int(get_config_value(session, "hist_window_size", "60")),
         is_price_drop_alert=get_config_value(
-            session, "is_price_drop_alert", "false").lower() == "true",
+            session, "is_price_drop_alert", "false"
+        ).lower()
+        == "true",
         is_stock_change_alert=get_config_value(
-            session, "is_stock_change_alert", "false").lower() == "true",
+            session, "is_stock_change_alert", "false"
+        ).lower()
+        == "true",
         telegram_bot_token=token if token else None,
         telegram_bot_chat_id=chat_id if chat_id else None,
-        selected_language=get_config_value(
-            session, "selected_language", "english"),
+        selected_language=get_config_value(session, "selected_language", "english"),
         google_api_key=google_key if google_key else None,
     )
 
@@ -57,40 +58,48 @@ def update_config(session: Session, config_update: ConfigUpdate) -> ConfigRespon
     if config_update.analysis_hour is not None:
         if config_update.analysis_hour < 0 or config_update.analysis_hour > 23:
             raise HTTPException(
-                status_code=400, detail="analysis_hour must be between 0 and 23")
-        set_config_value(session, "analysis_hour",
-                         str(config_update.analysis_hour))
+                status_code=400, detail="analysis_hour must be between 0 and 23"
+            )
+        set_config_value(session, "analysis_hour", str(config_update.analysis_hour))
 
     if config_update.hist_window_size is not None:
         if config_update.hist_window_size < 30 or config_update.hist_window_size > 180:
             raise HTTPException(
-                status_code=400, detail="hist_window_size must be between 30 and 180")
-        set_config_value(session, "hist_window_size",
-                         str(config_update.hist_window_size))
+                status_code=400, detail="hist_window_size must be between 30 and 180"
+            )
+        set_config_value(
+            session, "hist_window_size", str(config_update.hist_window_size)
+        )
 
     if config_update.is_price_drop_alert is not None:
-        set_config_value(session, "is_price_drop_alert", str(
-            config_update.is_price_drop_alert).lower())
+        set_config_value(
+            session,
+            "is_price_drop_alert",
+            str(config_update.is_price_drop_alert).lower(),
+        )
 
     if config_update.is_stock_change_alert is not None:
-        set_config_value(session, "is_stock_change_alert", str(
-            config_update.is_stock_change_alert).lower())
+        set_config_value(
+            session,
+            "is_stock_change_alert",
+            str(config_update.is_stock_change_alert).lower(),
+        )
 
     if config_update.telegram_bot_token is not None:
-        set_config_value(session, "telegram_bot_token",
-                         config_update.telegram_bot_token)
+        set_config_value(
+            session, "telegram_bot_token", config_update.telegram_bot_token
+        )
 
     if config_update.telegram_bot_chat_id is not None:
-        set_config_value(session, "telegram_bot_chat_id",
-                         config_update.telegram_bot_chat_id)
+        set_config_value(
+            session, "telegram_bot_chat_id", config_update.telegram_bot_chat_id
+        )
 
     if config_update.selected_language is not None:
-        set_config_value(session, "selected_language",
-                         config_update.selected_language)
+        set_config_value(session, "selected_language", config_update.selected_language)
 
     if config_update.google_api_key is not None:
-        set_config_value(session, "google_api_key",
-                         config_update.google_api_key)
+        set_config_value(session, "google_api_key", config_update.google_api_key)
 
     session.commit()
 

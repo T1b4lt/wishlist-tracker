@@ -3,7 +3,6 @@ Telegram router — endpoints for chat ID retrieval and test notifications.
 """
 
 from fastapi import APIRouter
-
 from src.core.database import SessionDep
 from src.services import telegram_service
 

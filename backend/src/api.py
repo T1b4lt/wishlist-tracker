@@ -8,7 +8,6 @@ definitions live in ``routers/``.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from src.core.database import lifespan
 from src.routers import (
     category_router,

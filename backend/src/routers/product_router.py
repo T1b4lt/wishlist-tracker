@@ -2,10 +2,7 @@
 Product router — CRUD, dashboard summary, detail, and AI extraction endpoints.
 """
 
-from typing import List
-
 from fastapi import APIRouter
-
 from src.core.database import SessionDep
 from src.models.database_models import Product
 from src.schemas.product import (
@@ -42,7 +39,7 @@ def create_product(payload: ProductCreate, session: SessionDep) -> Product:
 
 
 @router.get("/products/")
-def read_products(session: SessionDep) -> List[Product]:
+def read_products(session: SessionDep) -> list[Product]:
     """List all products."""
     return product_service.get_all(session)
 
@@ -50,7 +47,7 @@ def read_products(session: SessionDep) -> List[Product]:
 @router.get("/products/dashboard-summary")
 def get_products_dashboard_summary(
     session: SessionDep,
-) -> List[ProductDashboardSummary]:
+) -> list[ProductDashboardSummary]:
     """Get enriched product summaries for the dashboard view."""
     return product_service.get_dashboard_summary(session)
 

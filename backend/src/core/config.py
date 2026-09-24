@@ -6,9 +6,7 @@ defines the default values used during database setup.
 """
 
 from sqlmodel import Session, select
-
 from src.models.database_models import Config
-
 
 # Default configuration values used during initial database setup
 # and as fallback when a key is missing.

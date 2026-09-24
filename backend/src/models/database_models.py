@@ -31,8 +31,9 @@ class Product(SQLModel, table=True):
 class ProductHist(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     product_id: int = Field(
-        sa_column=Column(Integer, ForeignKey(
-            "product.id", ondelete="CASCADE"), index=True),
+        sa_column=Column(
+            Integer, ForeignKey("product.id", ondelete="CASCADE"), index=True
+        ),
     )
     price: float
     is_in_stock: bool
