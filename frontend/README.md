@@ -30,8 +30,10 @@ The Chakra UI v3 theme lives in `src/theme/` and is exported as `system`
   `colorMode` ternaries.
 - `textStyles.js`: `display`, `heading.lg|md|sm`, `body`, `caption` and
   `numeric` (tabular figures for prices and percentages).
-- `recipes.js`: overrides for Chakra recipes (solid button uses the accent,
-  flat bordered cards, pill badges and tags).
+- `recipes.js`: overrides for Chakra recipes (button press feedback, flat
+  bordered cards, pill badges and tags). Solid buttons use the default
+  `gray` palette, which maps to `accent`, so they are black and white;
+  `colorPalette="red"` keeps destructive actions red.
 - `globalCss.js`: body colors, the `:focus-visible` outline and the
   `prefers-reduced-motion` override.
 

@@ -96,9 +96,11 @@ export const semanticColors = defineSemanticTokens.colors({
     }
   },
   /**
-   * The default `gray` color palette drives most Chakra components. Point its
-   * solid/contrast pair at the accent so checkboxes, switches and solid
-   * badges stay black and white, and give the focus ring AA non-text contrast.
+   * `gray` is the default color palette (set on `html` by Chakra's global
+   * CSS). Point its solid/contrast pair at the accent so solid buttons,
+   * checkboxes, switches and solid badges without an explicit
+   * `colorPalette` are black and white, and give the focus ring AA non-text
+   * contrast. Other palettes (e.g. `red` for destructive buttons) are kept.
    */
   gray: {
     solid: { value: '{colors.accent}' },

@@ -65,33 +65,68 @@ describe('theme system', () => {
   });
 
   it('defines the typography text styles', () => {
-    const { textStyles } = system._config.theme;
-    for (const name of ['display', 'body', 'caption', 'numeric']) {
-      expect(textStyles[name]).toBeDefined();
-    }
-    for (const size of ['lg', 'md', 'sm']) {
-      expect(textStyles.heading[size]).toBeDefined();
+    for (const name of [
+      'display',
+      'heading.lg',
+      'heading.md',
+      'heading.sm',
+      'body',
+      'caption'
+    ]) {
+      expect(system.css({ textStyle: name })).toHaveProperty('fontFamily');
     }
     expect(system.css({ textStyle: 'numeric' })).toMatchObject({
       fontVariantNumeric: 'tabular-nums'
     });
   });
 
-  it('renders solid buttons with the accent colors', () => {
+  it('renders default solid buttons with the accent colors', () => {
     const { solid } = system.getRecipe('button').variants.variant;
-    expect(solid).toMatchObject({ bg: 'accent', color: 'accent.fg' });
+    expect(solid).toMatchObject({
+      bg: 'colorPalette.solid',
+      color: 'colorPalette.contrast'
+    });
+    // `gray` is the default palette; its solid pair resolves to the accent.
+    expect(system.getGlobalCss()['@layer base']['&html']).toMatchObject({
+      '--chakra-colors-color-palette-solid': 'var(--chakra-colors-gray-solid)',
+      '--chakra-colors-color-palette-contrast':
+        'var(--chakra-colors-gray-contrast)'
+    });
+    expect(tokenCss()).toContain(
+      '"--chakra-colors-gray-solid":"var(--chakra-colors-accent)"'
+    );
+    expect(tokenCss()).toContain(
+      '"--chakra-colors-gray-contrast":"var(--chakra-colors-accent-fg)"'
+    );
   });
 
-  it('keeps cards flat and bordered with the default card slots intact', () => {
+  it('keeps the red palette for destructive solid buttons', () => {
+    expect(tokenCss()).toMatch(
+      /"--chakra-colors-red-solid":"var\(--chakra-colors-red-600\)"/
+    );
+    const redSolid = system.css({
+      colorPalette: 'red',
+      bg: 'colorPalette.solid'
+    });
+    expect(JSON.stringify(redSolid)).toContain('--chakra-colors-red-solid');
+  });
+
+  it('keeps default cards flat and bordered and elevated cards border-free', () => {
     const card = system.getSlotRecipe('card');
     expect(card.slots).toEqual(
       expect.arrayContaining(['root', 'header', 'body', 'footer'])
     );
-    expect(card.base.root).toMatchObject({
-      borderRadius: 'lg',
+    expect(card.base.root).toMatchObject({ borderRadius: 'lg' });
+    expect(card.base.root).not.toHaveProperty('borderWidth');
+    expect(card.defaultVariants.variant).toBe('outline');
+    expect(card.variants.variant.outline.root).toMatchObject({
       borderWidth: '1px',
+      borderColor: 'border',
       boxShadow: 'none'
     });
+    expect(card.variants.variant.elevated.root).not.toHaveProperty(
+      'borderWidth'
+    );
   });
 
   it('disables motion when the user prefers reduced motion', () => {

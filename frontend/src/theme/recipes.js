@@ -8,28 +8,21 @@ import { defineRecipe, defineSlotRecipe } from '@chakra-ui/react';
  */
 
 /**
- * Button: the solid (default) variant uses the accent, so primary actions
- * are near-black on light and near-white on dark. Pressing scales the button
- * slightly for feedback; transitions and the press scale are disabled when
- * the user prefers reduced motion.
+ * Button: pressing scales the button slightly for feedback; transitions and
+ * the press scale are disabled when the user prefers reduced motion.
+ *
+ * The solid (default) variant keeps Chakra's `colorPalette.solid` /
+ * `colorPalette.contrast` colors. The default `gray` palette maps those to
+ * `accent` / `accent.fg` (see `semanticTokens.js`), so primary buttons are
+ * near-black on light and near-white on dark, while an explicit
+ * `colorPalette="red"` keeps destructive actions red.
  */
 export const buttonRecipe = defineRecipe({
   base: {
-    borderRadius: 'md',
     _active: { transform: 'scale(0.98)' },
     _motionReduce: {
       transition: 'none',
       _active: { transform: 'none' }
-    }
-  },
-  variants: {
-    variant: {
-      solid: {
-        bg: 'accent',
-        color: 'accent.fg',
-        _hover: { bg: 'accent/90' },
-        _expanded: { bg: 'accent/90' }
-      }
     }
   }
 });
@@ -44,16 +37,22 @@ export const recipes = {
   badge: badgeRecipe
 };
 
-/** Card: radius `lg`, a border and no shadow by default. */
+/**
+ * Card: radius `lg`. The border lives in the default `outline` variant
+ * (bordered, no shadow), so `variant="elevated"` stays border-free.
+ */
 export const cardSlotRecipe = defineSlotRecipe({
   base: {
-    root: {
-      borderRadius: 'lg',
-      borderWidth: '1px',
-      borderColor: 'border',
-      boxShadow: 'none'
+    root: { borderRadius: 'lg' }
+  },
+  variants: {
+    variant: {
+      outline: {
+        root: { borderWidth: '1px', borderColor: 'border', boxShadow: 'none' }
+      }
     }
-  }
+  },
+  defaultVariants: { variant: 'outline' }
 });
 
 /** Tag: pill shaped. */
