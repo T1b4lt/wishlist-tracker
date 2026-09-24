@@ -1,105 +1,115 @@
-import os
-from typing import Any
+"""AI-powered product scraping helpers built on the Stagehand v4 Python SDK.
 
-from pydantic import BaseModel
-from stagehand import AsyncStagehand
+Each public function launches a local headless Chrome, attaches a Stagehand
+instance driven by Gemini, visits the product page, dismisses pop-ups and
+extracts structured data validated by a Pydantic model.
+"""
+
+import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from pydantic import BaseModel, Field
+from stagehand import Page, Stagehand, local_browser
+
+# Model used for act() and extract() calls.
+MODEL_NAME = "google/gemini-2.5-flash"
+
+# Instruction used to dismiss cookie banners and pop-ups before extracting.
+DISMISS_POPUPS_INSTRUCTION = "Close any pop-ups or cookies consent banners if present"
+
+# Extra Chrome flags for WSL/Docker environments (GPU and /dev/shm restrictions).
+# The sandbox is disabled separately through ``chromium_sandbox=False``.
+CHROME_ARGS = [
+    "--disable-setuid-sandbox",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+]
+
 
 # --- Extraction result models ---
-# These Pydantic models define the expected shape of extracted data.
-# In v3, extract() uses JSON Schema dicts, so we pass the schema explicitly
-# and then validate the result with these models.
+# In v4, extract() takes a Pydantic model class as schema and returns
+# an instance of it in ``result.data``. Field descriptions guide the LLM.
 
 
 class ProductStatusExtraction(BaseModel):
     """Extracted product price and stock availability."""
 
-    price: float
-    is_in_stock: bool
+    price: float = Field(
+        description="The current price of the product as a float number"
+    )
+    is_in_stock: bool = Field(description="Whether the product is currently in stock")
 
 
 class ProductInfoExtraction(BaseModel):
     """Extracted product information (name, category, currency, description)."""
 
-    name: str
-    category: str
-    currency: str
-    description: str
+    name: str = Field(
+        description="Short, descriptive product name (brand, type, specs)"
+    )
+    category: str = Field(
+        description="The most accurate product category from the provided list"
+    )
+    currency: str = Field(
+        description="Currency code (e.g., EUR, USD, GBP) used for the product price"
+    )
+    description: str = Field(
+        description="Concise summary of the product's key features and uses"
+    )
 
 
-# --- JSON Schemas for Stagehand v3 extract() ---
-
-PRODUCT_STATUS_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "price": {
-            "type": "number",
-            "description": "The current price of the product as a float number",
-        },
-        "is_in_stock": {
-            "type": "boolean",
-            "description": "Whether the product is currently in stock",
-        },
-    },
-    "required": ["price", "is_in_stock"],
-}
-
-PRODUCT_INFO_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "name": {
-            "type": "string",
-            "description": "Short, descriptive product name (brand, type, specs)",
-        },
-        "category": {
-            "type": "string",
-            "description": "The most accurate product category from the provided list",
-        },
-        "currency": {
-            "type": "string",
-            "description": "Currency code (e.g., EUR, USD, GBP) used for the product price",
-        },
-        "description": {
-            "type": "string",
-            "description": "Concise summary of the product's key features and uses",
-        },
-    },
-    "required": ["name", "category", "currency", "description"],
-}
+# --- Internal helpers ---
 
 
-# --- Local browser configuration for Stagehand v3 ---
-# Chrome launch options for WSL/Linux environments.
-# The executablePath ensures Stagehand finds the correct Chrome binary.
-# We read it from CHROME_PATH environment variable (which can point to
-# /usr/bin/chromium in Docker) and default to /usr/bin/google-chrome.
-# The args handle common WSL sandbox/GPU restrictions.
+@asynccontextmanager
+async def _open_product_page(
+    google_api_key: str, url: str
+) -> AsyncIterator[tuple[Stagehand, Page]]:
+    """Launch a local browser, attach Stagehand and open the given URL.
 
-LOCAL_BROWSER_CONFIG: dict[str, Any] = {
-    "type": "local",
-    "launchOptions": {
-        "headless": True,
-        "executablePath": os.getenv("CHROME_PATH", "/usr/bin/google-chrome"),
-        "args": [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-gpu",
-            "--disable-dev-shm-usage",
-        ],
-    },
-}
+    Pop-ups and cookie banners are dismissed before yielding. Stagehand is
+    closed first and the browser last, as recommended by the SDK.
+
+    The Chrome binary is taken from the ``CHROME_PATH`` environment variable
+    (e.g. ``/usr/bin/chromium`` in Docker); if unset, Stagehand auto-detects it.
+
+    Args:
+        google_api_key (str): The Google API key for the Gemini model.
+        url (str): The URL of the product page.
+
+    Yields:
+        tuple[Stagehand, Page]: The Stagehand instance and the loaded page.
+    """
+    browser = await local_browser.launch(
+        headless=True,
+        executable_path=os.getenv("CHROME_PATH") or None,
+        chromium_sandbox=False,
+        args=CHROME_ARGS,
+    )
+    try:
+        stagehand = await Stagehand.create(
+            browser=browser,
+            model=MODEL_NAME,
+            model_api_key=google_api_key,
+        )
+        try:
+            page = (await browser.context.pages())[0]
+            await page.goto(url)
+            await stagehand.act(DISMISS_POPUPS_INSTRUCTION, page=page)
+            yield stagehand, page
+        finally:
+            await stagehand.close()
+    finally:
+        await browser.close()
 
 
-# --- Stagehand v3 public functions ---
+# --- Public functions ---
 
 
 async def get_product_info(
     google_api_key: str, url: str, language: str, categories: list[str]
 ) -> ProductInfoExtraction:
-    """Fetch the product information from the given URL using Stagehand v3.
-
-    Uses a local browser session managed by the Stagehand embedded server.
-    Navigates to the product page, dismisses pop-ups, and extracts structured
-    product information via Gemini.
+    """Fetch the product information from the given URL using Stagehand.
 
     Args:
         google_api_key (str): The Google API key for the AI model.
@@ -111,56 +121,27 @@ async def get_product_info(
         ProductInfoExtraction: The extracted product information.
 
     Raises:
-        RuntimeError: If extraction fails or the stream reports an error.
-        ValueError: If the extracted data doesn't match the expected schema.
+        pydantic.ValidationError: If the extracted data doesn't match the schema.
     """
-    async with AsyncStagehand(
-        server="local",
-        model_api_key=google_api_key,
-    ) as client:
-        # Start a local browser session with Gemini model
-        session = await client.sessions.start(
-            model_name="google/gemini-2.5-flash",
-            browser=LOCAL_BROWSER_CONFIG,
+    async with _open_product_page(google_api_key, url) as (stagehand, page):
+        result = await stagehand.extract(
+            (
+                f"Extract the product name, category, currency, and description. "
+                f"The name should be short and descriptive, including a short sequence of words like: brand, type, specs, etc. "
+                f"For description, provide a concise summary of the product's key features and uses. "
+                f"For categories, select one from the following list, the most accurate: {', '.join(categories)} "
+                f"For currency, extract the currency code (e.g., EUR, USD, GBP) used for the product price. "
+                f"The product information should be provided in {language} language."
+            ),
+            ProductInfoExtraction,
+            page=page,
         )
-
-        try:
-            # Navigate to the product page
-            await session.navigate(url=url)
-
-            # Close any pop-ups or cookie consent banners if present
-            await session.act(
-                input="Close any pop-ups or cookies consent banners if present",
-            )
-
-            # Extract the product information using JSON schema
-            extract_response = await session.extract(
-                instruction=(
-                    f"Extract the product name, category, currency, and description. "
-                    f"The name should be short and descriptive, including a short sequence of words like: brand, type, specs, etc. "
-                    f"For description, provide a concise summary of the product's key features and uses. "
-                    f"For categories, select one from the following list, the most accurate: {', '.join(categories)} "
-                    f"For currency, extract the currency code (e.g., EUR, USD, GBP) used for the product price. "
-                    f"The product information should be provided in {language} language."
-                ),
-                schema=PRODUCT_INFO_SCHEMA,
-            )
-            extracted_data = extract_response.data.result
-
-            # Validate and convert the result dict into our Pydantic model
-            product_info = ProductInfoExtraction.model_validate(extracted_data)
-            print(f"Extracted product info: {product_info}")
-            return product_info
-        finally:
-            await session.end()
+    print(f"Extracted product info: {result.data}")
+    return result.data
 
 
 async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtraction:
-    """Fetch the price and stock status of a product from the given URL using Stagehand v3.
-
-    Uses a local browser session managed by the Stagehand embedded server.
-    Navigates to the product page, dismisses pop-ups, and extracts the current
-    price and stock availability via Gemini.
+    """Fetch the price and stock status of a product from the given URL using Stagehand.
 
     Args:
         google_api_key (str): The Google API key for the AI model.
@@ -170,46 +151,20 @@ async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtr
         ProductStatusExtraction: The extracted product price and stock status.
 
     Raises:
-        RuntimeError: If extraction fails or the stream reports an error.
-        ValueError: If the extracted data doesn't match the expected schema.
+        pydantic.ValidationError: If the extracted data doesn't match the schema.
     """
-    async with AsyncStagehand(
-        server="local",
-        model_api_key=google_api_key,
-    ) as client:
-        # Start a local browser session with Gemini model
-        session = await client.sessions.start(
-            model_name="google/gemini-2.5-flash",
-            browser=LOCAL_BROWSER_CONFIG,
+    async with _open_product_page(google_api_key, url) as (stagehand, page):
+        result = await stagehand.extract(
+            "Extract the price of the product as a float number and if it's in stock as boolean",
+            ProductStatusExtraction,
+            page=page,
         )
-
-        try:
-            # Navigate to the product page
-            await session.navigate(url=url)
-
-            # Close any pop-ups or cookie consent banners if present
-            await session.act(
-                input="Close any pop-ups or cookies consent banners if present",
-            )
-
-            # Extract the price and stock status using JSON schema
-            extract_response = await session.extract(
-                instruction="Extract the price of the product as a float number and if it's in stock as boolean",
-                schema=PRODUCT_STATUS_SCHEMA,
-            )
-            extracted_data = extract_response.data.result
-
-            # Validate and convert the result dict into our Pydantic model
-            product_status = ProductStatusExtraction.model_validate(extracted_data)
-            print(f"Extracted product status: {product_status}")
-            return product_status
-        finally:
-            await session.end()
+    print(f"Extracted product status: {result.data}")
+    return result.data
 
 
 if __name__ == "__main__":
     import asyncio
-    import os
 
     from dotenv import load_dotenv
 
