@@ -1,0 +1,17 @@
+# VCS and editor files
+.git
+.github
+.vscode
+.agents
+.claude
+.ruff_cache
+**/__pycache__
+
+# Frontend build artifacts and local dependencies (rebuilt in the image)
+frontend/node_modules
+frontend/dist
+
+# Backend local environment, secrets and data
+backend/.venv
+backend/.env
+backend/db/*.db*
