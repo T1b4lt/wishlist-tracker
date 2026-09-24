@@ -87,6 +87,8 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
   // Fetch categories when modal opens
   useEffect(() => {
     if (isOpen) {
+      // Fetch-on-mount: state is updated from the async request, not synchronously
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchCategories();
     }
   }, [isOpen, fetchCategories]);

@@ -59,7 +59,6 @@ const SettingsPage = () => {
   const { t, i18n } = useTranslation();
   const linkColor = colorMode === 'light' ? 'blue.600' : 'blue.300';
   const [isLoading, setIsLoading] = useState(true);
-  const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Configuration states
@@ -144,24 +143,25 @@ const SettingsPage = () => {
   }, [applyLanguagePreference, t]);
 
   useEffect(() => {
+    // Fetch-on-mount: state is updated from the async request, not synchronously
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Check if there are changes
-  useEffect(() => {
-    if (!originalConfig.selected_language) return; // Wait for original config to load
+  // Derive whether the form differs from the last loaded/saved configuration
+  const hasChanges = useMemo(() => {
+    if (!originalConfig.selected_language) return false; // Wait for original config to load
 
-    const changed =
+    return (
       selectedLanguage !== originalConfig.selected_language ||
       analysisHour !== originalConfig.analysis_hour ||
       histWindowSize !== originalConfig.hist_window_size ||
       googleApiKey !== (originalConfig.google_api_key || '') ||
       telegramBotString !== (originalConfig.telegram_bot_token || '') ||
       isPriceDropAlert !== originalConfig.is_price_drop_alert ||
-      isStockChangeAlert !== originalConfig.is_stock_change_alert;
-
-    setHasChanges(changed);
+      isStockChangeAlert !== originalConfig.is_stock_change_alert
+    );
   }, [
     selectedLanguage,
     analysisHour,
@@ -271,7 +271,6 @@ const SettingsPage = () => {
 
       const data = await response.json();
       setOriginalConfig(data);
-      setHasChanges(false);
       applyLanguagePreference(data.selected_language, true);
 
       toaster.create({

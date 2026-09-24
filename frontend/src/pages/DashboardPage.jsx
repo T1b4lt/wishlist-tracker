@@ -69,6 +69,8 @@ const DashboardPage = () => {
   }, []);
 
   useEffect(() => {
+    // Fetch-on-mount: state is updated from the async request, not synchronously
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchConfig();
     fetchProducts();
   }, [fetchConfig, fetchProducts]);

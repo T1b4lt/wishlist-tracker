@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Box, Button, Input, Flex, Text, Grid, VStack } from '@chakra-ui/react';
 import {
   DialogRoot,
@@ -36,7 +36,12 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
   const { colorMode } = useColorMode();
   const { t } = useTranslation();
 
-  useEffect(() => {
+  // Reset the form whenever the modal opens/closes or the edited category changes.
+  // Done during render (instead of in an effect) to avoid an extra render pass:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [syncedProps, setSyncedProps] = useState(null);
+  if (syncedProps?.category !== category || syncedProps?.isOpen !== isOpen) {
+    setSyncedProps({ category, isOpen });
     if (category) {
       setName(category.name);
       setSelectedColor(category.color);
@@ -45,7 +50,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
       setSelectedColor(PREDEFINED_COLORS[0]);
       setCustomColor('');
     }
-  }, [category, isOpen]);
+  }
 
   const handleSave = async () => {
     if (!name.trim()) return;
