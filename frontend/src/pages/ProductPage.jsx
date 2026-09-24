@@ -25,11 +25,8 @@ import {
   LuMinus,
   LuRefreshCw
 } from 'react-icons/lu';
-import {
-  getCurrencySymbol,
-  getPriorityLabel,
-  getPriceTrendDirection
-} from '@/lib/web_utils';
+import { getCurrencySymbol, getPriorityLabel } from '@/lib/web_utils';
+import { getTrend } from '@/lib/format';
 import {
   CartesianGrid,
   Line,
@@ -271,7 +268,7 @@ const ProductPage = () => {
   const priceChange = calculatePriceChange();
 
   const calculateTrend = () => {
-    const direction = getPriceTrendDirection(priceChange);
+    const direction = getTrend(priceChange);
     if (direction === 'up') return { icon: LuTrendingUp, color: 'price.up' };
     if (direction === 'down')
       return { icon: LuTrendingDown, color: 'price.down' };

@@ -27,7 +27,8 @@ import {
   LuRefreshCw,
   LuTriangleAlert
 } from 'react-icons/lu';
-import { getPriorityLabel, getPriceTrendDirection } from '@/lib/web_utils';
+import { getPriorityLabel } from '@/lib/web_utils';
+import { getTrend } from '@/lib/format';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { API_URL } from '@/lib/api';
@@ -161,7 +162,7 @@ const DashboardPage = () => {
   };
 
   const formatPriceChange = (priceChange) => {
-    const direction = getPriceTrendDirection(priceChange);
+    const direction = getTrend(priceChange);
     if (direction === null) return '-';
 
     const color =
