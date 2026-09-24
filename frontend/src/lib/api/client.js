@@ -1,4 +1,9 @@
-import { API_URL } from '@/lib/api';
+/**
+ * Base URL every request is prefixed with. Defined here (rather than in a
+ * sibling `src/lib/api.js`) so the `@/lib/api` alias unambiguously resolves
+ * to this directory's barrel (`./index.js`) for every consumer.
+ */
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * Error thrown by `request` for any non-2xx response.
