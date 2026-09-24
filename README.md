@@ -86,12 +86,16 @@ Key highlights:
 ```
 wishlist-tracker/
 ├── README.md                         # This file
-├── Dockerfile                        # Docker configuration (WIP)
+├── Dockerfile                        # Multi-stage image (Node 24 build + Python 3.12 runtime)
+├── .dockerignore                     # Files excluded from the Docker build context
+├── entrypoint.sh                     # Container entrypoint (DB init, cron, API, Nginx)
+├── nginx.conf                        # Nginx config (serves frontend, proxies /api)
 ├── .gitignore
 │
 ├── backend/                          # Python backend (FastAPI)
 │   ├── .env                          # Environment variables (API keys)
-│   ├── requirements.txt              # Python dependencies
+│   ├── pyproject.toml                # Python project & dependencies
+│   ├── uv.lock                       # Locked dependency versions (uv)
 │   ├── db/
 │   │   └── database.db               # SQLite database (auto-generated)
 │   └── src/
@@ -261,8 +265,8 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 
 ### Prerequisites
 
-- **Python 3.11+** (with [uv](https://github.com/astral-sh/uv) recommended)
-- **Node.js 18+** and **npm**
+- **Python 3.12+** and [uv](https://github.com/astral-sh/uv)
+- **Node.js 24+** and **npm**
 - **Google Chrome** installed on the system (required by Stagehand v4 for local browser scraping)
 - A **Google API key** with access to Gemini models
 - _(Optional)_ A **Telegram Bot** token for notifications
@@ -279,13 +283,10 @@ cd wishlist-tracker
 ```bash
 cd backend
 
-# Create and activate virtual environment
-uv venv -p 3.11
+# Create the virtual environment and install dependencies from uv.lock
+uv sync
 source .venv/bin/activate    # Linux/macOS
 # .venv\Scripts\activate     # Windows
-
-# Install dependencies
-pip install -r requirements.txt
 
 # Set up the database
 python -m src.setup_backend           # Create tables only
@@ -313,17 +314,30 @@ The app will be available at `http://localhost:5173`.
 
 ### 4. Docker Setup
 
-You can run the entire application (Frontend, Backend, and Cronjob) using Docker.
+You can run the entire application (Frontend, Backend, and Cronjob) in a single container. The image is built in two stages: the frontend is compiled with **Node.js 24**, and the runtime is **Python 3.12** with Nginx, cron and Chromium (for Stagehand).
 
 ```bash
 # Build the Docker image
 docker build -t wishlist-tracker:latest .
 
-# Run the container (exposes the app on port 7755)
-docker run -d -p 7755:7755 --name wishlist-tracker-app wishlist-tracker:latest
+# Run the container (exposes the app on port 7755 and persists the database)
+docker run -d \
+  -p 7755:7755 \
+  -v wishlist-tracker-db:/app/backend/db \
+  --restart unless-stopped \
+  --name wishlist-tracker-app \
+  wishlist-tracker:latest
 ```
 
 The application will be available at `http://localhost:7755`.
+
+Inside the container:
+
+- **Nginx** listens on port `7755`, serves the compiled frontend and proxies `/api/*` to the FastAPI backend (the `/api` prefix is stripped).
+- **Uvicorn** runs the API on `127.0.0.1:8000` (not exposed outside the container).
+- **Cron** runs the price tracking job every hour; its output appears in `docker logs wishlist-tracker-app`.
+- The **SQLite database** lives in `/app/backend/db`. It is created on first start and reused afterwards, so mount a volume there (as above) to keep your data across container upgrades.
+- If the API or Nginx process dies, the container exits so Docker can restart it.
 
 ### 5. Environment Variables
 
