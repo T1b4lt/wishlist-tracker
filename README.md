@@ -67,6 +67,7 @@ Key highlights:
 | [react-icons](https://react-icons.github.io/react-icons/) | Icon library                              |
 | [react-i18next](https://react.i18next.com/)               | Internationalization framework            |
 | [next-themes](https://github.com/pacocoursey/next-themes) | Theme management (dark/light mode)        |
+| [Fontsource](https://fontsource.org/)                     | Self-hosted Geist and Geist Mono fonts    |
 
 ### Backend
 
@@ -381,7 +382,7 @@ just docker-build   # Build the Docker image (then: just docker-run)
 | ------- | ---------------------------------------------------------------------------- |
 | setup   | `setup`, `install`, `install-backend`, `install-frontend`, `hooks`, `update` |
 | quality | `format`, `lint`, `check`, `pre-commit`                                      |
-| test    | `test`, `test-backend`, `test-frontend`                                     |
+| test    | `test`, `test-backend`, `test-frontend`                                      |
 | dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
 | db      | `db-init`, `db-seed`, `db-clean`, `db-reset`                                 |
 | docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`                   |
