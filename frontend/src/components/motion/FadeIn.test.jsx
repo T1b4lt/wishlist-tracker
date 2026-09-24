@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { spyOnConsoleError } from '@/test/consoleErrors';
 import { FadeIn } from './FadeIn';
 
 describe('FadeIn', () => {
@@ -14,9 +15,7 @@ describe('FadeIn', () => {
   });
 
   it('does not leak Motion-only props onto the DOM node', () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    const getUnexpectedErrors = spyOnConsoleError();
 
     renderWithProviders(
       <FadeIn data-testid="fade-in">
@@ -25,8 +24,6 @@ describe('FadeIn', () => {
     );
 
     expect(screen.getByTestId('fade-in').tagName).toBe('DIV');
-    expect(consoleError).not.toHaveBeenCalled();
-
-    consoleError.mockRestore();
+    expect(getUnexpectedErrors()).toEqual([]);
   });
 });
