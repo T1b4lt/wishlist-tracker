@@ -11,3 +11,22 @@ dependencies = [
     "sqlmodel>=0.0.47",
     "stagehand>=4.1.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.2",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["src"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort, UP: pyupgrade, B: bugbear
+select = ["E", "W", "F", "I", "UP", "B"]
+# Line length is enforced by the formatter; long strings/comments are allowed.
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
