@@ -8,6 +8,7 @@ import {
   HStack,
   Spinner,
   Card,
+  Circle,
   Flex,
   Button,
   Stack
@@ -308,12 +309,9 @@ const ProductPage = () => {
                   <Tag
                     size="md"
                     variant="subtle"
-                    style={{
-                      backgroundColor: 'transparent',
-                      borderColor: product.category_color,
-                      borderWidth: '1px',
-                      color: product.category_color
-                    }}
+                    startElement={
+                      <Circle size="8px" bg={product.category_color} />
+                    }
                   >
                     {product.category_name}
                   </Tag>
