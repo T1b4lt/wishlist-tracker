@@ -10,7 +10,6 @@ import {
   DialogBackdrop,
   DialogCloseTrigger
 } from '@/components/ui/dialog';
-import { useColorMode } from '@/components/ui/color-mode';
 import { useTranslation } from 'react-i18next';
 
 const PREDEFINED_COLORS = [
@@ -33,7 +32,6 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
   const [selectedColor, setSelectedColor] = useState(PREDEFINED_COLORS[0]);
   const [customColor, setCustomColor] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { colorMode } = useColorMode();
   const { t } = useTranslation();
 
   // Reset the form whenever the modal opens/closes or the edited category changes.
@@ -92,10 +90,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
         <DialogCloseTrigger />
         <DialogBody>
           <VStack gap={6} align="stretch">
-            <Text
-              fontSize="sm"
-              color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-            >
+            <Text fontSize="sm" color="fg.muted">
               {category
                 ? t('components.categoryModal.descriptionEdit')
                 : t('components.categoryModal.descriptionCreate')}
@@ -134,13 +129,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
                         ? '3px solid'
                         : '2px solid transparent'
                     }
-                    borderColor={
-                      activeColor === color
-                        ? colorMode === 'light'
-                          ? 'gray.800'
-                          : 'white'
-                        : 'transparent'
-                    }
+                    borderColor={activeColor === color ? 'fg' : 'transparent'}
                     transition="all 0.2s"
                     _hover={{
                       transform: 'scale(1.1)',
@@ -165,10 +154,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
                   p={1}
                   cursor="pointer"
                 />
-                <Text
-                  fontSize="sm"
-                  color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                >
+                <Text fontSize="sm" color="fg.muted">
                   {t('components.categoryModal.customColor')}
                 </Text>
               </Flex>

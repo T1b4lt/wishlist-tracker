@@ -56,15 +56,11 @@ const HeaderComponent = () => {
       position="sticky"
       top={0}
       zIndex={10}
-      bg={
-        colorMode === 'light'
-          ? 'rgba(255, 255, 255, 0.8)'
-          : 'rgba(26, 32, 44, 0.8)'
-      }
+      bg="bg/80"
       backdropFilter="blur(12px)"
       WebkitBackdropFilter="blur(12px)"
       borderBottomWidth="1px"
-      borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
+      borderColor="border"
       px={4}
       py={3}
     >
@@ -106,16 +102,8 @@ const HeaderComponent = () => {
                         borderRadius="md"
                         textAlign="left"
                         fontWeight={location === item.path ? 'bold' : 'normal'}
-                        bg={
-                          location === item.path
-                            ? colorMode === 'light'
-                              ? 'gray.100'
-                              : 'gray.700'
-                            : 'transparent'
-                        }
-                        _hover={{
-                          bg: colorMode === 'light' ? 'gray.100' : 'gray.700'
-                        }}
+                        bg={location === item.path ? 'bg.muted' : 'transparent'}
+                        _hover={{ bg: 'bg.muted' }}
                         onClick={() => handleNavigation(item.path)}
                       >
                         <Flex align="center" gap={3}>

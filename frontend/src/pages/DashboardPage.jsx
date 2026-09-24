@@ -13,7 +13,6 @@ import {
   Circle
 } from '@chakra-ui/react';
 import { Link } from 'wouter';
-import { useColorMode } from '@/components/ui/color-mode';
 import { Tag } from '@/components/ui/tag';
 import NewProductModal from '@/components/NewProductModal';
 import DeleteProductDialog from '@/components/DeleteProductDialog';
@@ -39,7 +38,6 @@ const DashboardPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [histWindowSize, setHistWindowSize] = useState(60);
-  const { colorMode } = useColorMode();
   const { t, i18n } = useTranslation();
   const locale = useMemo(
     () => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'),
@@ -164,10 +162,10 @@ const DashboardPage = () => {
 
     const color =
       direction === 'up'
-        ? 'red.500'
+        ? 'price.up'
         : direction === 'down'
-          ? 'green.500'
-          : 'gray.500';
+          ? 'price.down'
+          : 'price.flat';
     const Icon =
       direction === 'up'
         ? LuTrendingUp
@@ -202,8 +200,10 @@ const DashboardPage = () => {
         {/* Add New Product Section */}
         <Box
           borderRadius="2xl"
-          bg="gray.900"
-          color="white"
+          bg="bg.subtle"
+          borderWidth="1px"
+          borderColor="border"
+          color="fg"
           p={{ base: 6, md: 8 }}
           shadow="lg"
         >
@@ -214,10 +214,10 @@ const DashboardPage = () => {
             gap={4}
           >
             <Box textAlign={{ base: 'center', md: 'left' }}>
-              <Heading size="xl" mb={2} color="white">
+              <Heading size="xl" mb={2} color="fg">
                 {t('pages.dashboard.hero.title')}
               </Heading>
-              <Text color="whiteAlpha.800" fontSize="lg">
+              <Text color="fg.muted" fontSize="lg">
                 {t('pages.dashboard.hero.subtitle')}
               </Text>
             </Box>
@@ -245,33 +245,19 @@ const DashboardPage = () => {
             </Flex>
           ) : error ? (
             <Card.Root
-              bg={colorMode === 'light' ? 'white' : 'gray.800'}
               p={12}
               variant="outline"
               borderStyle="dashed"
               borderWidth="2px"
             >
               <VStack gap={4}>
-                <Circle
-                  size="48px"
-                  bg={colorMode === 'light' ? 'red.50' : 'red.900'}
-                >
-                  <LuTriangleAlert
-                    size={24}
-                    color={colorMode === 'light' ? '#C53030' : '#FEB2B2'}
-                  />
+                <Circle size="48px" bg="bg.error">
+                  <LuTriangleAlert size={24} color="fg.error" />
                 </Circle>
-                <Text
-                  fontSize="xl"
-                  fontWeight="medium"
-                  color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                >
+                <Text fontSize="xl" fontWeight="medium" color="fg.muted">
                   {t('pages.dashboard.error.title')}
                 </Text>
-                <Text
-                  fontSize="sm"
-                  color={colorMode === 'light' ? 'gray.500' : 'gray.500'}
-                >
+                <Text fontSize="sm" color="fg.subtle">
                   {error}
                 </Text>
                 <Button variant="outline" onClick={fetchProducts}>
@@ -282,44 +268,25 @@ const DashboardPage = () => {
             </Card.Root>
           ) : products.length === 0 ? (
             <Card.Root
-              bg={colorMode === 'light' ? 'white' : 'gray.800'}
               p={12}
               variant="outline"
               borderStyle="dashed"
               borderWidth="2px"
             >
               <VStack gap={4}>
-                <Circle
-                  size="48px"
-                  bg={colorMode === 'light' ? 'gray.100' : 'gray.700'}
-                >
-                  <LuPackagePlus
-                    size={24}
-                    color={colorMode === 'light' ? '#718096' : '#A0AEC0'}
-                  />
+                <Circle size="48px" bg="bg.muted">
+                  <LuPackagePlus size={24} color="fg.muted" />
                 </Circle>
-                <Text
-                  fontSize="xl"
-                  fontWeight="medium"
-                  color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                >
+                <Text fontSize="xl" fontWeight="medium" color="fg.muted">
                   {t('pages.dashboard.table.empty.title')}
                 </Text>
-                <Text
-                  fontSize="sm"
-                  color={colorMode === 'light' ? 'gray.500' : 'gray.500'}
-                >
+                <Text fontSize="sm" color="fg.subtle">
                   {t('pages.dashboard.table.empty.subtitle')}
                 </Text>
               </VStack>
             </Card.Root>
           ) : (
-            <Card.Root
-              bg={colorMode === 'light' ? 'white' : 'gray.800'}
-              p={0}
-              overflow="hidden"
-              shadow="sm"
-            >
+            <Card.Root p={0} overflow="hidden" shadow="sm">
               <Table.ScrollArea>
                 <Table.Root size="md" variant="line">
                   <Table.Header>
@@ -351,20 +318,12 @@ const DashboardPage = () => {
                   </Table.Header>
                   <Table.Body>
                     {products.map((product) => (
-                      <Table.Row
-                        key={product.id}
-                        _hover={{
-                          bg:
-                            colorMode === 'light' ? 'gray.50' : 'whiteAlpha.100'
-                        }}
-                      >
+                      <Table.Row key={product.id} _hover={{ bg: 'bg.muted' }}>
                         <Table.Cell>
                           <Link href={`/product/${product.id}`}>
                             <Text
                               fontWeight="medium"
-                              color={
-                                colorMode === 'light' ? 'blue.600' : 'blue.400'
-                              }
+                              color="fg"
                               _hover={{
                                 textDecoration: 'underline',
                                 cursor: 'pointer'
@@ -379,16 +338,10 @@ const DashboardPage = () => {
                             size="md"
                             variant="subtle"
                             style={{
-                              backgroundColor:
-                                colorMode === 'dark'
-                                  ? 'transparent'
-                                  : product.category_color,
+                              backgroundColor: 'transparent',
                               borderColor: product.category_color,
                               borderWidth: '1px',
-                              color:
-                                colorMode === 'dark'
-                                  ? product.category_color
-                                  : 'white'
+                              color: product.category_color
                             }}
                           >
                             {product.category_name}
@@ -418,17 +371,19 @@ const DashboardPage = () => {
                           {product.is_in_stock !== null && (
                             <Circle
                               size="10px"
-                              bg={product.is_in_stock ? 'green.500' : 'red.500'}
+                              bg={
+                                product.is_in_stock ? 'stock.in' : 'stock.out'
+                              }
                               display="inline-block"
                             />
                           )}
                           {product.is_in_stock === null && (
-                            <Text color="gray.500">-</Text>
+                            <Text color="fg.muted">-</Text>
                           )}
                           {product.is_in_stock !== null && (
                             <Text
                               fontSize="sm"
-                              color="gray.500"
+                              color="fg.muted"
                               display="inline-block"
                               ml={2}
                             >

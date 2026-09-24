@@ -228,7 +228,7 @@ const ProductPage = () => {
         <Card.Root>
           <Card.Body>
             <VStack gap="4" align="center" py="8">
-              <Heading size="lg" color="red.500">
+              <Heading size="lg" color="fg.error">
                 {t('pages.product.error.title')}
               </Heading>
               <Text>{error}</Text>
@@ -259,10 +259,10 @@ const ProductPage = () => {
 
   const calculateTrend = () => {
     const direction = getPriceTrendDirection(priceChange);
-    if (direction === 'up') return { icon: LuTrendingUp, color: 'red.500' };
+    if (direction === 'up') return { icon: LuTrendingUp, color: 'price.up' };
     if (direction === 'down')
-      return { icon: LuTrendingDown, color: 'green.500' };
-    return { icon: LuMinus, color: 'gray.500' };
+      return { icon: LuTrendingDown, color: 'price.down' };
+    return { icon: LuMinus, color: 'price.flat' };
   };
 
   const TrendIcon = calculateTrend().icon;
@@ -286,8 +286,10 @@ const ProductPage = () => {
         {/* Hero header */}
         <Box
           borderRadius="2xl"
-          bg="gray.900"
-          color="white"
+          bg="bg.subtle"
+          borderWidth="1px"
+          borderColor="border"
+          color="fg"
           p={{ base: 6, md: 8 }}
           shadow="lg"
         >
@@ -299,7 +301,7 @@ const ProductPage = () => {
               gap={4}
             >
               <Box>
-                <Heading size="3xl" mb="4" color="white" lineHeight="1.2">
+                <Heading size="3xl" mb="4" color="fg" lineHeight="1.2">
                   {product.name}
                 </Heading>
                 <HStack gap="3" wrap="wrap">
@@ -352,25 +354,20 @@ const ProductPage = () => {
               gap={{ base: 8, md: 12 }}
               divideX={{ base: '0', md: '1px' }}
               divideY={{ base: '1px', md: '0' }}
-              borderColor="gray.200"
-              _dark={{ borderColor: 'gray.700' }}
+              borderColor="border"
             >
               <Box flex="1" pl={{ base: 0, md: 0 }} pt={{ base: 0, md: 0 }}>
                 <Text
                   fontSize="sm"
                   fontWeight="semibold"
-                  color="gray.500"
+                  color="fg.muted"
                   mb="2"
                   textTransform="uppercase"
                   letterSpacing="wider"
                 >
                   {t('pages.product.price.current')}
                 </Text>
-                <Heading
-                  size="3xl"
-                  color="blue.500"
-                  _dark={{ color: 'blue.400' }}
-                >
+                <Heading size="3xl" color="fg">
                   {formatPrice(product.current_price, product.currency)}
                 </Heading>
               </Box>
@@ -379,7 +376,7 @@ const ProductPage = () => {
                 <Text
                   fontSize="sm"
                   fontWeight="semibold"
-                  color="gray.500"
+                  color="fg.muted"
                   mb="2"
                   textTransform="uppercase"
                   letterSpacing="wider"
@@ -396,8 +393,7 @@ const ProductPage = () => {
                       gap={1}
                       color={trendColor}
                       fontWeight="bold"
-                      bg={`${trendColor.split('.')[0]}.100`}
-                      _dark={{ bg: `${trendColor.split('.')[0]}.900` }}
+                      bg="bg.muted"
                       px={2}
                       py={1}
                       borderRadius="md"
@@ -414,7 +410,7 @@ const ProductPage = () => {
                   )}
                 </Flex>
                 {getMinPriceDateLong() && (
-                  <Text fontSize="sm" color="gray.500" mt={1}>
+                  <Text fontSize="sm" color="fg.subtle" mt={1}>
                     {t('pages.product.price.minReached', {
                       date: getMinPriceDateLong()
                     })}
@@ -426,18 +422,14 @@ const ProductPage = () => {
                 <Text
                   fontSize="sm"
                   fontWeight="semibold"
-                  color="gray.500"
+                  color="fg.muted"
                   mb="2"
                   textTransform="uppercase"
                   letterSpacing="wider"
                 >
                   {t('pages.product.price.average')}
                 </Text>
-                <Heading
-                  size="xl"
-                  color="gray.600"
-                  _dark={{ color: 'gray.300' }}
-                >
+                <Heading size="xl" color="fg.muted">
                   {averagePrice
                     ? formatPrice(averagePrice, product.currency)
                     : '-'}
@@ -453,18 +445,13 @@ const ProductPage = () => {
             <Heading
               size="sm"
               mb="2"
-              color="gray.500"
+              color="fg.muted"
               textTransform="uppercase"
               letterSpacing="wider"
             >
               {t('pages.product.description')}
             </Heading>
-            <Text
-              color="gray.700"
-              _dark={{ color: 'gray.300' }}
-              lineHeight="relaxed"
-              fontSize="md"
-            >
+            <Text color="fg" lineHeight="relaxed" fontSize="md">
               {product.description}
             </Text>
           </Box>
@@ -493,12 +480,12 @@ const ProductPage = () => {
                       >
                         <stop
                           offset="5%"
-                          stopColor="#3182CE"
+                          stopColor="var(--chakra-colors-fg)"
                           stopOpacity={0.3}
                         />
                         <stop
                           offset="95%"
-                          stopColor="#3182CE"
+                          stopColor="var(--chakra-colors-fg)"
                           stopOpacity={0}
                         />
                       </linearGradient>
@@ -506,20 +493,25 @@ const ProductPage = () => {
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
-                      stroke="#E2E8F0"
-                      _dark={{ stroke: '#2D3748' }}
+                      stroke="var(--chakra-colors-border)"
                     />
                     <XAxis
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#718096', fontSize: 12 }}
+                      tick={{
+                        fill: 'var(--chakra-colors-fg-muted)',
+                        fontSize: 12
+                      }}
                       dy={10}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#718096', fontSize: 12 }}
+                      tick={{
+                        fill: 'var(--chakra-colors-fg-muted)',
+                        fontSize: 12
+                      }}
                       tickFormatter={(value) =>
                         `${value.toFixed(0)} ${getCurrencySymbol(
                           product.currency
@@ -535,11 +527,11 @@ const ProductPage = () => {
                         t('pages.product.priceHistory.tooltipPrice')
                       ]}
                       contentStyle={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        backgroundColor: 'var(--chakra-colors-bg-inverted)',
                         border: 'none',
                         borderRadius: '8px',
-                        color: '#fff',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                        color: 'var(--chakra-colors-fg-inverted)',
+                        boxShadow: 'var(--chakra-shadows-md)'
                       }}
                     />
                     <Legend
@@ -555,7 +547,7 @@ const ProductPage = () => {
                     {averagePrice && (
                       <ReferenceLine
                         y={averagePrice}
-                        stroke="#ED8936"
+                        stroke="var(--chakra-colors-fg-muted)"
                         strokeDasharray="5 5"
                         strokeWidth={1.5}
                         label={{
@@ -564,7 +556,7 @@ const ProductPage = () => {
                             currency: getCurrencySymbol(product.currency)
                           }),
                           position: 'insideTopRight',
-                          fill: '#ED8936',
+                          fill: 'var(--chakra-colors-fg-muted)',
                           fontSize: 12,
                           fontWeight: 500
                         }}
@@ -575,12 +567,12 @@ const ProductPage = () => {
                     {minPriceDate && (
                       <ReferenceLine
                         x={minPriceDate}
-                        stroke="#48BB78"
+                        stroke="var(--chakra-colors-fg)"
                         strokeWidth={1.5}
                         label={{
                           value: t('pages.product.priceHistory.minReference'),
                           position: 'insideTopLeft',
-                          fill: '#48BB78',
+                          fill: 'var(--chakra-colors-fg)',
                           fontSize: 12,
                           fontWeight: 500
                         }}
@@ -590,7 +582,7 @@ const ProductPage = () => {
                     <Area
                       type="monotone"
                       dataKey="price"
-                      stroke="#3182CE"
+                      stroke="var(--chakra-colors-fg)"
                       strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorPrice)"
@@ -601,7 +593,7 @@ const ProductPage = () => {
                 </ResponsiveContainer>
               </Box>
             ) : (
-              <Text color="gray.500" textAlign="center" py="8">
+              <Text color="fg.muted" textAlign="center" py="8">
                 {t('pages.product.priceHistory.empty')}
               </Text>
             )}

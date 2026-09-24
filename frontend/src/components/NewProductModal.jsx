@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/select';
 import { Field } from '@/components/ui/field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { useColorMode } from '@/components/ui/color-mode';
 import { LuSparkles } from 'react-icons/lu';
 import { Trans, useTranslation } from 'react-i18next';
 import { API_URL } from '@/lib/api';
@@ -46,7 +45,6 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { colorMode } = useColorMode();
   const { t } = useTranslation();
   const priorityOptions = useMemo(
     () => [
@@ -244,7 +242,6 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
             <Button
               onClick={handleGenerateDetails}
               disabled={!url.trim() || isGenerating || isLoading}
-              colorScheme="blue"
               width="full"
               size="lg"
             >
@@ -266,21 +263,17 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
               <Box
                 borderWidth="1px"
                 borderRadius="lg"
-                borderColor={colorMode === 'light' ? 'blue.200' : 'blue.800'}
+                borderColor="border"
                 p={5}
-                bg={colorMode === 'light' ? 'blue.50' : 'blue.900/20'}
+                bg="bg.muted"
                 shadow="sm"
               >
                 <Flex align="center" gap={2} mb={3}>
-                  <Text fontSize="sm" fontWeight="bold" color="blue.500">
+                  <Text fontSize="sm" fontWeight="bold" color="fg">
                     {t('components.newProductModal.ai.title')}
                   </Text>
                 </Flex>
-                <Text
-                  fontSize="sm"
-                  color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                  mb={3}
-                >
+                <Text fontSize="sm" color="fg.muted" mb={3}>
                   {t('components.newProductModal.ai.description')}
                 </Text>
 
@@ -355,7 +348,7 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
                               href="https://en.wikipedia.org/wiki/ISO_4217#List_of_ISO_4217_currency_codes"
                               target="_blank"
                               rel="noopener noreferrer"
-                              color="blue.500"
+                              color="fg"
                               textDecoration="underline"
                             />
                           )
@@ -390,7 +383,6 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
               {t('common.actions.cancel')}
             </Button>
             <Button
-              colorScheme="blue"
               onClick={handleSave}
               disabled={!hasGenerated || isGenerating || isLoading}
             >
@@ -421,7 +413,6 @@ const NewProductModal = ({ isOpen, onClose, onSave }) => {
           <DialogFooter>
             <Button
               onClick={() => setErrorDialog({ ...errorDialog, isOpen: false })}
-              colorScheme="blue"
             >
               {t('common.actions.ok')}
             </Button>

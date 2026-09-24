@@ -11,7 +11,6 @@ import {
   VStack
 } from '@chakra-ui/react';
 import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
-import { useColorMode } from '@/components/ui/color-mode';
 import CategoryModal from '../components/CategoryModal';
 import { toaster } from '@/components/ui/toaster';
 import {
@@ -39,7 +38,6 @@ const CategoriesPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
 
-  const { colorMode } = useColorMode();
   const { t } = useTranslation();
 
   // Fetch categories
@@ -226,9 +224,7 @@ const CategoriesPage = () => {
           <Heading size="2xl" mb={2}>
             {t('pages.categories.title')}
           </Heading>
-          <Text color={colorMode === 'light' ? 'gray.600' : 'gray.400'}>
-            {t('pages.categories.subtitle')}
-          </Text>
+          <Text color="fg.muted">{t('pages.categories.subtitle')}</Text>
         </Box>
 
         {/* Add New Category Section */}
@@ -236,8 +232,8 @@ const CategoriesPage = () => {
           p={6}
           borderRadius="lg"
           borderWidth="1px"
-          borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
-          bg={colorMode === 'light' ? 'white' : 'gray.800'}
+          borderColor="border"
+          bg="bg.panel"
         >
           <Flex justify="space-between" align="center">
             <Box>
@@ -266,9 +262,9 @@ const CategoriesPage = () => {
               borderRadius="lg"
               borderWidth="1px"
               borderStyle="dashed"
-              borderColor={colorMode === 'light' ? 'gray.300' : 'gray.600'}
+              borderColor="border.emphasized"
             >
-              <Text color={colorMode === 'light' ? 'gray.500' : 'gray.400'}>
+              <Text color="fg.muted">
                 {t('pages.categories.existingSection.empty')}
               </Text>
             </Box>
@@ -283,11 +279,9 @@ const CategoriesPage = () => {
                   p={5}
                   borderRadius="lg"
                   borderWidth="1px"
-                  borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
-                  bg={colorMode === 'light' ? 'white' : 'gray.800'}
-                  _hover={{
-                    borderColor: colorMode === 'light' ? 'gray.300' : 'gray.600'
-                  }}
+                  borderColor="border"
+                  bg="bg.panel"
+                  _hover={{ borderColor: 'border.emphasized' }}
                   transition="all 0.2s"
                 >
                   <Flex justify="space-between" align="center">

@@ -24,7 +24,6 @@ import {
   LuEye,
   LuEyeOff
 } from 'react-icons/lu';
-import { useColorMode } from '@/components/ui/color-mode';
 import { toaster } from '@/components/ui/toaster';
 import {
   SelectRoot,
@@ -59,9 +58,7 @@ const hourCollection = createListCollection({
 const histWindowSizeValues = [30, 60, 90, 180];
 
 const SettingsPage = () => {
-  const { colorMode } = useColorMode();
   const { t, i18n } = useTranslation();
-  const linkColor = colorMode === 'light' ? 'blue.600' : 'blue.300';
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -311,9 +308,7 @@ const SettingsPage = () => {
           <Heading size="2xl" mb={2}>
             {t('pages.settings.title')}
           </Heading>
-          <Text color={colorMode === 'light' ? 'gray.600' : 'gray.400'}>
-            {t('pages.settings.subtitle')}
-          </Text>
+          <Text color="fg.muted">{t('pages.settings.subtitle')}</Text>
         </Box>
 
         {/* General Section */}
@@ -321,8 +316,8 @@ const SettingsPage = () => {
           p={6}
           borderRadius="lg"
           borderWidth="1px"
-          borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
-          bg={colorMode === 'light' ? 'white' : 'gray.900'}
+          borderColor="border"
+          bg="bg.panel"
         >
           <Heading size="lg" mb={4}>
             {t('pages.settings.sections.general')}
@@ -368,7 +363,7 @@ const SettingsPage = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       isExternal
-                      color={linkColor}
+                      color="fg"
                       textDecoration="underline"
                     />
                   )
@@ -390,8 +385,8 @@ const SettingsPage = () => {
           p={6}
           borderRadius="lg"
           borderWidth="1px"
-          borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
-          bg={colorMode === 'light' ? 'white' : 'gray.900'}
+          borderColor="border"
+          bg="bg.panel"
         >
           <Heading size="lg" mb={4}>
             {t('pages.settings.sections.analysis')}
@@ -443,8 +438,8 @@ const SettingsPage = () => {
           p={6}
           borderRadius="lg"
           borderWidth="1px"
-          borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
-          bg={colorMode === 'light' ? 'white' : 'gray.900'}
+          borderColor="border"
+          bg="bg.panel"
         >
           <Heading size="lg" mb={4}>
             {t('pages.settings.sections.notifications')}
@@ -514,7 +509,6 @@ const SettingsPage = () => {
                       loading={isSendingTestMessage}
                       disabled={isSendingTestMessage}
                       size="md"
-                      colorScheme="blue"
                     >
                       <LuSend /> {t('common.actions.testBot')}
                     </Button>
@@ -529,29 +523,19 @@ const SettingsPage = () => {
               justify="space-between"
               p={4}
               borderRadius="md"
-              _hover={{
-                bg: colorMode === 'light' ? 'gray.50' : 'gray.800'
-              }}
+              _hover={{ bg: 'bg.muted' }}
               transition="all 0.2s"
               opacity={!telegramBotString ? 0.5 : 1}
             >
               <Flex align="center" gap={4} flex={1}>
-                <Box
-                  p={2}
-                  borderRadius="md"
-                  bg={colorMode === 'light' ? 'blue.50' : 'blue.900'}
-                  color={colorMode === 'light' ? 'blue.600' : 'blue.300'}
-                >
+                <Box p={2} borderRadius="md" bg="bg.muted" color="price.down">
                   <LuTrendingDown size={20} />
                 </Box>
                 <Box>
                   <Text fontWeight="medium" mb={1}>
                     {t('pages.settings.alerts.priceDrop.title')}
                   </Text>
-                  <Text
-                    fontSize="sm"
-                    color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                  >
+                  <Text fontSize="sm" color="fg.muted">
                     {telegramBotString
                       ? t('pages.settings.alerts.priceDrop.subtitleConfigured')
                       : t('pages.settings.alerts.priceDrop.subtitleMissing')}
@@ -572,29 +556,19 @@ const SettingsPage = () => {
               justify="space-between"
               p={4}
               borderRadius="md"
-              _hover={{
-                bg: colorMode === 'light' ? 'gray.50' : 'gray.800'
-              }}
+              _hover={{ bg: 'bg.muted' }}
               transition="all 0.2s"
               opacity={!telegramBotString ? 0.5 : 1}
             >
               <Flex align="center" gap={4} flex={1}>
-                <Box
-                  p={2}
-                  borderRadius="md"
-                  bg={colorMode === 'light' ? 'green.50' : 'green.900'}
-                  color={colorMode === 'light' ? 'green.600' : 'green.300'}
-                >
+                <Box p={2} borderRadius="md" bg="bg.muted" color="stock.in">
                   <LuPackage size={20} />
                 </Box>
                 <Box>
                   <Text fontWeight="medium" mb={1}>
                     {t('pages.settings.alerts.stockChange.title')}
                   </Text>
-                  <Text
-                    fontSize="sm"
-                    color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
-                  >
+                  <Text fontSize="sm" color="fg.muted">
                     {telegramBotString
                       ? t(
                           'pages.settings.alerts.stockChange.subtitleConfigured'
@@ -639,11 +613,7 @@ const SettingsPage = () => {
           <DialogBody>
             <VStack gap={4} align="stretch">
               <Text>{t('pages.settings.startBotModal.description')}</Text>
-              <Box
-                p={4}
-                borderRadius="md"
-                bg={colorMode === 'light' ? 'gray.50' : 'gray.800'}
-              >
+              <Box p={4} borderRadius="md" bg="bg.muted">
                 <Text fontWeight="medium" mb={2}>
                   {t('pages.settings.startBotModal.stepsTitle')}
                 </Text>
