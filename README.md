@@ -40,7 +40,7 @@ Key highlights:
 | Feature                    | Description                                                                                                                            |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                 |
-| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, price, and stock status from any URL using Stagehand v3 + Gemini. |
+| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, price, and stock status from any URL using Stagehand v4 + Gemini. |
 | **Price Tracking**         | Historical price records stored daily, with configurable tracking window (30–180 days).                                                |
 | **Interactive Dashboard**  | Overview of all products with current price, price change trend (%), stock status, and category indicators.                            |
 | **Product Detail View**    | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline.                           |
@@ -74,7 +74,7 @@ Key highlights:
 | [FastAPI](https://fastapi.tiangolo.com/)                           | Async REST API framework          |
 | [SQLModel](https://sqlmodel.tiangolo.com/)                         | ORM (SQLAlchemy + Pydantic)       |
 | [SQLite](https://www.sqlite.org/)                                  | Lightweight embedded database     |
-| [Stagehand v3](https://github.com/browserbase/stagehand)           | AI browser agent for web scraping |
+| [Stagehand v4](https://github.com/browserbase/stagehand)           | AI browser agent for web scraping |
 | [Google Gemini](https://ai.google.dev/)                            | LLM powering the AI extraction    |
 | [python-telegram-bot](https://python-telegram-bot.readthedocs.io/) | Telegram Bot API integration      |
 | [python-dotenv](https://pypi.org/project/python-dotenv/)           | Environment variable management   |
@@ -115,7 +115,7 @@ wishlist-tracker/
 │       │   ├── category_router.py    # CRUD /categories/
 │       │   ├── product_router.py     # CRUD /products/ + /extract-product-info/
 │       │   └── telegram_router.py    # /telegram-chat-id, /telegram-test-message
-│       ├── stagehand_utils.py        # Stagehand v3 AI scraping functions
+│       ├── stagehand_utils.py        # Stagehand v4 AI scraping functions
 │       ├── telegram_utils.py         # Telegram notification helpers
 │       ├── product_status_cronjob.py # Daily price tracking script
 │       └── setup_backend.py          # Database initialization script
@@ -263,7 +263,7 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 
 - **Python 3.11+** (with [uv](https://github.com/astral-sh/uv) recommended)
 - **Node.js 18+** and **npm**
-- **Google Chrome** installed on the system (required by Stagehand v3 for local browser scraping)
+- **Google Chrome** installed on the system (required by Stagehand v4 for local browser scraping)
 - A **Google API key** with access to Gemini models
 - _(Optional)_ A **Telegram Bot** token for notifications
 
@@ -366,17 +366,17 @@ backend/.venv/bin/pre-commit run --all-files
 
 ### Hooks
 
-| Scope       | Hook                                                          | Purpose                                                      |
-| ----------- | ------------------------------------------------------------- | ------------------------------------------------------------ |
-| All files   | `trailing-whitespace`, `end-of-file-fixer`                    | Remove trailing whitespace and ensure a final newline        |
-| All files   | `mixed-line-ending`                                           | Enforce LF line endings (also set in `.gitattributes`)       |
-| All files   | `check-json`, `check-yaml`, `check-toml`                      | Validate syntax of config/data files                         |
-| All files   | `detect-private-key`, `gitleaks`                              | Block commits containing private keys or secrets             |
-| Backend     | `ruff-check`, `ruff-format`                                   | Lint (with autofix) and format Python code                   |
-| Backend     | `uv-lock`                                                     | Keep `backend/uv.lock` in sync with `pyproject.toml`         |
-| Frontend    | `prettier`                                                    | Format frontend files using `frontend/.prettierrc`           |
-| Frontend    | `eslint`                                                      | Lint (with autofix) JS/JSX using `frontend/eslint.config.js` |
-| Commit msg  | `conventional-pre-commit`                                     | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages |
+| Scope      | Hook                                       | Purpose                                                                       |
+| ---------- | ------------------------------------------ | ----------------------------------------------------------------------------- |
+| All files  | `trailing-whitespace`, `end-of-file-fixer` | Remove trailing whitespace and ensure a final newline                         |
+| All files  | `mixed-line-ending`                        | Enforce LF line endings (also set in `.gitattributes`)                        |
+| All files  | `check-json`, `check-yaml`, `check-toml`   | Validate syntax of config/data files                                          |
+| All files  | `detect-private-key`, `gitleaks`           | Block commits containing private keys or secrets                              |
+| Backend    | `ruff-check`, `ruff-format`                | Lint (with autofix) and format Python code                                    |
+| Backend    | `uv-lock`                                  | Keep `backend/uv.lock` in sync with `pyproject.toml`                          |
+| Frontend   | `prettier`                                 | Format frontend files using `frontend/.prettierrc`                            |
+| Frontend   | `eslint`                                   | Lint (with autofix) JS/JSX using `frontend/eslint.config.js`                  |
+| Commit msg | `conventional-pre-commit`                  | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages |
 
 Ruff settings are in `backend/pyproject.toml` (`[tool.ruff]`). Frontend formatting can also be run with `npm run format` / `npm run format:check`.
 
