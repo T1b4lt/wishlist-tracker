@@ -8,6 +8,7 @@
     "actions": {
       "cancel": "Cancelar",
       "delete": "Eliminar",
+      "edit": "Editar",
       "save": "Guardar",
       "saveItem": "Guardar elemento",
       "saving": "Guardando...",
@@ -131,11 +132,17 @@
       "title": "Tu lista de deseos",
       "subtitle": "Haz seguimiento de los precios y la disponibilidad de los productos que quieres comprar",
       "addButton": "Añadir nuevo producto",
+      "summary": {
+        "items": "Artículos",
+        "totalValue": "Valor total",
+        "priceDrops": "Bajadas de precio",
+        "atLowest": "En su precio mínimo"
+      },
       "table": {
         "columns": {
           "name": "Nombre del producto",
-          "category": "Categoría",
           "priority": "Prioridad",
+          "trend": "Tendencia",
           "currentPrice": "Precio actual",
           "priceChange": "Cambio de precio ({{days}}D)",
           "stock": "Stock",
@@ -146,12 +153,17 @@
           "subtitle": "Haz clic en \"Añadir nuevo producto\" para empezar a seguir tu primer artículo"
         }
       },
+      "menu": {
+        "open": "Abrir",
+        "storePage": "Abrir página de la tienda"
+      },
       "error": {
         "title": "No pudimos cargar tu lista de deseos",
         "message": "Ocurrió un problema al obtener tus productos. Inténtalo de nuevo."
       },
       "aria": {
-        "deleteProduct": "Eliminar producto"
+        "rowActions": "Acciones para {{name}}",
+        "openProduct": "Abrir {{name}}"
       }
     },
     "categories": {

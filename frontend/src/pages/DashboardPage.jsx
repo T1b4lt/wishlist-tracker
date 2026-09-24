@@ -1,21 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, IconButton, Table, Text } from '@chakra-ui/react';
-import { Link } from 'wouter';
+import { Button, Text } from '@chakra-ui/react';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import NewProductModal from '@/components/NewProductModal';
+import { EmptyState, ErrorState, ConfirmDialog } from '@/components/common';
 import {
-  EmptyState,
-  ErrorState,
-  SkeletonRows,
-  ConfirmDialog,
-  PriorityBadge,
-  CategoryTag,
-  PriceChange,
-  StockStatus
-} from '@/components/common';
-import { LuTrash2, LuPackagePlus, LuPlus } from 'react-icons/lu';
-import { formatPrice, getLocale } from '@/lib/format';
+  DashboardSummary,
+  ProductTable,
+  ProductCardList
+} from '@/components/dashboard';
+import { LuPackagePlus, LuPlus } from 'react-icons/lu';
+import { getLocale } from '@/lib/format';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { toaster } from '@/components/ui/toaster';
@@ -27,6 +22,15 @@ const DashboardPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Edit hook point for Task 11: the row/card actions menu's "Edit" item
+  // calls `handleEditProduct`, which sets this. `NewProductModal` only
+  // supports creating today; Task 11's shared `ProductFormDialog` will read
+  // `editingProduct` to open in edit mode and clear it (via
+  // `setEditingProduct(null)`) when it closes. Nothing renders from it yet,
+  // so it is read here only to keep the setter meaningful without an
+  // unused-variable lint error.
+  const [editingProduct, setEditingProduct] = useState(null);
+  void editingProduct;
   const { t, i18n } = useTranslation();
   const locale = useMemo(() => getLocale(i18n.language), [i18n.language]);
 
@@ -70,7 +74,11 @@ const DashboardPage = () => {
     }
   };
 
-  const handleDeleteClick = (product) => {
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+  };
+
+  const handleDeleteRequest = (product) => {
     setProductToDelete(product);
     setDeleteDialogOpen(true);
   };
@@ -107,6 +115,9 @@ const DashboardPage = () => {
   };
 
   const isLoading = status === 'loading' && products.length === 0;
+  // `status === 'error'` is handled by the branch above, so by the time
+  // this is checked it can only mean "loaded successfully, zero products".
+  const isEmpty = !isLoading && products.length === 0;
 
   return (
     <PageContainer>
@@ -130,112 +141,37 @@ const DashboardPage = () => {
           message={t('pages.dashboard.error.message')}
           onRetry={fetchSummary}
         />
-      ) : !isLoading && products.length === 0 ? (
+      ) : isEmpty ? (
         <EmptyState
           icon={LuPackagePlus}
           title={t('pages.dashboard.table.empty.title')}
           description={t('pages.dashboard.table.empty.subtitle')}
+          action={
+            <Button onClick={() => setIsModalOpen(true)}>
+              <LuPlus size={18} />
+              {t('pages.dashboard.addButton')}
+            </Button>
+          }
         />
       ) : (
-        <Card.Root p={0} overflow="hidden" shadow="sm">
-          <Table.ScrollArea>
-            <Table.Root size="md" variant="line" aria-busy={isLoading}>
-              <Table.Header>
-                <Table.Row>
-                  <Table.ColumnHeader>
-                    {t('pages.dashboard.table.columns.name')}
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader>
-                    {t('pages.dashboard.table.columns.category')}
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader>
-                    {t('pages.dashboard.table.columns.priority')}
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader textAlign="end">
-                    {t('pages.dashboard.table.columns.currentPrice')}
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader textAlign="end">
-                    {t('pages.dashboard.table.columns.priceChange', {
-                      days: histWindowSize
-                    })}
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader textAlign="center">
-                    {t('pages.dashboard.table.columns.stock')}
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader textAlign="center">
-                    {t('pages.dashboard.table.columns.actions')}
-                  </Table.ColumnHeader>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {isLoading ? (
-                  <SkeletonRows rows={5} columns={7} />
-                ) : (
-                  products.map((product) => (
-                    <Table.Row key={product.id} _hover={{ bg: 'bg.muted' }}>
-                      <Table.Cell>
-                        <Link href={`/product/${product.id}`}>
-                          <Text
-                            fontWeight="medium"
-                            color="fg"
-                            _hover={{
-                              textDecoration: 'underline',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {product.name}
-                          </Text>
-                        </Link>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <CategoryTag
-                          name={product.category_name}
-                          color={product.category_color}
-                        />
-                      </Table.Cell>
-                      <Table.Cell>
-                        <PriorityBadge priority={product.priority} />
-                      </Table.Cell>
-                      <Table.Cell textAlign="end">
-                        <Text fontWeight="medium">
-                          {formatPrice(
-                            product.current_price,
-                            product.currency,
-                            locale
-                          )}
-                        </Text>
-                      </Table.Cell>
-                      <Table.Cell textAlign="end">
-                        <PriceChange
-                          value={product.price_change_60d}
-                          locale={locale}
-                          justify="flex-end"
-                        />
-                      </Table.Cell>
-                      <Table.Cell textAlign="center">
-                        <StockStatus
-                          inStock={product.is_in_stock}
-                          justify="center"
-                        />
-                      </Table.Cell>
-                      <Table.Cell textAlign="center">
-                        <IconButton
-                          size="sm"
-                          variant="ghost"
-                          colorPalette="red"
-                          onClick={() => handleDeleteClick(product)}
-                          aria-label={t('pages.dashboard.aria.deleteProduct')}
-                        >
-                          <LuTrash2 />
-                        </IconButton>
-                      </Table.Cell>
-                    </Table.Row>
-                  ))
-                )}
-              </Table.Body>
-            </Table.Root>
-          </Table.ScrollArea>
-        </Card.Root>
+        <>
+          <DashboardSummary products={products} locale={locale} />
+          <ProductTable
+            products={products}
+            isLoading={isLoading}
+            locale={locale}
+            histWindowSize={histWindowSize}
+            onEdit={handleEditProduct}
+            onDelete={handleDeleteRequest}
+          />
+          <ProductCardList
+            products={products}
+            isLoading={isLoading}
+            locale={locale}
+            onEdit={handleEditProduct}
+            onDelete={handleDeleteRequest}
+          />
+        </>
       )}
 
       {/* New Product Modal */}

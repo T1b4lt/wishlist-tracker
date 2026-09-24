@@ -8,6 +8,7 @@
     "actions": {
       "cancel": "Cancel",
       "delete": "Delete",
+      "edit": "Edit",
       "save": "Save",
       "saveItem": "Save Item",
       "saving": "Saving...",
@@ -131,11 +132,17 @@
       "title": "Your Wishlist",
       "subtitle": "Track prices and availability of products you want to buy",
       "addButton": "Add New Product",
+      "summary": {
+        "items": "Items",
+        "totalValue": "Total value",
+        "priceDrops": "Price drops",
+        "atLowest": "At lowest price"
+      },
       "table": {
         "columns": {
           "name": "Product Name",
-          "category": "Category",
           "priority": "Priority",
+          "trend": "Trend",
           "currentPrice": "Current Price",
           "priceChange": "Price Change ({{days}}D)",
           "stock": "Stock",
@@ -146,12 +153,17 @@
           "subtitle": "Click \"Add New Product\" to start tracking your first item"
         }
       },
+      "menu": {
+        "open": "Open",
+        "storePage": "Open store page"
+      },
       "error": {
         "title": "We couldn't load your wishlist",
         "message": "Something went wrong while fetching your products. Please try again."
       },
       "aria": {
-        "deleteProduct": "Delete product"
+        "rowActions": "Actions for {{name}}",
+        "openProduct": "Open {{name}}"
       }
     },
     "categories": {

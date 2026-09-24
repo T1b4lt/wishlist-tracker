@@ -14,3 +14,15 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
     dispatchEvent: () => false
   });
 }
+
+// jsdom does not implement `ResizeObserver`. Chakra's floating-positioned
+// content (Menu, Select, Popover, ...) uses it, through `@floating-ui/dom`'s
+// `autoUpdate`, to reposition itself when open, so any test that opens one
+// needs a stub.
+if (typeof window !== 'undefined' && !window.ResizeObserver) {
+  window.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
