@@ -13,6 +13,7 @@
 - [Database Schema](#-database-schema)
 - [API Reference](#-api-reference)
 - [Installation & Setup](#-installation--setup)
+- [Git Hooks](#-git-hooks)
 - [Configuration](#-configuration)
 - [Usage Guide](#-usage-guide)
 - [Cronjob Setup](#-cronjob-setup)
@@ -337,6 +338,47 @@ DSA_TELEGRAM=your_telegram_bot_token
 ```
 
 > ⚠️ **Note**: These environment variables are used only by the standalone test scripts (`stagehand_utils.py`, `telegram_utils.py`). In production, the API keys are managed through the **Settings page** and stored in the database.
+
+---
+
+## 🪝 Git Hooks
+
+Git hooks are managed with [pre-commit](https://pre-commit.com), declared as a dev dependency of the backend but applied to the whole repository. The configuration lives in [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
+
+### Setup
+
+```bash
+# Install backend dev dependencies (includes pre-commit)
+cd backend && uv sync && cd ..
+
+# Frontend hooks use the local Prettier/ESLint installs
+cd frontend && npm install && cd ..
+
+# Install the pre-commit and commit-msg hooks
+backend/.venv/bin/pre-commit install
+```
+
+Run all hooks manually against the entire repository with:
+
+```bash
+backend/.venv/bin/pre-commit run --all-files
+```
+
+### Hooks
+
+| Scope       | Hook                                                          | Purpose                                                      |
+| ----------- | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| All files   | `trailing-whitespace`, `end-of-file-fixer`                    | Remove trailing whitespace and ensure a final newline        |
+| All files   | `mixed-line-ending`                                           | Enforce LF line endings (also set in `.gitattributes`)       |
+| All files   | `check-json`, `check-yaml`, `check-toml`                      | Validate syntax of config/data files                         |
+| All files   | `detect-private-key`, `gitleaks`                              | Block commits containing private keys or secrets             |
+| Backend     | `ruff-check`, `ruff-format`                                   | Lint (with autofix) and format Python code                   |
+| Backend     | `uv-lock`                                                     | Keep `backend/uv.lock` in sync with `pyproject.toml`         |
+| Frontend    | `prettier`                                                    | Format frontend files using `frontend/.prettierrc`           |
+| Frontend    | `eslint`                                                      | Lint (with autofix) JS/JSX using `frontend/eslint.config.js` |
+| Commit msg  | `conventional-pre-commit`                                     | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages |
+
+Ruff settings are in `backend/pyproject.toml` (`[tool.ruff]`). Frontend formatting can also be run with `npm run format` / `npm run format:check`.
 
 ---
 
