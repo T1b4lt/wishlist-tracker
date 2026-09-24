@@ -1,5 +1,5 @@
 import { useReducedMotion } from 'motion/react';
-import { durationSeconds, easeOut } from '@/theme/motion';
+import { durationSeconds, easeOut, staggerStepSeconds } from '@/theme/motion';
 import { MotionBox } from './MotionBox';
 
 /**
@@ -25,7 +25,9 @@ export const Stagger = ({ children, ...rest }) => {
       variants={{
         hidden: {},
         visible: {
-          transition: shouldReduceMotion ? {} : { staggerChildren: 0.04 }
+          transition: shouldReduceMotion
+            ? {}
+            : { staggerChildren: staggerStepSeconds }
         }
       }}
       {...rest}

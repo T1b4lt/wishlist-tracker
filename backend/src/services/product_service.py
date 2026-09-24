@@ -217,6 +217,7 @@ def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
             ProductDashboardSummary(
                 id=product.id,
                 name=product.name,
+                url=product.url,
                 category_id=product.category_id,
                 category_name=category_name,
                 category_color=category_color,

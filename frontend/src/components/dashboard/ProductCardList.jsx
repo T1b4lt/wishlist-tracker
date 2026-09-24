@@ -2,7 +2,7 @@ import { Box, Card, Flex, Text, VStack } from '@chakra-ui/react';
 import { useReducedMotion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { AnimatedList, AnimatedListItem } from '@/components/motion';
-import { durationSeconds, easeOut } from '@/theme/motion';
+import { durationSeconds, easeOut, staggerStepSeconds } from '@/theme/motion';
 import {
   SkeletonCards,
   CategoryTag,
@@ -12,9 +12,6 @@ import {
 import { formatPrice } from '@/lib/format';
 import { ProductRowActions } from './ProductRowActions';
 import { useRowActivation } from './useRowActivation';
-
-/** Cadence between each card's entrance, matching `Stagger`'s own (see `src/components/motion/Stagger.jsx`). */
-const STAGGER_DELAY_STEP = 0.04;
 
 const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
   const { t } = useTranslation();
@@ -27,7 +24,7 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
       transition={{
         duration: shouldReduceMotion ? 0 : durationSeconds.normal,
         ease: easeOut,
-        delay: shouldReduceMotion ? 0 : index * STAGGER_DELAY_STEP
+        delay: shouldReduceMotion ? 0 : index * staggerStepSeconds
       }}
     >
       <Card.Root

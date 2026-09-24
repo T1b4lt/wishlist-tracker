@@ -18,6 +18,7 @@ vi.mock('motion/react', async (importOriginal) => {
 const PRODUCT = {
   id: 42,
   name: 'Mechanical Keyboard',
+  url: 'https://example.com/mechanical-keyboard',
   category_id: 1,
   category_name: 'Electronics',
   category_color: '#3182ce',
@@ -65,21 +66,44 @@ describe('ProductTable', () => {
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
-  it('navigates to the product detail page when the row is clicked', async () => {
+  it('keeps native table row/cell semantics on the row (no overridden role)', () => {
+    renderTable();
+
+    // The row itself carries no `role`/`tabIndex` override; a table row's
+    // implicit role is "row" (queryable once a cell inside is a plain
+    // "cell", not overridden either).
+    expect(
+      screen.getByRole('row', { name: /Mechanical Keyboard/i })
+    ).toBeInTheDocument();
+  });
+
+  it('renders the product name as a real link to the detail page', async () => {
     const user = userEvent.setup();
     renderTable();
 
-    await user.click(screen.getByText('Mechanical Keyboard'));
+    const link = screen.getByRole('link', { name: 'Mechanical Keyboard' });
+    expect(link).toHaveAttribute('href', '/product/42');
+
+    await user.click(link);
 
     expect(screen.getByTestId('location')).toHaveTextContent('/product/42');
   });
 
-  it('navigates to the product detail page when the focused row receives Enter', async () => {
+  it('navigates to the product detail page when the name link is focused and Enter is pressed', async () => {
     const user = userEvent.setup();
     renderTable();
 
-    screen.getByRole('link', { name: /mechanical keyboard/i }).focus();
+    screen.getByRole('link', { name: 'Mechanical Keyboard' }).focus();
     await user.keyboard('{Enter}');
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/product/42');
+  });
+
+  it('navigates to the product detail page when a non-link cell in the row is clicked', async () => {
+    const user = userEvent.setup();
+    renderTable();
+
+    await user.click(screen.getByText('€120.00'));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/product/42');
   });
@@ -106,11 +130,11 @@ describe('ProductTable', () => {
     expect(onEdit).toHaveBeenCalledWith(PRODUCT);
   });
 
-  it('renders skeleton placeholder rows while loading', () => {
-    renderTable({ products: [], isLoading: true });
+  it('renders skeleton placeholder rows while loading, with aria-busy on the tbody', () => {
+    const { container } = renderTable({ products: [], isLoading: true });
 
     expect(screen.queryByText('Mechanical Keyboard')).not.toBeInTheDocument();
-    expect(screen.getByRole('table', { hidden: true })).toHaveAttribute(
+    expect(container.querySelector('tbody')).toHaveAttribute(
       'aria-busy',
       'true'
     );

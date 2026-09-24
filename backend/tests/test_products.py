@@ -99,6 +99,16 @@ def test_dashboard_summary_recent_prices_window_larger_than_history(client, sess
     assert data["last_checked_at"] == 3
 
 
+def test_dashboard_summary_includes_product_url(client, session):
+    category = _make_category(session)
+    product = _make_product(session, category.id)
+
+    response = client.get("/products/dashboard-summary")
+    data = response.json()[0]
+
+    assert data["url"] == product.url
+
+
 def test_dashboard_summary_recent_prices_capped_at_60(client, session):
     category = _make_category(session)
     product = _make_product(session, category.id)

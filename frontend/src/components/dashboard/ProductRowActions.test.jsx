@@ -68,9 +68,11 @@ describe('ProductRowActions', () => {
     await user.click(screen.getByRole('button', { name: /actions for/i }));
     expect(outerOnClick).not.toHaveBeenCalled();
 
-    // Every action is present, including "Open store page" (its
-    // `window.open` effect is the same one-line `onSelect` shape already
-    // proven live for "Open" below, "Edit" and "Delete" elsewhere).
+    // Every action is present. "Open store page" gets its own live click
+    // test in `ProductRowActions.storePage.test.jsx` (a second real
+    // open-and-select here would hit the same jsdom flakiness noted above);
+    // "Edit" and "Delete" each get a full live test in `ProductTable.test.jsx`
+    // and `ProductCardList.test.jsx` respectively.
     expect(
       screen.getByRole('menuitem', { name: /^open$/i })
     ).toBeInTheDocument();

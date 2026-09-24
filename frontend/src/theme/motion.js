@@ -23,6 +23,15 @@ export const easeOut = [0.16, 1, 0.3, 1];
 /** The shared spring used for interactive, physical motion (e.g. presses). */
 export const spring = { type: 'spring', stiffness: 400, damping: 32 };
 
+/**
+ * Cadence (in seconds) between each item's entrance in a staggered list,
+ * shared by `Stagger`/`StaggerItem` and anything that hand-rolls the same
+ * effect on a preset that cannot itself be nested inside `Stagger`, e.g.
+ * `AnimatedListItem` (see `src/components/dashboard/ProductTable.jsx` and
+ * `ProductCardList.jsx`).
+ */
+export const staggerStepSeconds = 0.04;
+
 /** Chakra tokens: `durations.fast` / `.normal` / `.slow`, in milliseconds. */
 export const durations = defineTokens.durations({
   fast: { value: `${durationSeconds.fast * 1000}ms` },

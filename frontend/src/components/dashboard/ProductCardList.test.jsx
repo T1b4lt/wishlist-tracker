@@ -15,6 +15,7 @@ vi.mock('motion/react', async (importOriginal) => {
 const PRODUCT = {
   id: 7,
   name: 'Espresso Machine',
+  url: 'https://example.com/espresso-machine',
   category_id: 2,
   category_name: 'Kitchen',
   category_color: '#38a169',

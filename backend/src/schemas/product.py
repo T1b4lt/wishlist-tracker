@@ -49,6 +49,7 @@ class ProductDashboardSummary(BaseModel):
 
     id: int
     name: str
+    url: str
     category_id: int
     category_name: str
     category_color: str

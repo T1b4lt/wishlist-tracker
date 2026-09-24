@@ -1,8 +1,9 @@
 import { Card, Table, Text, VStack } from '@chakra-ui/react';
+import { Link } from 'wouter';
 import { useReducedMotion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { AnimatedList, AnimatedListItem } from '@/components/motion';
-import { durationSeconds, easeOut } from '@/theme/motion';
+import { durationSeconds, easeOut, staggerStepSeconds } from '@/theme/motion';
 import {
   SkeletonRows,
   CategoryTag,
@@ -13,41 +14,41 @@ import {
 import { formatPrice } from '@/lib/format';
 import { Sparkline } from './Sparkline';
 import { ProductRowActions } from './ProductRowActions';
-import { useRowActivation } from './useRowActivation';
-
-/** Cadence between each row's entrance, matching `Stagger`'s own (see `src/components/motion/Stagger.jsx`). */
-const STAGGER_DELAY_STEP = 0.04;
+import { useTableRowActivation } from './useRowActivation';
 
 const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
-  const { t } = useTranslation();
   const shouldReduceMotion = useReducedMotion();
-  const activation = useRowActivation(`/product/${product.id}`);
+  const activation = useTableRowActivation(`/product/${product.id}`);
 
   return (
     <AnimatedListItem
       as="tr"
       {...activation}
-      aria-label={t('pages.dashboard.aria.openProduct', {
-        name: product.name
-      })}
       transitionProperty="background"
       transitionDuration="fast"
       transitionTimingFunction="easeOut"
       _hover={{ bg: 'bg.muted' }}
-      focusVisibleRing="inside"
-      focusRingWidth="2px"
-      focusRingColor="fg"
       transition={{
         duration: shouldReduceMotion ? 0 : durationSeconds.normal,
         ease: easeOut,
-        delay: shouldReduceMotion ? 0 : index * STAGGER_DELAY_STEP
+        delay: shouldReduceMotion ? 0 : index * staggerStepSeconds
       }}
     >
       <Table.Cell>
         <VStack align="flex-start" gap={1}>
-          <Text fontWeight="medium" color="fg">
-            {product.name}
-          </Text>
+          <Link href={`/product/${product.id}`} asChild>
+            <Text
+              as="a"
+              fontWeight="medium"
+              color="fg"
+              _hover={{ textDecoration: 'underline' }}
+              focusVisibleRing="inside"
+              focusRingWidth="2px"
+              focusRingColor="fg"
+            >
+              {product.name}
+            </Text>
+          </Link>
           <CategoryTag
             name={product.category_name}
             color={product.category_color}
@@ -88,9 +89,12 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
 
 /**
  * The `md+` product list: a table with name (+ category tag), priority,
- * trend sparkline, price, change, stock and a row actions menu. Each row
- * navigates to the product's detail page on click and on Enter; clicks
- * inside the actions menu do not (see `ProductRowActions`).
+ * trend sparkline, price, change, stock and a row actions menu. The
+ * product name is a real link to the detail page (the keyboard and
+ * screen-reader path, keeping the row's/cell's native table semantics
+ * intact); clicking anywhere else on the row also navigates there, and
+ * clicking inside the actions menu does not (see `ProductRowActions` and
+ * `useTableRowActivation`).
  *
  * @param {object} props
  * @param {object[]} props.products - Dashboard summary rows.
@@ -113,7 +117,7 @@ export const ProductTable = ({
   return (
     <Card.Root p={0} overflow="hidden" shadow="sm" hideBelow="md">
       <Table.ScrollArea>
-        <Table.Root size="md" variant="line" aria-busy={isLoading}>
+        <Table.Root size="md" variant="line">
           <Table.Header>
             <Table.Row>
               <Table.ColumnHeader>
@@ -141,7 +145,7 @@ export const ProductTable = ({
               </Table.ColumnHeader>
             </Table.Row>
           </Table.Header>
-          <AnimatedList as="tbody">
+          <AnimatedList as="tbody" aria-busy={isLoading}>
             {isLoading ? (
               <SkeletonRows rows={5} columns={7} />
             ) : (

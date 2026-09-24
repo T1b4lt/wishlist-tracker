@@ -37,3 +37,31 @@ export function useRowActivation(href) {
     cursor: 'pointer'
   };
 }
+
+/**
+ * Click-anywhere-navigates props for a `Table.Row`, without touching its
+ * native `row`/`cell` semantics: no `role`, `tabIndex` or `aria-label` on
+ * the `<tr>`, so screen readers still get normal table navigation (the
+ * product name's own real link, rendered in the first cell, is the
+ * keyboard/screen-reader path instead - see `ProductTable.jsx`).
+ *
+ * Ignores a click whose target is (or is inside) an `<a>`: the name
+ * link already navigates itself, and letting the row's own `onClick` also
+ * fire would navigate a second time. A click that starts inside the
+ * actions menu never reaches this `onClick` in the first place:
+ * `ProductRowActions` stops that propagation itself.
+ *
+ * @param {string} href - The detail page path to navigate to.
+ * @returns {{ onClick: (event: import('react').MouseEvent) => void, cursor: 'pointer' }}
+ */
+export function useTableRowActivation(href) {
+  const [, navigate] = useLocation();
+
+  return {
+    onClick: (event) => {
+      if (event.target.closest('a')) return;
+      navigate(href);
+    },
+    cursor: 'pointer'
+  };
+}
