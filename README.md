@@ -13,6 +13,7 @@
 - [Database Schema](#-database-schema)
 - [API Reference](#-api-reference)
 - [Installation & Setup](#-installation--setup)
+- [Task Runner (just)](#-task-runner-just)
 - [Git Hooks](#-git-hooks)
 - [Configuration](#-configuration)
 - [Usage Guide](#-usage-guide)
@@ -86,6 +87,7 @@ Key highlights:
 ```
 wishlist-tracker/
 ├── README.md                         # This file
+├── justfile                          # Task runner recipes (setup, dev, lint, db, docker)
 ├── Dockerfile                        # Multi-stage image (Node 24 build + Python 3.12 runtime)
 ├── .dockerignore                     # Files excluded from the Docker build context
 ├── entrypoint.sh                     # Container entrypoint (DB init, cron, API, Nginx)
@@ -352,6 +354,31 @@ DSA_TELEGRAM=your_telegram_bot_token
 ```
 
 > ⚠️ **Note**: These environment variables are used only by the standalone test scripts (`stagehand_utils.py`, `telegram_utils.py`). In production, the API keys are managed through the **Settings page** and stored in the database.
+
+---
+
+## 🧰 Task Runner (just)
+
+Common tasks are available as [just](https://just.systems) recipes defined in the root [`justfile`](justfile). Run `just` to list them all.
+
+```bash
+just setup          # Install backend + frontend deps, git hooks and create the database
+just dev            # Run API (:8000) and Vite dev server (:5173) together
+just check          # Format (ruff, prettier, eslint --fix) and then lint
+just lint           # Lint and check formatting without modifying files
+just db-reset --populate  # Delete and recreate the database with demo data
+just docker-build   # Build the Docker image (then: just docker-run)
+```
+
+| Group   | Recipes                                                                      |
+| ------- | ---------------------------------------------------------------------------- |
+| setup   | `setup`, `install`, `install-backend`, `install-frontend`, `hooks`, `update` |
+| quality | `format`, `lint`, `check`, `pre-commit`                                      |
+| dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
+| db      | `db-init`, `db-seed`, `db-clean`, `db-reset`                                 |
+| docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`                   |
+
+> Ruff is pinned as a backend dev dependency to the same version used by the pre-commit hook, so `just lint` and the hooks always agree. Keep both in sync when upgrading.
 
 ---
 
