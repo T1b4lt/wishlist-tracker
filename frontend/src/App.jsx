@@ -1,7 +1,6 @@
 import { Route, Switch } from 'wouter';
 
-import HeaderComponent from './components/HeaderComponent';
-import FooterComponent from './components/FooterComponent';
+import AppShell from './components/layout/AppShell';
 import DashboardPage from './pages/DashboardPage';
 import ProductPage from './pages/ProductPage';
 import CategoriesPage from './pages/CategoriesPage';
@@ -10,8 +9,7 @@ import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
-    <div className="app-container">
-      <HeaderComponent />
+    <AppShell>
       <Switch>
         <Route path="/" component={DashboardPage} />
         <Route path="/product/:productId" component={ProductPage} />
@@ -19,8 +17,7 @@ function App() {
         <Route path="/settings" component={SettingsPage} />
         <Route component={NotFoundPage} />
       </Switch>
-      <FooterComponent />
-    </div>
+    </AppShell>
   );
 }
 

@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Wishlist Tracker AI",
+    "appName": "Wishlist Tracker",
     "language": {
       "english": "English",
       "spanish": "Spanish"
@@ -132,13 +132,10 @@
   },
   "pages": {
     "dashboard": {
-      "hero": {
-        "title": "Add New Product",
-        "subtitle": "Track prices and availability of products you want to buy",
-        "button": "Add New Product"
-      },
+      "title": "Your Wishlist",
+      "subtitle": "Track prices and availability of products you want to buy",
+      "addButton": "Add New Product",
       "table": {
-        "title": "Your Wishlist",
         "columns": {
           "name": "Product Name",
           "category": "Category",
@@ -164,10 +161,7 @@
     "categories": {
       "title": "Manage Categories",
       "subtitle": "Organize your wishlist items into custom categories.",
-      "addSection": {
-        "title": "Add New Category",
-        "button": "Add Category"
-      },
+      "addButton": "Add Category",
       "existingSection": {
         "title": "Existing Categories",
         "loading": "Loading categories...",

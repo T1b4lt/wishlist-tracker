@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
-  Container,
   Heading,
   IconButton,
   Input,
@@ -46,6 +45,9 @@ import {
 } from '@/components/ui/dialog';
 import { Trans, useTranslation } from 'react-i18next';
 import { persistLanguagePreference, SUPPORTED_LANGUAGES } from '@/i18n';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { API_URL } from '@/lib/api';
 
 const hourCollection = createListCollection({
@@ -59,6 +61,7 @@ const histWindowSizeValues = [30, 60, 90, 180];
 
 const SettingsPage = () => {
   const { t, i18n } = useTranslation();
+  useDocumentTitle(t('pages.settings.title'));
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -294,23 +297,19 @@ const SettingsPage = () => {
 
   if (isLoading) {
     return (
-      <Container maxW="container.xl" py={8}>
+      <PageContainer>
         <Text>{t('pages.settings.loading')}</Text>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxW="container.lg" py={8}>
+    <PageContainer>
+      <PageHeader
+        title={t('pages.settings.title')}
+        description={t('pages.settings.subtitle')}
+      />
       <VStack gap={8} align="stretch">
-        {/* Header */}
-        <Box>
-          <Heading size="2xl" mb={2}>
-            {t('pages.settings.title')}
-          </Heading>
-          <Text color="fg.muted">{t('pages.settings.subtitle')}</Text>
-        </Box>
-
         {/* General Section */}
         <Box
           p={6}
@@ -637,7 +636,7 @@ const SettingsPage = () => {
           </DialogFooter>
         </DialogContent>
       </DialogRoot>
-    </Container>
+    </PageContainer>
   );
 };
 

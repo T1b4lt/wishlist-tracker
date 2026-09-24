@@ -1,7 +1,11 @@
 import { Box, Text, Link } from '@chakra-ui/react';
 import { Trans } from 'react-i18next';
 
-const FooterComponent = () => {
+/**
+ * App footer: attribution line, styled with semantic tokens. Rendered inside
+ * `AppShell`, always at the bottom of the viewport.
+ */
+const AppFooter = () => {
   return (
     <Box
       as="footer"
@@ -10,7 +14,7 @@ const FooterComponent = () => {
       py={4}
       textAlign="center"
     >
-      <Text fontSize="sm" color="fg.muted">
+      <Text textStyle="caption" color="fg.muted">
         <Trans
           i18nKey="components.footer.credits"
           values={{ author: 'T1b4lt' }}
@@ -31,4 +35,4 @@ const FooterComponent = () => {
   );
 };
 
-export default FooterComponent;
+export default AppFooter;

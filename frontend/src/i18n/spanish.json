@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Wishlist Tracker IA",
+    "appName": "Wishlist Tracker",
     "language": {
       "english": "Inglés",
       "spanish": "Español"
@@ -132,13 +132,10 @@
   },
   "pages": {
     "dashboard": {
-      "hero": {
-        "title": "Añadir nuevo producto",
-        "subtitle": "Haz seguimiento de los precios y la disponibilidad de los productos que quieres comprar",
-        "button": "Añadir nuevo producto"
-      },
+      "title": "Tu lista de deseos",
+      "subtitle": "Haz seguimiento de los precios y la disponibilidad de los productos que quieres comprar",
+      "addButton": "Añadir nuevo producto",
       "table": {
-        "title": "Tu lista de deseos",
         "columns": {
           "name": "Nombre del producto",
           "category": "Categoría",
@@ -164,10 +161,7 @@
     "categories": {
       "title": "Gestionar categorías",
       "subtitle": "Organiza tus artículos en categorías personalizadas.",
-      "addSection": {
-        "title": "Añadir nueva categoría",
-        "button": "Añadir categoría"
-      },
+      "addButton": "Añadir categoría",
       "existingSection": {
         "title": "Categorías existentes",
         "loading": "Cargando categorías...",

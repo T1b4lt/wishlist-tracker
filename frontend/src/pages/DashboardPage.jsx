@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
-  Heading,
   VStack,
   Text,
   Flex,
@@ -14,6 +13,8 @@ import {
 } from '@chakra-ui/react';
 import { Link } from 'wouter';
 import { Tag } from '@/components/ui/tag';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import NewProductModal from '@/components/NewProductModal';
 import DeleteProductDialog from '@/components/DeleteProductDialog';
 import {
@@ -28,6 +29,7 @@ import {
 } from 'react-icons/lu';
 import { getPriorityLabel, getPriceTrendDirection } from '@/lib/web_utils';
 import { useTranslation } from 'react-i18next';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { API_URL } from '@/lib/api';
 
 const DashboardPage = () => {
@@ -43,6 +45,8 @@ const DashboardPage = () => {
     () => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'),
     [i18n.language]
   );
+
+  useDocumentTitle(t('pages.dashboard.title'));
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -195,50 +199,24 @@ const DashboardPage = () => {
   };
 
   return (
-    <Box maxW="1400px" mx="auto" p={6}>
-      <VStack gap={8} align="stretch">
-        {/* Add New Product Section */}
-        <Box
-          borderRadius="2xl"
-          bg="bg.subtle"
-          borderWidth="1px"
-          borderColor="border"
-          color="fg"
-          p={{ base: 6, md: 8 }}
-          shadow="lg"
-        >
-          <Flex
-            justify="space-between"
-            align="center"
-            direction={{ base: 'column', md: 'row' }}
-            gap={4}
+    <PageContainer>
+      <PageHeader
+        title={t('pages.dashboard.title')}
+        description={t('pages.dashboard.subtitle')}
+        actions={
+          <Button
+            size="lg"
+            variant="solid"
+            onClick={() => setIsModalOpen(true)}
           >
-            <Box textAlign={{ base: 'center', md: 'left' }}>
-              <Heading size="xl" mb={2} color="fg">
-                {t('pages.dashboard.hero.title')}
-              </Heading>
-              <Text color="fg.muted" fontSize="lg">
-                {t('pages.dashboard.hero.subtitle')}
-              </Text>
-            </Box>
-            <Button
-              size="lg"
-              variant="solid"
-              onClick={() => setIsModalOpen(true)}
-              shadow="md"
-            >
-              <LuPlus size={20} />
-              {t('pages.dashboard.hero.button')}
-            </Button>
-          </Flex>
-        </Box>
-
+            <LuPlus size={20} />
+            {t('pages.dashboard.addButton')}
+          </Button>
+        }
+      />
+      <VStack gap={8} align="stretch">
         {/* Products List Section */}
         <Box>
-          <Heading size="lg" mb={4}>
-            {t('pages.dashboard.table.title')}
-          </Heading>
-
           {isLoading ? (
             <Flex justify="center" align="center" minH="200px">
               <Spinner size="xl" />
@@ -425,7 +403,7 @@ const DashboardPage = () => {
         onConfirm={handleDeleteConfirm}
         productName={productToDelete?.name || ''}
       />
-    </Box>
+    </PageContainer>
   );
 };
 

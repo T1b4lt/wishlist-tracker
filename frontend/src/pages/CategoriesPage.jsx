@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
-  Container,
   Flex,
   Grid,
   Heading,
@@ -12,6 +11,9 @@ import {
 } from '@chakra-ui/react';
 import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
 import CategoryModal from '../components/CategoryModal';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { toaster } from '@/components/ui/toaster';
 import {
   DialogRoot,
@@ -39,6 +41,8 @@ const CategoriesPage = () => {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   const { t } = useTranslation();
+
+  useDocumentTitle(t('pages.categories.title'));
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -217,36 +221,17 @@ const CategoriesPage = () => {
   };
 
   return (
-    <Container maxW="container.xl" py={8}>
+    <PageContainer>
+      <PageHeader
+        title={t('pages.categories.title')}
+        description={t('pages.categories.subtitle')}
+        actions={
+          <Button size="lg" onClick={handleOpenCreateModal}>
+            <LuPlus /> {t('pages.categories.addButton')}
+          </Button>
+        }
+      />
       <VStack gap={8} align="stretch">
-        {/* Header */}
-        <Box>
-          <Heading size="2xl" mb={2}>
-            {t('pages.categories.title')}
-          </Heading>
-          <Text color="fg.muted">{t('pages.categories.subtitle')}</Text>
-        </Box>
-
-        {/* Add New Category Section */}
-        <Box
-          p={6}
-          borderRadius="lg"
-          borderWidth="1px"
-          borderColor="border"
-          bg="bg.panel"
-        >
-          <Flex justify="space-between" align="center">
-            <Box>
-              <Heading size="lg">
-                {t('pages.categories.addSection.title')}
-              </Heading>
-            </Box>
-            <Button size="lg" onClick={handleOpenCreateModal}>
-              <LuPlus /> {t('pages.categories.addSection.button')}
-            </Button>
-          </Flex>
-        </Box>
-
         {/* Existing Categories */}
         <Box>
           <Heading size="lg" mb={4}>
@@ -366,7 +351,7 @@ const CategoriesPage = () => {
           </DialogFooter>
         </DialogContent>
       </DialogRoot>
-    </Container>
+    </PageContainer>
   );
 };
 

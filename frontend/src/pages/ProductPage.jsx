@@ -14,6 +14,9 @@ import {
   Stack
 } from '@chakra-ui/react';
 import { Tag } from '@/components/ui/tag';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import {
   LuArrowLeft,
   LuExternalLink,
@@ -55,6 +58,13 @@ const ProductPage = () => {
   const locale = useMemo(
     () => (i18n.language === 'spanish' ? 'es-ES' : 'en-US'),
     [i18n.language]
+  );
+
+  useDocumentTitle(
+    product?.name ??
+      (isLoading
+        ? t('common.messages.loading')
+        : t('pages.product.error.title'))
   );
 
   const fetchConfig = useCallback(async () => {
@@ -212,20 +222,22 @@ const ProductPage = () => {
 
   if (isLoading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
-        <Spinner size="xl" />
-      </Box>
+      <PageContainer>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
+          <Spinner size="xl" />
+        </Box>
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <Box maxWidth="1200px" margin="0 auto" padding="6">
+      <PageContainer>
         <Card.Root>
           <Card.Body>
             <VStack gap="4" align="center" py="8">
@@ -248,7 +260,7 @@ const ProductPage = () => {
             </VStack>
           </Card.Body>
         </Card.Root>
-      </Box>
+      </PageContainer>
     );
   }
 
@@ -274,75 +286,45 @@ const ProductPage = () => {
   const minPriceDate = getMinPriceDate();
 
   return (
-    <Box maxWidth="1200px" margin="0 auto" padding="6">
+    <PageContainer>
+      <PageHeader
+        title={product.name}
+        backLink={{ href: '/', label: t('common.actions.backToWishlist') }}
+        actions={
+          <a href={product.url} target="_blank" rel="noopener noreferrer">
+            <Button variant="solid" size="lg">
+              <LuExternalLink />
+              {t('common.actions.viewOnline')}
+            </Button>
+          </a>
+        }
+      />
       <VStack gap="6" align="stretch">
-        {/* Back button */}
-        <Link href="/">
-          <Button variant="ghost" size="sm">
-            <LuArrowLeft />
-            {t('common.actions.backToWishlist')}
-          </Button>
-        </Link>
-
-        {/* Hero header */}
-        <Box
-          borderRadius="2xl"
-          bg="bg.subtle"
-          borderWidth="1px"
-          borderColor="border"
-          color="fg"
-          p={{ base: 6, md: 8 }}
-          shadow="lg"
-        >
-          <VStack align="stretch" gap={6}>
-            <Flex
-              justify="space-between"
-              align="flex-start"
-              direction={{ base: 'column', md: 'row' }}
-              gap={4}
-            >
-              <Box>
-                <Heading size="3xl" mb="4" color="fg" lineHeight="1.2">
-                  {product.name}
-                </Heading>
-                <HStack gap="3" wrap="wrap">
-                  <Tag
-                    size="md"
-                    variant="subtle"
-                    startElement={
-                      <Circle size="8px" bg={product.category_color} />
-                    }
-                  >
-                    {product.category_name}
-                  </Tag>
-                  <Tag
-                    size="md"
-                    variant="subtle"
-                    colorPalette={getPriorityColor(product.priority)}
-                  >
-                    {getPriorityLabel(product.priority, t)}
-                  </Tag>
-                  <Tag
-                    size="md"
-                    variant="subtle"
-                    colorPalette={product.is_in_stock ? 'green' : 'red'}
-                  >
-                    {product.is_in_stock
-                      ? t('common.status.inStock')
-                      : t('common.status.outOfStock')}
-                  </Tag>
-                </HStack>
-              </Box>
-
-              <a href={product.url} target="_blank" rel="noopener noreferrer">
-                <Button variant="solid" size="lg" shadow="md">
-                  <LuExternalLink />
-                  {t('common.actions.viewOnline')}
-                </Button>
-              </a>
-            </Flex>
-          </VStack>
-        </Box>
+        <HStack gap="3" wrap="wrap">
+          <Tag
+            size="md"
+            variant="subtle"
+            startElement={<Circle size="8px" bg={product.category_color} />}
+          >
+            {product.category_name}
+          </Tag>
+          <Tag
+            size="md"
+            variant="subtle"
+            colorPalette={getPriorityColor(product.priority)}
+          >
+            {getPriorityLabel(product.priority, t)}
+          </Tag>
+          <Tag
+            size="md"
+            variant="subtle"
+            colorPalette={product.is_in_stock ? 'green' : 'red'}
+          >
+            {product.is_in_stock
+              ? t('common.status.inStock')
+              : t('common.status.outOfStock')}
+          </Tag>
+        </HStack>
 
         {/* Stats Section */}
         <Card.Root variant="elevated">
@@ -598,7 +580,7 @@ const ProductPage = () => {
           </Card.Body>
         </Card.Root>
       </VStack>
-    </Box>
+    </PageContainer>
   );
 };
 

@@ -1,29 +1,24 @@
 import { useLocation } from 'wouter';
-import {
-  Box,
-  Button,
-  Container,
-  Heading,
-  Text,
-  VStack
-} from '@chakra-ui/react';
+import { Box, Button, Heading, Text, VStack } from '@chakra-ui/react';
 import { LuHouse } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const NotFoundPage = () => {
   const [, navigate] = useLocation();
   const { t } = useTranslation();
+  useDocumentTitle(t('pages.notFound.title'));
 
   return (
-    <Container maxW="container.md" py={20}>
+    <PageContainer>
+      <PageHeader title={t('pages.notFound.title')} />
       <VStack gap={8} textAlign="center">
         {/* Error Code */}
-        <Heading size="4xl" color="fg">
+        <Heading textStyle="display" color="fg">
           404
         </Heading>
-
-        {/* Main Message */}
-        <Heading size="xl">{t('pages.notFound.title')}</Heading>
 
         {/* Funny Messages */}
         <Box p={6} borderRadius="lg" bg="bg.muted" maxW="md">
@@ -42,7 +37,7 @@ const NotFoundPage = () => {
           </Text>
         </VStack>
       </VStack>
-    </Container>
+    </PageContainer>
   );
 };
 
