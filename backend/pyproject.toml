@@ -14,7 +14,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
     "ruff==0.16.8",
 ]
 
@@ -31,3 +33,12 @@ ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = [
+    # Upstream Starlette nudges toward the (optional, unrelated) httpx2
+    # package; irrelevant to what these tests exercise.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:UserWarning",
+]

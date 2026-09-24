@@ -296,9 +296,12 @@ python -m src.setup_backend --populate  # Create tables + demo data
 
 # Start the API server
 uvicorn src.api:app --reload
+
+# Run the test suite
+uv run pytest
 ```
 
-The API will start at `http://localhost:8000`.
+The API will start at `http://localhost:8000`. See [`backend/README.md`](backend/README.md) for testing details.
 
 ### 3. Frontend Setup
 
@@ -310,9 +313,12 @@ npm install
 
 # Start the development server
 npm run dev
+
+# Run the test suite
+npm test
 ```
 
-The app will be available at `http://localhost:5173`.
+The app will be available at `http://localhost:5173`. See [`frontend/README.md`](frontend/README.md) for testing details.
 
 ### 4. Docker Setup
 
@@ -366,6 +372,7 @@ just setup          # Install backend + frontend deps, git hooks and create the 
 just dev            # Run API (:8000) and Vite dev server (:5173) together
 just check          # Format (ruff, prettier, eslint --fix) and then lint
 just lint           # Lint and check formatting without modifying files
+just test           # Run the backend (pytest) and frontend (Vitest) test suites
 just db-reset --populate  # Delete and recreate the database with demo data
 just docker-build   # Build the Docker image (then: just docker-run)
 ```
@@ -374,6 +381,7 @@ just docker-build   # Build the Docker image (then: just docker-run)
 | ------- | ---------------------------------------------------------------------------- |
 | setup   | `setup`, `install`, `install-backend`, `install-frontend`, `hooks`, `update` |
 | quality | `format`, `lint`, `check`, `pre-commit`                                      |
+| test    | `test`, `test-backend`, `test-frontend`                                     |
 | dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
 | db      | `db-init`, `db-seed`, `db-clean`, `db-reset`                                 |
 | docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`                   |

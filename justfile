@@ -73,6 +73,24 @@ pre-commit:
     {{ backend }}/.venv/bin/pre-commit run --all-files
 
 # ---------------------------------------------------------------------------
+# Test
+# ---------------------------------------------------------------------------
+
+# Run the backend and frontend test suites
+[group('test')]
+test: test-backend test-frontend
+
+# Run the frontend test suite (Vitest)
+[group('test')]
+test-frontend:
+    cd {{ frontend }} && npm test
+
+# Run the backend test suite (pytest)
+[group('test')]
+test-backend:
+    cd {{ backend }} && uv run pytest
+
+# ---------------------------------------------------------------------------
 # Development
 # ---------------------------------------------------------------------------
 
