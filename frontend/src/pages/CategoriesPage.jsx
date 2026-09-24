@@ -27,7 +27,6 @@ import {
 import { useTranslation, Trans } from 'react-i18next';
 import { API_URL } from '@/lib/api';
 
-
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

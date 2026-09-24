@@ -35,7 +35,6 @@ import { LuSparkles } from 'react-icons/lu';
 import { Trans, useTranslation } from 'react-i18next';
 import { API_URL } from '@/lib/api';
 
-
 const NewProductModal = ({ isOpen, onClose, onSave }) => {
   const [url, setUrl] = useState('');
   const [priority, setPriority] = useState('Medium');

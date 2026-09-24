@@ -5,13 +5,13 @@
  */
 export const getCurrencySymbol = (currency) => {
   const currencySymbols = {
-    'EUR': '€',
-    'USD': '$',
-    'GBP': '£',
-    'JPY': '¥',
-    'CNY': '¥',
-    'CAD': '$',
-    'AUD': '$'
+    EUR: '€',
+    USD: '$',
+    GBP: '£',
+    JPY: '¥',
+    CNY: '¥',
+    CAD: '$',
+    AUD: '$'
   };
   return currencySymbols[currency?.toUpperCase()] || currency || '$';
 };
@@ -39,7 +39,9 @@ export const getPriorityLabel = (priority, translate) => {
   }
 
   if (translationKey) {
-    return normalizedPriority.charAt(0).toUpperCase() + normalizedPriority.slice(1);
+    return (
+      normalizedPriority.charAt(0).toUpperCase() + normalizedPriority.slice(1)
+    );
   }
 
   return priority;

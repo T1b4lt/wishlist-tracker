@@ -56,7 +56,11 @@ const HeaderComponent = () => {
       position="sticky"
       top={0}
       zIndex={10}
-      bg={colorMode === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(26, 32, 44, 0.8)'}
+      bg={
+        colorMode === 'light'
+          ? 'rgba(255, 255, 255, 0.8)'
+          : 'rgba(26, 32, 44, 0.8)'
+      }
       backdropFilter="blur(12px)"
       WebkitBackdropFilter="blur(12px)"
       borderBottomWidth="1px"
