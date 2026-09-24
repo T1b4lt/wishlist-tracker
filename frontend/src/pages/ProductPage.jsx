@@ -18,9 +18,14 @@ import {
   LuExternalLink,
   LuTrendingUp,
   LuTrendingDown,
-  LuMinus
+  LuMinus,
+  LuRefreshCw
 } from 'react-icons/lu';
-import { getCurrencySymbol, getPriorityLabel } from '@/lib/web_utils';
+import {
+  getCurrencySymbol,
+  getPriorityLabel,
+  getPriceTrendDirection
+} from '@/lib/web_utils';
 import {
   CartesianGrid,
   Line,
@@ -227,12 +232,18 @@ const ProductPage = () => {
                 {t('pages.product.error.title')}
               </Heading>
               <Text>{error}</Text>
-              <Link href="/">
-                <Button variant="outline">
-                  <LuArrowLeft />
-                  {t('common.actions.backToDashboard')}
+              <HStack gap="3">
+                <Button variant="solid" onClick={fetchProductDetail}>
+                  <LuRefreshCw />
+                  {t('common.actions.retry')}
                 </Button>
-              </Link>
+                <Link href="/">
+                  <Button variant="outline">
+                    <LuArrowLeft />
+                    {t('common.actions.backToDashboard')}
+                  </Button>
+                </Link>
+              </HStack>
             </VStack>
           </Card.Body>
         </Card.Root>
@@ -247,9 +258,11 @@ const ProductPage = () => {
   const priceChange = calculatePriceChange();
 
   const calculateTrend = () => {
-    if (priceChange === null) return { icon: LuMinus, color: 'gray.500' };
-    if (priceChange > 0) return { icon: LuTrendingUp, color: 'red.500' };
-    return { icon: LuTrendingDown, color: 'green.500' };
+    const direction = getPriceTrendDirection(priceChange);
+    if (direction === 'up') return { icon: LuTrendingUp, color: 'red.500' };
+    if (direction === 'down')
+      return { icon: LuTrendingDown, color: 'green.500' };
+    return { icon: LuMinus, color: 'gray.500' };
   };
 
   const TrendIcon = calculateTrend().icon;
@@ -273,26 +286,12 @@ const ProductPage = () => {
         {/* Hero header */}
         <Box
           borderRadius="2xl"
-          bgGradient="to-r, gray.800, gray.900"
-          _dark={{ bgGradient: 'to-r, gray.800, gray.900' }}
+          bg="gray.900"
           color="white"
           p={{ base: 6, md: 8 }}
           shadow="lg"
-          position="relative"
-          overflow="hidden"
         >
-          {/* Subtle background glow */}
-          <Box
-            position="absolute"
-            top="-50%"
-            left="-10%"
-            width="50%"
-            height="200%"
-            bgGradient="radial(circle, rgba(66,153,225,0.15) 0%, transparent 70%)"
-            pointerEvents="none"
-          />
-
-          <VStack align="stretch" gap={6} position="relative" zIndex={1}>
+          <VStack align="stretch" gap={6}>
             <Flex
               justify="space-between"
               align="flex-start"
@@ -432,7 +431,7 @@ const ProductPage = () => {
                   textTransform="uppercase"
                   letterSpacing="wider"
                 >
-                  Average Price
+                  {t('pages.product.price.average')}
                 </Text>
                 <Heading
                   size="xl"

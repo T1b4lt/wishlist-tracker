@@ -17,6 +17,7 @@
       "testBot": "Probar bot",
       "gotIt": "Entendido",
       "ok": "Aceptar",
+      "retry": "Reintentar",
       "addCategory": "Añadir categoría",
       "addNewProduct": "Añadir nuevo producto",
       "viewOnline": "Ver producto online",
@@ -152,6 +153,10 @@
           "subtitle": "Haz clic en \"Añadir nuevo producto\" para empezar a seguir tu primer artículo"
         }
       },
+      "error": {
+        "title": "No pudimos cargar tu lista de deseos",
+        "message": "Ocurrió un problema al obtener tus productos. Inténtalo de nuevo."
+      },
       "aria": {
         "deleteProduct": "Eliminar producto"
       }
@@ -190,7 +195,8 @@
       "price": {
         "current": "Precio actual",
         "min": "Precio mínimo en {{days}} días",
-        "minReached": "Se alcanzó el {{date}}"
+        "minReached": "Se alcanzó el {{date}}",
+        "average": "Precio promedio"
       },
       "priceHistory": {
         "title": "Historial de precios",
@@ -255,7 +261,11 @@
         }
       },
       "loading": "Cargando ajustes...",
-      "histWindowOption": "{{days}} días"
+      "histWindowOption": "{{days}} días",
+      "aria": {
+        "showTelegramBotToken": "Mostrar token del bot de Telegram",
+        "hideTelegramBotToken": "Ocultar token del bot de Telegram"
+      }
     },
     "notFound": {
       "title": "¡Ups! Página no encontrada",

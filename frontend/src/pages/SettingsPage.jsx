@@ -4,7 +4,9 @@ import {
   Button,
   Container,
   Heading,
+  IconButton,
   Input,
+  InputGroup,
   Text,
   VStack,
   Flex,
@@ -18,7 +20,9 @@ import {
   LuTrendingDown,
   LuPackage,
   LuDownload,
-  LuSend
+  LuSend,
+  LuEye,
+  LuEyeOff
 } from 'react-icons/lu';
 import { useColorMode } from '@/components/ui/color-mode';
 import { toaster } from '@/components/ui/toaster';
@@ -78,6 +82,7 @@ const SettingsPage = () => {
   const [isGettingChatId, setIsGettingChatId] = useState(false);
   const [isSendingTestMessage, setIsSendingTestMessage] = useState(false);
   const [showStartBotModal, setShowStartBotModal] = useState(false);
+  const [isTelegramTokenVisible, setIsTelegramTokenVisible] = useState(false);
 
   const languageCollection = useMemo(
     () =>
@@ -127,9 +132,9 @@ const SettingsPage = () => {
       setIsPriceDropAlert(data.is_price_drop_alert);
       setIsStockChangeAlert(data.is_stock_change_alert);
 
-      // Store original values
+      // Store original values. The app language keeps coming from
+      // localStorage; Settings must not switch it silently on load.
       setOriginalConfig(data);
-      applyLanguagePreference(data.selected_language, true);
     } catch (error) {
       console.error('Error fetching configuration:', error);
       toaster.create({
@@ -140,7 +145,7 @@ const SettingsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [applyLanguagePreference, t]);
+  }, [t]);
 
   useEffect(() => {
     // Fetch-on-mount: state is updated from the async request, not synchronously
@@ -330,8 +335,9 @@ const SettingsPage = () => {
               onValueChange={(details) => {
                 const nextLanguage = details.value[0];
                 if (!nextLanguage) return;
+                // Only update the form value here. The language is applied
+                // and persisted only after a successful Save (see B4).
                 setSelectedLanguage(nextLanguage);
-                applyLanguagePreference(nextLanguage);
               }}
               size="md"
             >
@@ -456,12 +462,32 @@ const SettingsPage = () => {
                 flex={1}
               >
                 <HStack gap={2}>
-                  <Input
-                    value={telegramBotString}
-                    onChange={(e) => setTelegramBotString(e.target.value)}
-                    placeholder={t('common.placeholders.telegramBotToken')}
+                  <InputGroup
                     flex={1}
-                  />
+                    endElement={
+                      <IconButton
+                        variant="ghost"
+                        size="sm"
+                        aria-label={
+                          isTelegramTokenVisible
+                            ? t('pages.settings.aria.hideTelegramBotToken')
+                            : t('pages.settings.aria.showTelegramBotToken')
+                        }
+                        onClick={() =>
+                          setIsTelegramTokenVisible((visible) => !visible)
+                        }
+                      >
+                        {isTelegramTokenVisible ? <LuEyeOff /> : <LuEye />}
+                      </IconButton>
+                    }
+                  >
+                    <Input
+                      value={telegramBotString}
+                      onChange={(e) => setTelegramBotString(e.target.value)}
+                      placeholder={t('common.placeholders.telegramBotToken')}
+                      type={isTelegramTokenVisible ? 'text' : 'password'}
+                    />
+                  </InputGroup>
                   {telegramBotString && (
                     <Button
                       onClick={handleGetChatId}

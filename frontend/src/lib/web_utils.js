@@ -46,3 +46,18 @@ export const getPriorityLabel = (priority, translate) => {
 
   return priority;
 };
+
+/**
+ * Determine the trend direction for a price change value.
+ * A change of exactly 0 is treated as "flat", never as a rise or a drop.
+ * @param {number|null|undefined} change - The price change value (percentage or absolute).
+ * @returns {'up'|'down'|'flat'|null} The trend direction, or null when no change is available.
+ */
+export const getPriceTrendDirection = (change) => {
+  if (change === null || change === undefined || Number.isNaN(change)) {
+    return null;
+  }
+  if (change > 0) return 'up';
+  if (change < 0) return 'down';
+  return 'flat';
+};

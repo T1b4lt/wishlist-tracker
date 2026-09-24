@@ -17,6 +17,7 @@
       "testBot": "Test Bot",
       "gotIt": "Got it",
       "ok": "OK",
+      "retry": "Retry",
       "addCategory": "Add Category",
       "addNewProduct": "Add New Product",
       "viewOnline": "View Product Online",
@@ -152,6 +153,10 @@
           "subtitle": "Click \"Add New Product\" to start tracking your first item"
         }
       },
+      "error": {
+        "title": "We couldn't load your wishlist",
+        "message": "Something went wrong while fetching your products. Please try again."
+      },
       "aria": {
         "deleteProduct": "Delete product"
       }
@@ -190,7 +195,8 @@
       "price": {
         "current": "Current Price",
         "min": "Min price in {{days}} days",
-        "minReached": "Reached on {{date}}"
+        "minReached": "Reached on {{date}}",
+        "average": "Average Price"
       },
       "priceHistory": {
         "title": "Price History",
@@ -255,7 +261,11 @@
         }
       },
       "loading": "Loading settings...",
-      "histWindowOption": "{{days}} days"
+      "histWindowOption": "{{days}} days",
+      "aria": {
+        "showTelegramBotToken": "Show Telegram bot token",
+        "hideTelegramBotToken": "Hide Telegram bot token"
+      }
     },
     "notFound": {
       "title": "Oops! Page Not Found",

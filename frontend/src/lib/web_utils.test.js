@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getCurrencySymbol, getPriorityLabel } from './web_utils';
+import {
+  getCurrencySymbol,
+  getPriorityLabel,
+  getPriceTrendDirection
+} from './web_utils';
 
 describe('getCurrencySymbol', () => {
   it('returns the symbol for a known currency code', () => {
@@ -50,5 +54,25 @@ describe('getPriorityLabel', () => {
   it('returns an empty string when given no priority', () => {
     expect(getPriorityLabel('')).toBe('');
     expect(getPriorityLabel(undefined)).toBe('');
+  });
+});
+
+describe('getPriceTrendDirection', () => {
+  it('returns "up" for a positive change', () => {
+    expect(getPriceTrendDirection(12.5)).toBe('up');
+  });
+
+  it('returns "down" for a negative change', () => {
+    expect(getPriceTrendDirection(-3.4)).toBe('down');
+  });
+
+  it('returns "flat" for a change of exactly 0', () => {
+    expect(getPriceTrendDirection(0)).toBe('flat');
+  });
+
+  it('returns null when no change is available', () => {
+    expect(getPriceTrendDirection(null)).toBeNull();
+    expect(getPriceTrendDirection(undefined)).toBeNull();
+    expect(getPriceTrendDirection(NaN)).toBeNull();
   });
 });

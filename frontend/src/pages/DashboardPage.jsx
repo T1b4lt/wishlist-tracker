@@ -23,9 +23,11 @@ import {
   LuTrendingUp,
   LuTrendingDown,
   LuMinus,
-  LuPlus
+  LuPlus,
+  LuRefreshCw,
+  LuTriangleAlert
 } from 'react-icons/lu';
-import { getPriorityLabel } from '@/lib/web_utils';
+import { getPriorityLabel, getPriceTrendDirection } from '@/lib/web_utils';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '@/lib/api';
 
@@ -33,6 +35,7 @@ const DashboardPage = () => {
   const [products, setProducts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [histWindowSize, setHistWindowSize] = useState(60);
@@ -56,6 +59,7 @@ const DashboardPage = () => {
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch(`${API_URL}/products/dashboard-summary`);
       if (!response.ok) throw new Error('Failed to fetch products');
@@ -63,10 +67,11 @@ const DashboardPage = () => {
       setProducts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
+      setError(t('pages.dashboard.error.message'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // Fetch-on-mount: state is updated from the async request, not synchronously
@@ -154,20 +159,21 @@ const DashboardPage = () => {
   };
 
   const formatPriceChange = (priceChange) => {
-    if (priceChange === null || priceChange === undefined) return '-';
+    const direction = getPriceTrendDirection(priceChange);
+    if (direction === null) return '-';
 
-    const isPositive = priceChange > 0;
-    const isNegative = priceChange < 0;
-    const color = isPositive
-      ? 'red.500'
-      : isNegative
-        ? 'green.500'
-        : 'gray.500';
-    const Icon = isPositive
-      ? LuTrendingUp
-      : isNegative
-        ? LuTrendingDown
-        : LuMinus;
+    const color =
+      direction === 'up'
+        ? 'red.500'
+        : direction === 'down'
+          ? 'green.500'
+          : 'gray.500';
+    const Icon =
+      direction === 'up'
+        ? LuTrendingUp
+        : direction === 'down'
+          ? LuTrendingDown
+          : LuMinus;
 
     const formattedChange = new Intl.NumberFormat(locale, {
       style: 'percent',
@@ -196,11 +202,7 @@ const DashboardPage = () => {
         {/* Add New Product Section */}
         <Box
           borderRadius="2xl"
-          bgGradient={
-            colorMode === 'light'
-              ? 'to-r, blue.600, purple.600'
-              : 'to-r, blue.900, purple.900'
-          }
+          bg="gray.900"
           color="white"
           p={{ base: 6, md: 8 }}
           shadow="lg"
@@ -241,6 +243,43 @@ const DashboardPage = () => {
             <Flex justify="center" align="center" minH="200px">
               <Spinner size="xl" />
             </Flex>
+          ) : error ? (
+            <Card.Root
+              bg={colorMode === 'light' ? 'white' : 'gray.800'}
+              p={12}
+              variant="outline"
+              borderStyle="dashed"
+              borderWidth="2px"
+            >
+              <VStack gap={4}>
+                <Circle
+                  size="48px"
+                  bg={colorMode === 'light' ? 'red.50' : 'red.900'}
+                >
+                  <LuTriangleAlert
+                    size={24}
+                    color={colorMode === 'light' ? '#C53030' : '#FEB2B2'}
+                  />
+                </Circle>
+                <Text
+                  fontSize="xl"
+                  fontWeight="medium"
+                  color={colorMode === 'light' ? 'gray.600' : 'gray.400'}
+                >
+                  {t('pages.dashboard.error.title')}
+                </Text>
+                <Text
+                  fontSize="sm"
+                  color={colorMode === 'light' ? 'gray.500' : 'gray.500'}
+                >
+                  {error}
+                </Text>
+                <Button variant="outline" onClick={fetchProducts}>
+                  <LuRefreshCw size={16} />
+                  {t('common.actions.retry')}
+                </Button>
+              </VStack>
+            </Card.Root>
           ) : products.length === 0 ? (
             <Card.Root
               bg={colorMode === 'light' ? 'white' : 'gray.800'}
@@ -281,134 +320,140 @@ const DashboardPage = () => {
               overflow="hidden"
               shadow="sm"
             >
-              <Table.Root size="md" variant="line">
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeader>
-                      {t('pages.dashboard.table.columns.name')}
-                    </Table.ColumnHeader>
-                    <Table.ColumnHeader>
-                      {t('pages.dashboard.table.columns.category')}
-                    </Table.ColumnHeader>
-                    <Table.ColumnHeader>
-                      {t('pages.dashboard.table.columns.priority')}
-                    </Table.ColumnHeader>
-                    <Table.ColumnHeader textAlign="end">
-                      {t('pages.dashboard.table.columns.currentPrice')}
-                    </Table.ColumnHeader>
-                    <Table.ColumnHeader textAlign="end">
-                      {t('pages.dashboard.table.columns.priceChange', {
-                        days: histWindowSize
-                      })}
-                    </Table.ColumnHeader>
-                    <Table.ColumnHeader textAlign="center">
-                      {t('pages.dashboard.table.columns.stock')}
-                    </Table.ColumnHeader>
-                    <Table.ColumnHeader textAlign="center">
-                      {t('pages.dashboard.table.columns.actions')}
-                    </Table.ColumnHeader>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {products.map((product) => (
-                    <Table.Row
-                      key={product.id}
-                      _hover={{
-                        bg: colorMode === 'light' ? 'gray.50' : 'whiteAlpha.100'
-                      }}
-                    >
-                      <Table.Cell>
-                        <Link href={`/product/${product.id}`}>
-                          <Text
-                            fontWeight="medium"
-                            color={
-                              colorMode === 'light' ? 'blue.600' : 'blue.400'
-                            }
-                            _hover={{
-                              textDecoration: 'underline',
-                              cursor: 'pointer'
+              <Table.ScrollArea>
+                <Table.Root size="md" variant="line">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader>
+                        {t('pages.dashboard.table.columns.name')}
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader>
+                        {t('pages.dashboard.table.columns.category')}
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader>
+                        {t('pages.dashboard.table.columns.priority')}
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="end">
+                        {t('pages.dashboard.table.columns.currentPrice')}
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="end">
+                        {t('pages.dashboard.table.columns.priceChange', {
+                          days: histWindowSize
+                        })}
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="center">
+                        {t('pages.dashboard.table.columns.stock')}
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="center">
+                        {t('pages.dashboard.table.columns.actions')}
+                      </Table.ColumnHeader>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {products.map((product) => (
+                      <Table.Row
+                        key={product.id}
+                        _hover={{
+                          bg:
+                            colorMode === 'light' ? 'gray.50' : 'whiteAlpha.100'
+                        }}
+                      >
+                        <Table.Cell>
+                          <Link href={`/product/${product.id}`}>
+                            <Text
+                              fontWeight="medium"
+                              color={
+                                colorMode === 'light' ? 'blue.600' : 'blue.400'
+                              }
+                              _hover={{
+                                textDecoration: 'underline',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {product.name}
+                            </Text>
+                          </Link>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Tag
+                            size="md"
+                            variant="subtle"
+                            style={{
+                              backgroundColor:
+                                colorMode === 'dark'
+                                  ? 'transparent'
+                                  : product.category_color,
+                              borderColor: product.category_color,
+                              borderWidth: '1px',
+                              color:
+                                colorMode === 'dark'
+                                  ? product.category_color
+                                  : 'white'
                             }}
                           >
-                            {product.name}
-                          </Text>
-                        </Link>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Tag
-                          size="md"
-                          variant="subtle"
-                          style={{
-                            backgroundColor:
-                              colorMode === 'dark'
-                                ? 'transparent'
-                                : product.category_color,
-                            borderColor: product.category_color,
-                            borderWidth: '1px',
-                            color:
-                              colorMode === 'dark'
-                                ? product.category_color
-                                : 'white'
-                          }}
-                        >
-                          {product.category_name}
-                        </Tag>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Tag
-                          size="md"
-                          variant="subtle"
-                          colorPalette={getPriorityColor(product.priority)}
-                        >
-                          {getPriorityLabel(product.priority, t)}
-                        </Tag>
-                      </Table.Cell>
-                      <Table.Cell textAlign="end">
-                        <Text fontWeight="medium">
-                          {formatPrice(product.current_price, product.currency)}
-                        </Text>
-                      </Table.Cell>
-                      <Table.Cell textAlign="end">
-                        {formatPriceChange(product.price_change_60d)}
-                      </Table.Cell>
-                      <Table.Cell textAlign="center">
-                        {product.is_in_stock !== null && (
-                          <Circle
-                            size="10px"
-                            bg={product.is_in_stock ? 'green.500' : 'red.500'}
-                            display="inline-block"
-                          />
-                        )}
-                        {product.is_in_stock === null && (
-                          <Text color="gray.500">-</Text>
-                        )}
-                        {product.is_in_stock !== null && (
-                          <Text
-                            fontSize="sm"
-                            color="gray.500"
-                            display="inline-block"
-                            ml={2}
+                            {product.category_name}
+                          </Tag>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Tag
+                            size="md"
+                            variant="subtle"
+                            colorPalette={getPriorityColor(product.priority)}
                           >
-                            {product.is_in_stock
-                              ? t('common.status.inStock')
-                              : t('common.status.outOfStock')}
+                            {getPriorityLabel(product.priority, t)}
+                          </Tag>
+                        </Table.Cell>
+                        <Table.Cell textAlign="end">
+                          <Text fontWeight="medium">
+                            {formatPrice(
+                              product.current_price,
+                              product.currency
+                            )}
                           </Text>
-                        )}
-                      </Table.Cell>
-                      <Table.Cell textAlign="center">
-                        <IconButton
-                          size="sm"
-                          variant="ghost"
-                          colorPalette="red"
-                          onClick={() => handleDeleteClick(product)}
-                          aria-label={t('pages.dashboard.aria.deleteProduct')}
-                        >
-                          <LuTrash2 />
-                        </IconButton>
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table.Root>
+                        </Table.Cell>
+                        <Table.Cell textAlign="end">
+                          {formatPriceChange(product.price_change_60d)}
+                        </Table.Cell>
+                        <Table.Cell textAlign="center">
+                          {product.is_in_stock !== null && (
+                            <Circle
+                              size="10px"
+                              bg={product.is_in_stock ? 'green.500' : 'red.500'}
+                              display="inline-block"
+                            />
+                          )}
+                          {product.is_in_stock === null && (
+                            <Text color="gray.500">-</Text>
+                          )}
+                          {product.is_in_stock !== null && (
+                            <Text
+                              fontSize="sm"
+                              color="gray.500"
+                              display="inline-block"
+                              ml={2}
+                            >
+                              {product.is_in_stock
+                                ? t('common.status.inStock')
+                                : t('common.status.outOfStock')}
+                            </Text>
+                          )}
+                        </Table.Cell>
+                        <Table.Cell textAlign="center">
+                          <IconButton
+                            size="sm"
+                            variant="ghost"
+                            colorPalette="red"
+                            onClick={() => handleDeleteClick(product)}
+                            aria-label={t('pages.dashboard.aria.deleteProduct')}
+                          >
+                            <LuTrash2 />
+                          </IconButton>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              </Table.ScrollArea>
             </Card.Root>
           )}
         </Box>
