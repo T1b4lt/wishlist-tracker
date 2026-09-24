@@ -1,8 +1,8 @@
 """AI-powered product scraping helpers built on the Stagehand v4 Python SDK.
 
 Each public function launches a local headless Chrome, attaches a Stagehand
-instance driven by Gemini, visits the product page, dismisses pop-ups and
-extracts structured data validated by a Pydantic model.
+instance driven by Gemini 3.1 Flash-Lite, visits the product page, dismisses
+pop-ups and extracts structured data validated by a Pydantic model.
 """
 
 import os
@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from stagehand import Page, Stagehand, local_browser
 
 # Model used for act() and extract() calls.
-MODEL_NAME = "google/gemini-2.5-flash"
+MODEL_NAME = "google/gemini-flash-lite-latest"
 
 # Instruction used to dismiss cookie banners and pop-ups before extracting.
 DISMISS_POPUPS_INSTRUCTION = "Close any pop-ups or cookies consent banners if present"
