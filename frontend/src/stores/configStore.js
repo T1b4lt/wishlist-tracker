@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { config as configApi } from '@/lib/api';
 import i18n, { persistLanguagePreference } from '@/i18n';
+import { toStoreError } from './storeError';
 
 /**
  * The store's state before any action has run. Exported so tests can reset
@@ -9,7 +10,12 @@ import i18n, { persistLanguagePreference } from '@/i18n';
 export const initialConfigState = {
   /** @type {'idle'|'loading'|'success'|'error'} Status of the last `fetch()` call. */
   status: 'idle',
-  /** @type {string|null} Error message from the last failed `fetch()` call. */
+  /**
+   * Normalized error from the last failed `fetch()` call. `message` is the
+   * raw (English, untranslated) error text for logging only; pages must
+   * render their own translated copy.
+   * @type {{status: number|null, message: string}|null}
+   */
   error: null,
   /** @type {object|null} `GET /config/` response (includes `telegram_status`). */
   config: null
@@ -60,7 +66,8 @@ export const useConfigStore = create((set, get) => ({
       set({ status: 'success', error: null, config: data });
       applyLanguage(data.selected_language);
     } catch (err) {
-      set({ status: 'error', error: err.message });
+      console.error('Error fetching configuration:', err);
+      set({ status: 'error', error: toStoreError(err) });
     }
   },
 

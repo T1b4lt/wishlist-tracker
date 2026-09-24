@@ -68,7 +68,6 @@ const SettingsPage = () => {
 
   const configStatus = useConfigStore((state) => state.status);
   const config = useConfigStore((state) => state.config);
-  const configError = useConfigStore((state) => state.error);
   const fetchConfig = useConfigStore((state) => state.fetch);
   const saveConfig = useConfigStore((state) => state.save);
 
@@ -160,8 +159,18 @@ const SettingsPage = () => {
     try {
       await telegramApi.getChatId();
 
-      // Refresh config to get the saved chat_id
+      // Refresh config to get the saved chat_id. fetchConfig never rejects
+      // (it stores the failure in the store instead), so check its status
+      // afterward to report a refresh failure.
       await fetchConfig(true);
+      if (useConfigStore.getState().status === 'error') {
+        toaster.create({
+          title: t('toasts.settings.chatIdError.title'),
+          description: t('toasts.settings.chatIdError.description'),
+          type: 'error'
+        });
+        return;
+      }
 
       toaster.create({
         title: t('toasts.settings.chatIdSaved.title'),
@@ -255,7 +264,7 @@ const SettingsPage = () => {
       <PageContainer>
         <ErrorState
           title={t('toasts.settings.loadError.title')}
-          message={configError ?? t('toasts.settings.loadError.description')}
+          message={t('toasts.settings.loadError.description')}
           onRetry={() => fetchConfig(true)}
         />
       </PageContainer>

@@ -288,10 +288,6 @@
       }
     },
     "categories": {
-      "loadError": {
-        "title": "Error al cargar las categorías",
-        "description": "No se pudieron cargar las categorías. Inténtalo de nuevo."
-      },
       "createSuccess": {
         "title": "Categoría creada",
         "description": "{{name}} se ha creado correctamente."

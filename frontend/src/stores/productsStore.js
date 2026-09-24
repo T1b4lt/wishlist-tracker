@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { products as productsApi } from '@/lib/api';
+import { toStoreError } from './storeError';
 
 /**
  * The store's state before any action has run. Exported so tests can reset
@@ -10,12 +11,18 @@ export const initialProductsState = {
   items: [],
   /** @type {'idle'|'loading'|'success'|'error'} Status of the last `fetchSummary()` call. */
   status: 'idle',
-  /** @type {string|null} Error message from the last failed `fetchSummary()` call. */
+  /**
+   * Normalized error from the last failed `fetchSummary()` call. `message`
+   * is the raw (English, untranslated) error text for logging only; pages
+   * must render their own translated copy and may use `status` (e.g. 404)
+   * to pick which one.
+   * @type {{status: number|null, message: string}|null}
+   */
   error: null,
   /**
    * Product detail records, keyed by id, each shaped like
-   * `{ status: 'idle'|'loading'|'success'|'error', error: string|null, data: object|null }`.
-   * @type {Record<string, {status: string, error: string|null, data: object|null}>}
+   * `{ status: 'idle'|'loading'|'success'|'error', error: {status, message}|null, data: object|null }`.
+   * @type {Record<string, {status: string, error: {status: number|null, message: string}|null, data: object|null}>}
    */
   details: {}
 };
@@ -34,7 +41,8 @@ export const useProductsStore = create((set, get) => ({
       const items = await productsApi.dashboardSummary();
       set({ items, status: 'success', error: null });
     } catch (err) {
-      set({ status: 'error', error: err.message });
+      console.error('Error fetching dashboard summary:', err);
+      set({ status: 'error', error: toStoreError(err) });
     }
   },
 
@@ -92,10 +100,11 @@ export const useProductsStore = create((set, get) => ({
         }
       }));
     } catch (err) {
+      console.error(`Error fetching product ${id}:`, err);
       set((state) => ({
         details: {
           ...state.details,
-          [id]: { status: 'error', error: err.message, data: null }
+          [id]: { status: 'error', error: toStoreError(err), data: null }
         }
       }));
     }

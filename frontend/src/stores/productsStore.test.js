@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { products as productsApi } from '@/lib/api';
 import { useProductsStore, initialProductsState } from './productsStore';
 
@@ -12,9 +12,23 @@ vi.mock('@/lib/api', () => ({
   }
 }));
 
+class ApiErrorLike extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
+let consoleErrorSpy;
+
 beforeEach(() => {
   useProductsStore.setState(initialProductsState);
   vi.clearAllMocks();
+  consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  consoleErrorSpy.mockRestore();
 });
 
 describe('useProductsStore', () => {
@@ -47,15 +61,28 @@ describe('useProductsStore', () => {
       expect(state.error).toBeNull();
     });
 
-    it('transitions to error and keeps the message on failure', async () => {
-      productsApi.dashboardSummary.mockRejectedValue(new Error('boom'));
+    it('transitions to error, normalizes the error and logs it', async () => {
+      const err = new ApiErrorLike('boom', 500);
+      productsApi.dashboardSummary.mockRejectedValue(err);
 
       await useProductsStore.getState().fetchSummary();
 
       const state = useProductsStore.getState();
       expect(state.status).toBe('error');
-      expect(state.error).toBe('boom');
+      expect(state.error).toEqual({ status: 500, message: 'boom' });
       expect(state.items).toEqual([]);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(String), err);
+    });
+
+    it('normalizes a non-ApiError failure with a null status', async () => {
+      productsApi.dashboardSummary.mockRejectedValue(new Error('network down'));
+
+      await useProductsStore.getState().fetchSummary();
+
+      expect(useProductsStore.getState().error).toEqual({
+        status: null,
+        message: 'network down'
+      });
     });
   });
 
@@ -148,17 +175,18 @@ describe('useProductsStore', () => {
       expect(state.details[7]).toBeUndefined();
     });
 
-    it('stores the error for that id on failure', async () => {
-      productsApi.get.mockRejectedValue(new Error('not found'));
+    it('stores the normalized error for that id on failure', async () => {
+      productsApi.get.mockRejectedValue(new ApiErrorLike('not found', 404));
 
       await useProductsStore.getState().fetchDetail(9);
 
       const state = useProductsStore.getState();
       expect(state.details[9]).toEqual({
         status: 'error',
-        error: 'not found',
+        error: { status: 404, message: 'not found' },
         data: null
       });
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
 
     it('keeps separate detail records for different ids', async () => {

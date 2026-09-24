@@ -159,13 +159,18 @@ const ProductPage = () => {
   }
 
   if (status === 'error' || !product) {
+    const notFound = detail?.error?.status === 404;
     return (
       <PageContainer>
         <Card.Root>
           <Card.Body>
             <ErrorState
               title={t('pages.product.error.title')}
-              message={detail?.error ?? t('pages.product.errors.fetchFailed')}
+              message={
+                notFound
+                  ? t('pages.product.errors.notFound')
+                  : t('pages.product.errors.fetchFailed')
+              }
               onRetry={() => fetchDetail(productId)}
             />
             <Flex justify="center" mt={2}>

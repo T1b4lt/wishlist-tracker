@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { categories as categoriesApi } from '@/lib/api';
 import { useCategoriesStore, initialCategoriesState } from './categoriesStore';
 
@@ -18,9 +18,16 @@ class ApiErrorLike extends Error {
   }
 }
 
+let consoleErrorSpy;
+
 beforeEach(() => {
   useCategoriesStore.setState(initialCategoriesState);
   vi.clearAllMocks();
+  consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  consoleErrorSpy.mockRestore();
 });
 
 describe('useCategoriesStore', () => {
@@ -53,14 +60,27 @@ describe('useCategoriesStore', () => {
       ]);
     });
 
-    it('transitions to error and keeps the message on failure', async () => {
-      categoriesApi.list.mockRejectedValue(new Error('boom'));
+    it('transitions to error, normalizes the error and logs it', async () => {
+      const err = new ApiErrorLike('boom', 500);
+      categoriesApi.list.mockRejectedValue(err);
 
       await useCategoriesStore.getState().fetch();
 
       const state = useCategoriesStore.getState();
       expect(state.status).toBe('error');
-      expect(state.error).toBe('boom');
+      expect(state.error).toEqual({ status: 500, message: 'boom' });
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(String), err);
+    });
+
+    it('normalizes a non-ApiError failure with a null status', async () => {
+      categoriesApi.list.mockRejectedValue(new Error('network down'));
+
+      await useCategoriesStore.getState().fetch();
+
+      expect(useCategoriesStore.getState().error).toEqual({
+        status: null,
+        message: 'network down'
+      });
     });
   });
 

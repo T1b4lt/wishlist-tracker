@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { config as configApi } from '@/lib/api';
 import i18n, { persistLanguagePreference } from '@/i18n';
 import { useConfigStore, initialConfigState } from './configStore';
@@ -15,9 +15,23 @@ vi.mock('@/i18n', () => ({
   persistLanguagePreference: vi.fn()
 }));
 
+class ApiErrorLike extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
+let consoleErrorSpy;
+
 beforeEach(() => {
   useConfigStore.setState(initialConfigState);
   vi.clearAllMocks();
+  consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  consoleErrorSpy.mockRestore();
 });
 
 describe('useConfigStore', () => {
@@ -60,15 +74,17 @@ describe('useConfigStore', () => {
       expect(persistLanguagePreference).toHaveBeenCalledWith('spanish');
     });
 
-    it('transitions to error and keeps the message on failure', async () => {
-      configApi.get.mockRejectedValue(new Error('network down'));
+    it('transitions to error, normalizes the error and logs it', async () => {
+      const err = new ApiErrorLike('network down', null);
+      configApi.get.mockRejectedValue(err);
 
       await useConfigStore.getState().fetch();
 
       const state = useConfigStore.getState();
       expect(state.status).toBe('error');
-      expect(state.error).toBe('network down');
+      expect(state.error).toEqual({ status: null, message: 'network down' });
       expect(i18n.changeLanguage).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(String), err);
     });
 
     it('skips the request when already loaded and not forced', async () => {

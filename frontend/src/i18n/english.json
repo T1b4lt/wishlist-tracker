@@ -288,10 +288,6 @@
       }
     },
     "categories": {
-      "loadError": {
-        "title": "Error loading categories",
-        "description": "Failed to load categories. Please try again."
-      },
       "createSuccess": {
         "title": "Category created",
         "description": "{{name}} has been created successfully."

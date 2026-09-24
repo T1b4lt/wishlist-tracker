@@ -38,7 +38,6 @@ const DashboardPage = () => {
 
   const products = useProductsStore((state) => state.items);
   const status = useProductsStore((state) => state.status);
-  const error = useProductsStore((state) => state.error);
   const fetchSummary = useProductsStore((state) => state.fetchSummary);
   const createProduct = useProductsStore((state) => state.create);
   const removeProduct = useProductsStore((state) => state.remove);
@@ -128,7 +127,7 @@ const DashboardPage = () => {
       {status === 'error' ? (
         <ErrorState
           title={t('pages.dashboard.error.title')}
-          message={error ?? t('pages.dashboard.error.message')}
+          message={t('pages.dashboard.error.message')}
           onRetry={fetchSummary}
         />
       ) : !isLoading && products.length === 0 ? (

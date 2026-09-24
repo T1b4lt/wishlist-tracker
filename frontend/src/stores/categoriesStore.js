@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { categories as categoriesApi } from '@/lib/api';
+import { toStoreError } from './storeError';
 
 /**
  * The store's state before any action has run. Exported so tests can reset
@@ -10,7 +11,12 @@ export const initialCategoriesState = {
   items: [],
   /** @type {'idle'|'loading'|'success'|'error'} Status of the last `fetch()` call. */
   status: 'idle',
-  /** @type {string|null} Error message from the last failed `fetch()` call. */
+  /**
+   * Normalized error from the last failed `fetch()` call. `message` is the
+   * raw (English, untranslated) error text for logging only; pages must
+   * render their own translated copy.
+   * @type {{status: number|null, message: string}|null}
+   */
   error: null
 };
 
@@ -27,7 +33,8 @@ export const useCategoriesStore = create((set, get) => ({
       const items = await categoriesApi.list();
       set({ items, status: 'success', error: null });
     } catch (err) {
-      set({ status: 'error', error: err.message });
+      console.error('Error fetching categories:', err);
+      set({ status: 'error', error: toStoreError(err) });
     }
   },
 

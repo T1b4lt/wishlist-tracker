@@ -39,7 +39,6 @@ const CategoriesPage = () => {
 
   const categories = useCategoriesStore((state) => state.items);
   const status = useCategoriesStore((state) => state.status);
-  const error = useCategoriesStore((state) => state.error);
   const fetchCategories = useCategoriesStore((state) => state.fetch);
   const createCategory = useCategoriesStore((state) => state.create);
   const updateCategory = useCategoriesStore((state) => state.update);
@@ -191,7 +190,7 @@ const CategoriesPage = () => {
         {status === 'error' ? (
           <ErrorState
             title={t('pages.categories.error.title')}
-            message={error ?? t('pages.categories.error.message')}
+            message={t('pages.categories.error.message')}
             onRetry={fetchCategories}
           />
         ) : isLoading ? (
