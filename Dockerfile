@@ -12,7 +12,7 @@ RUN npm ci
 # Copy the rest of the frontend source code
 COPY frontend/ ./
 
-# Build the frontend. 
+# Build the frontend.
 # We set VITE_API_URL so the compiled app requests /api/... which Nginx will proxy.
 ENV VITE_API_URL=/api
 RUN npm run build
