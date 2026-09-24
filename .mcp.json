@@ -3,6 +3,13 @@
     "agno": {
       "type": "http",
       "url": "https://docs.agno.com/mcp"
+    },
+    "stagehand-docs": {
+      "url": "https://docs.stagehand.dev/mcp"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
     }
   }
 }
