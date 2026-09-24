@@ -22,11 +22,11 @@ ones about typography, color discipline, shape consistency, interaction states,
 accessibility, dark mode and "AI tells". We ignore the landing-page rules
 (heroes, bento grids, scroll choreography).
 
-| Dial               | Value | Why                                                                      |
-| ------------------ | ----- | ------------------------------------------------------------------------ |
-| `DESIGN_VARIANCE`  | 4     | Predictable app layout. Asymmetry only where it helps (the detail page). |
-| `MOTION_INTENSITY` | 3     | Only feedback and state changes (hover, press, dialogs, list updates).   |
-| `VISUAL_DENSITY`   | 6     | People scan a wishlist and compare prices, so more data per screen.      |
+| Dial               | Value | Why                                                                                 |
+| ------------------ | ----- | ----------------------------------------------------------------------------------- |
+| `DESIGN_VARIANCE`  | 4     | Predictable app layout. Asymmetry only where it helps (the detail page).            |
+| `MOTION_INTENSITY` | 5     | Purposeful motion: page transitions, staggered entry, list insert/remove, feedback. |
+| `VISUAL_DENSITY`   | 6     | People scan a wishlist and compare prices, so more data per screen.                 |
 
 **Design system:** keep **Chakra UI v3** (one system per project). Stop
 overriding it ad hoc. Build a real theme with semantic tokens, text styles and
@@ -215,8 +215,12 @@ problem. **P2** is polish or tech debt.
   buttons `md` (8px), tags and badges `full`.
 - **Elevation:** borders and background tints first, soft shadows only on
   floating layers (menus, dialogs, toasts).
-- **Motion (`MOTION_INTENSITY 3`):** 150-200ms ease-out on hover, press
-  (`scale 0.98`), dialog enter and list insert or remove. Everything respects
+- **Motion (`MOTION_INTENSITY 5`):** **Motion** (Framer Motion,
+  `motion/react`) combined with Chakra's built-in animations. Shared
+  durations and easings as theme tokens. Page transitions, staggered entry of
+  lists and stats, animated insert/remove of rows and cards, chart line
+  draw-in, sliding save bar, press feedback (`scale 0.98`). Every animation
+  has a purpose (no decorative loops) and everything respects
   `prefers-reduced-motion`.
 - **Icons:** keep **Lucide** (`react-icons/lu`), with one global size scale
   and stroke width.
@@ -420,7 +424,7 @@ Layout (desktop, variance 4, a light asymmetric split):
 
 - [ ] Redo the 404 page with the shared `EmptyState` (no gradient text, no
       emoji, one CTA).
-- [ ] Motion pass (only the list in §3). Check `prefers-reduced-motion`.
+- [ ] Motion pass (consistency check of the motion listed in §3). Check `prefers-reduced-motion`.
 - [ ] A11y pass: visible `:focus-visible` everywhere, icon buttons with
       labels, dialogs with focus returned to their trigger, color never the
       only signal, WCAG AA contrast in both modes (including disabled inputs
@@ -472,6 +476,7 @@ set of tests for the endpoints it touches.
 | State / data       | Zustand stores with async actions and a shared API client. |
 | Add/Edit container | Centered dialog (full screen on mobile).                   |
 | Backend changes    | In this branch (full refactor branch).                     |
+| Motion             | Motion (Framer Motion) + Chakra animations.                |
 | Search/filter/sort | Out of scope for this branch. It will be done later.       |
 
 ## 7. Estimate
