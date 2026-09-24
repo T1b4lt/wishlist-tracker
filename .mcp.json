@@ -5,6 +5,7 @@
       "url": "https://docs.agno.com/mcp"
     },
     "stagehand-docs": {
+      "type": "http",
       "url": "https://docs.stagehand.dev/mcp"
     },
     "context7": {
