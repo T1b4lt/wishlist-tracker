@@ -134,4 +134,13 @@ describe('theme system', () => {
     expect(globalCss).toContain('prefers-reduced-motion: reduce');
     expect(globalCss).toContain('focus-visible');
   });
+
+  it('exposes the shared motion durations and easing as Chakra tokens', () => {
+    expect(system.token('durations.fast')).toBe('150ms');
+    expect(system.token('durations.normal')).toBe('220ms');
+    expect(system.token('durations.slow')).toBe('350ms');
+    expect(system.token('easings.easeOut')).toBe(
+      'cubic-bezier(0.16, 1, 0.3, 1)'
+    );
+  });
 });
