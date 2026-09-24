@@ -381,7 +381,8 @@ passes.
 - Store unit tests with the API modules mocked (status transitions, refetch
   after mutation, language applied on config load).
 
-Acceptance: `grep -rn "fetch(" frontend/src/pages frontend/src/components`
+Acceptance: `grep -rnE "(^|[^.A-Za-z_])fetch\(" frontend/src/pages frontend/src/components`
+(global `fetch` calls, not store actions)
 returns nothing; tests and lint pass; manual check that every page loads.
 
 ### Task 10: Dashboard redesign (spec §2.4, Phase 3)
@@ -561,6 +562,8 @@ Acceptance: tests (including parity) and lint pass; build passes.
   disabled when in use; settings save bar appears when dirty and language
   applies after save; nav active state; no horizontal scroll at 390px on every
   page; dark mode renders visible headings.
+- Exclude `e2e/**` from Vitest (`test.exclude`) so unit tests do not pick up
+  Playwright specs.
 - Scripts `"test:e2e": "playwright test"`; `just test-e2e` recipe; ignore
   Playwright output folders in `.gitignore`. Document in READMEs.
 
