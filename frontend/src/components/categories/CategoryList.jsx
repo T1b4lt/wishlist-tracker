@@ -1,4 +1,13 @@
-import { Card, Flex, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  Card,
+  Flex,
+  HStack,
+  IconButton,
+  Skeleton,
+  Text,
+  VStack
+} from '@chakra-ui/react';
 import { useReducedMotion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { LuPencil, LuTrash2 } from 'react-icons/lu';
@@ -6,6 +15,14 @@ import { AnimatedList, AnimatedListItem } from '@/components/motion';
 import { durationSeconds, easeOut, staggerStepSeconds } from '@/theme/motion';
 import { CategoryTag } from '@/components/common';
 import { Tooltip } from '@/components/ui/tooltip';
+
+/**
+ * Grid template shared by `CategoryList` and `CategoryListSkeleton`, so the
+ * loading state uses the exact same column count at any given width as the
+ * real grid it is standing in for (part of "no layout shift" between the
+ * two: see `CategoryListSkeleton`).
+ */
+const CATEGORY_GRID_TEMPLATE_COLUMNS = 'repeat(auto-fill, minmax(280px, 1fr))';
 
 const CategoryCard = ({ category, index, onEdit, onDelete }) => {
   const { t } = useTranslation();
@@ -104,7 +121,7 @@ export const CategoryList = ({ categories, onEdit, onDelete }) => (
     as="ul"
     listStyleType="none"
     display="grid"
-    gridTemplateColumns="repeat(auto-fill, minmax(280px, 1fr))"
+    gridTemplateColumns={CATEGORY_GRID_TEMPLATE_COLUMNS}
     gap={4}
   >
     {categories.map((category, index) => (
@@ -117,4 +134,41 @@ export const CategoryList = ({ categories, onEdit, onDelete }) => (
       />
     ))}
   </AnimatedList>
+);
+
+/**
+ * `CategoryList`'s loading placeholder. Mirrors `CategoryCard`'s exact
+ * layout (same `Card.Root` padding, the same `Flex`/`VStack`/`HStack`
+ * structure and gaps, `Skeleton`s sized to the real name tag, product-count
+ * line and the two `size="sm"` icon buttons) and the same
+ * `CATEGORY_GRID_TEMPLATE_COLUMNS` grid, so swapping this out for the real
+ * `CategoryList` once data arrives does not reflow the page: same column
+ * count at any given width, no card-height jump.
+ *
+ * @param {object} props
+ * @param {number} [props.count] - Number of placeholder cards. Defaults to `6`.
+ */
+export const CategoryListSkeleton = ({ count = 6 }) => (
+  <Box
+    display="grid"
+    gridTemplateColumns={CATEGORY_GRID_TEMPLATE_COLUMNS}
+    gap={4}
+    role="status"
+    aria-busy="true"
+  >
+    {Array.from({ length: count }, (_, index) => (
+      <Card.Root key={index} p={5} shadow="sm">
+        <Flex justify="space-between" align="center" gap={3}>
+          <VStack align="flex-start" gap={1.5} flex={1} minW={0}>
+            <Skeleton height="20px" width="55%" borderRadius="full" />
+            <Skeleton height="16px" width="35%" />
+          </VStack>
+          <HStack gap={1} flexShrink={0}>
+            <Skeleton boxSize="36px" borderRadius="md" />
+            <Skeleton boxSize="36px" borderRadius="md" />
+          </HStack>
+        </Flex>
+      </Card.Root>
+    ))}
+  </Box>
 );

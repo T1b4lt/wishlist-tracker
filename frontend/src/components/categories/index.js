@@ -1,2 +1,2 @@
 export { CategoryFormDialog } from './CategoryFormDialog';
-export { CategoryList } from './CategoryList';
+export { CategoryList, CategoryListSkeleton } from './CategoryList';

@@ -62,6 +62,19 @@ export const CategoryColorPicker = ({ value, onChange, disabled = false }) => {
                 </RadioGroup.ItemText>
               </VisuallyHidden>
               <RadioGroup.ItemControl
+                // Chakra's default `itemControl` slot recipe (`radiomark`,
+                // "solid" variant) paints its OWN `bg: colorPalette.solid`
+                // on `_checked` on top of whatever `bg` we pass as a base
+                // style. That recipe style lives in the (lower-priority)
+                // `@layer recipes`, so it loses to our own unlayered style
+                // props in every current browser (verified: a checked
+                // swatch keeps its own color) - but relying on cross-layer
+                // precedence for something this visible is fragile and
+                // easy to break by accident later. `unstyled` drops the
+                // recipe entirely so this component's own props (below)
+                // are the only source of truth for how a swatch looks,
+                // checked or not.
+                unstyled
                 w="40px"
                 h="40px"
                 borderRadius="full"
@@ -79,6 +92,7 @@ export const CategoryColorPicker = ({ value, onChange, disabled = false }) => {
                   outlineColor: 'fg',
                   outlineOffset: '2px'
                 }}
+                _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
               />
               <RadioGroup.ItemHiddenInput />
             </RadioGroup.Item>

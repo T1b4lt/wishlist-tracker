@@ -73,4 +73,46 @@ describe('CategoryColorPicker', () => {
     expect(screen.getByRole('radio', { name: 'Red' })).toBeDisabled();
     expect(screen.getByLabelText('Or pick a custom color')).toBeDisabled();
   });
+
+  // Regression test for the checked swatch losing its own color: Chakra's
+  // `RadioGroup.ItemControl` slot recipe (`radiomark`, "solid" variant)
+  // paints its own `bg: colorPalette.solid` on `_checked`, which used to
+  // compete with (and, depending on the browser/cascade-layer setup, could
+  // beat) the swatch's own `bg`. `CategoryColorPicker` now renders the
+  // control `unstyled` so that recipe never applies at all; this asserts
+  // that directly by inspecting every generated CSS rule for the checked
+  // swatch's class and failing if any of them still reference the
+  // recipe's `color-palette-solid` token, and that the swatch's own color
+  // is set unconditionally (not only inside a `:checked` rule that could
+  // lose a cascade fight).
+  it('keeps the checked swatch on its own color, never the colorPalette recipe background', () => {
+    renderWithProviders(
+      <CategoryColorPicker
+        value={CATEGORY_COLOR_SWATCHES[0]}
+        onChange={vi.fn()}
+      />
+    );
+
+    const checkedRadio = screen.getByRole('radio', { name: 'Red' });
+    expect(checkedRadio).toBeChecked();
+    const control = checkedRadio
+      .closest('label')
+      .querySelector('[aria-hidden="true"]');
+    const controlClass = control.className.split(' ').pop();
+
+    const matchingCss = [];
+    for (const sheet of document.styleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (rule.cssText.includes(controlClass)) matchingCss.push(rule.cssText);
+      }
+    }
+    const css = matchingCss.join('\n');
+
+    expect(css).not.toContain('color-palette-solid');
+    // The base (unconditional, not `:checked`-only) rule for this class
+    // sets its own color as `background`.
+    expect(css).toMatch(
+      new RegExp(`\\.${controlClass} \\{[^}]*background: rgb\\(239, 68, 68\\)`)
+    );
+  });
 });

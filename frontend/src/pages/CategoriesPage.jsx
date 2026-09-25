@@ -5,13 +5,12 @@ import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { toaster } from '@/components/ui/toaster';
+import { EmptyState, ErrorState, ConfirmDialog } from '@/components/common';
 import {
-  EmptyState,
-  ErrorState,
-  SkeletonCards,
-  ConfirmDialog
-} from '@/components/common';
-import { CategoryFormDialog, CategoryList } from '@/components/categories';
+  CategoryFormDialog,
+  CategoryList,
+  CategoryListSkeleton
+} from '@/components/categories';
 import { useTranslation, Trans } from 'react-i18next';
 import { useCategoriesStore } from '@/stores/categoriesStore';
 
@@ -172,7 +171,7 @@ const CategoriesPage = () => {
           onRetry={fetchCategories}
         />
       ) : isLoading ? (
-        <SkeletonCards count={6} />
+        <CategoryListSkeleton count={6} />
       ) : isEmpty ? (
         <EmptyState
           icon={LuShapes}
