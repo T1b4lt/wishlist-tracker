@@ -39,6 +39,10 @@ export const colors = defineTokens.colors({
     400: { value: '#a1a1aa' },
     450: { value: '#8b8b94' },
     500: { value: '#71717a' },
+    // Slightly darker than `500`, used only where a lighter-weight text
+    // color still needs to clear AA contrast on a tinted (`bg.muted`)
+    // surface, not just the plain `bg` (see `fg.subtle` below).
+    550: { value: '#65656d' },
     600: { value: '#52525b' },
     700: { value: '#3f3f46' },
     800: { value: '#27272a' },

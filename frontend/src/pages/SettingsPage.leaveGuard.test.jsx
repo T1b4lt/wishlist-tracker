@@ -77,7 +77,9 @@ describe('SettingsPage leave guard', () => {
       await screen.findByLabelText('Google AI Studio API Key'),
       'a-new-key'
     );
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: 'Dashboard' }));
 

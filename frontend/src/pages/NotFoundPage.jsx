@@ -1,42 +1,32 @@
-import { useLocation } from 'wouter';
-import { Box, Button, Heading, Text, VStack } from '@chakra-ui/react';
-import { LuHouse } from 'react-icons/lu';
+import { Button } from '@chakra-ui/react';
+import { Link } from 'wouter';
+import { LuSearchX } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import PageContainer from '@/components/layout/PageContainer';
-import PageHeader from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/common';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
+/**
+ * The catch-all 404 route: an `EmptyState` (icon, title, plain description)
+ * with a single action back to the dashboard. No page header, no gradient
+ * text, no emoji and no quote box, per the spec's plain-copy requirement.
+ */
 const NotFoundPage = () => {
-  const [, navigate] = useLocation();
   const { t } = useTranslation();
   useDocumentTitle(t('pages.notFound.title'));
 
   return (
     <PageContainer>
-      <PageHeader title={t('pages.notFound.title')} />
-      <VStack gap={8} textAlign="center">
-        {/* Error Code */}
-        <Heading textStyle="display" color="fg">
-          404
-        </Heading>
-
-        {/* Funny Messages */}
-        <Box p={6} borderRadius="lg" bg="bg.muted" maxW="md">
-          <Text fontSize="md" color="fg" fontStyle="italic">
-            {t('pages.notFound.quote')}
-          </Text>
-        </Box>
-
-        {/* Action Buttons */}
-        <VStack gap={3} pt={4}>
-          <Button size="lg" onClick={() => navigate('/')}>
-            <LuHouse /> {t('pages.notFound.actionPrimary')}
-          </Button>
-          <Text fontSize="sm" color="fg.subtle">
-            {t('pages.notFound.actionSecondary')}
-          </Text>
-        </VStack>
-      </VStack>
+      <EmptyState
+        icon={LuSearchX}
+        title={t('pages.notFound.title')}
+        description={t('pages.notFound.message')}
+        action={
+          <Link href="/" asChild>
+            <Button as="a">{t('pages.notFound.action')}</Button>
+          </Link>
+        }
+      />
     </PageContainer>
   );
 };

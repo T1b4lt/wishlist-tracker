@@ -77,7 +77,9 @@ describe('SettingsPage language', () => {
     // English, and nothing has been sent to the backend yet.
     expect(i18n.language).toBe('english');
     expect(configApi.update).not.toHaveBeenCalled();
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 

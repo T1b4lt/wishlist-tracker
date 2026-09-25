@@ -118,6 +118,12 @@ describe('ProductPage', () => {
       'true'
     );
     expect(screen.getByText('A nice keyboard.')).toBeInTheDocument();
+    // A real, single anchor (not a `<button>` nested inside an `<a>`), so it
+    // keeps native link semantics (opening in a new tab, right-click menu).
+    const storeLink = screen.getByRole('link', { name: 'Open store page' });
+    expect(storeLink.tagName).toBe('A');
+    expect(storeLink).toHaveAttribute('href', 'https://example.com/keyboard');
+    expect(storeLink).toHaveAttribute('target', '_blank');
     expect(getUnexpectedErrors()).toEqual([]);
   });
 

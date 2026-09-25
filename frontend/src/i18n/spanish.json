@@ -10,17 +10,12 @@
       "delete": "Eliminar",
       "edit": "Editar",
       "save": "Guardar",
-      "saveItem": "Guardar elemento",
-      "saving": "Guardando...",
       "generateDetails": "Generar detalles",
       "generating": "Generando...",
       "getChatId": "Obtener Chat ID",
       "testBot": "Probar bot",
       "gotIt": "Entendido",
-      "ok": "Aceptar",
       "retry": "Reintentar",
-      "addCategory": "Añadir categoría",
-      "addNewProduct": "Añadir nuevo producto",
       "backToDashboard": "Volver al panel",
       "discard": "Descartar"
     },
@@ -35,13 +30,10 @@
     },
     "placeholders": {
       "selectLanguage": "Selecciona un idioma",
-      "selectCategory": "Selecciona una categoría",
       "selectHour": "Selecciona una hora",
       "googleApiKey": "Introduce tu clave de Google AI Studio",
       "telegramBotToken": "Introduce el token de tu bot de Telegram",
-      "productUrl": "https://ejemplo.com/producto...",
-      "currencyCode": "p. ej., EUR, USD, GBP, MXN",
-      "categoryName": "p. ej. Electrónica"
+      "productUrl": "https://ejemplo.com/producto..."
     },
     "messages": {
       "loading": "Cargando...",
@@ -154,7 +146,7 @@
     "dashboard": {
       "title": "Tu lista de deseos",
       "subtitle": "Haz seguimiento de los precios y la disponibilidad de los productos que quieres comprar",
-      "addButton": "Añadir nuevo producto",
+      "addButton": "Añadir producto",
       "summary": {
         "items": "Artículos",
         "totalValue": "Valor total",
@@ -173,7 +165,7 @@
         },
         "empty": {
           "title": "Todavía no hay productos en tu lista de deseos",
-          "subtitle": "Haz clic en \"Añadir nuevo producto\" para empezar a seguir tu primer artículo"
+          "subtitle": "Haz clic en \"Añadir producto\" para empezar a seguir tu primer artículo"
         }
       },
       "menu": {
@@ -283,8 +275,7 @@
           "helper": "Crea un bot con @BotFather en Telegram y pega aquí el token"
         },
         "telegramChatId": {
-          "label": "Chat ID de Telegram",
-          "helper": "Este es tu chat ID único para recibir notificaciones"
+          "label": "Chat ID de Telegram"
         }
       },
       "alerts": {
@@ -327,6 +318,7 @@
         "unsavedChanges": "Tienes cambios sin guardar"
       },
       "telegram": {
+        "title": "Integración con Telegram",
         "steps": {
           "token": "1. Token del bot",
           "chat": "2. Vincular chat",
@@ -337,7 +329,6 @@
           "tokenOnly": "Esperando el chat",
           "connected": "Conectado"
         },
-        "chatIdLinkedLabel": "ID de chat vinculado",
         "chatIdDisabledReason": "Guarda primero el token del bot para continuar",
         "testDisabledReason": "Termina de vincular tu chat primero"
       },
@@ -348,17 +339,17 @@
       }
     },
     "notFound": {
-      "title": "¡Ups! Página no encontrada",
-      "quote": "\"Ni nuestra IA pudo encontrar esta página. ¿Estará en la lista de deseos de otra persona?\" 🤔",
-      "actionPrimary": "Volver al inicio",
-      "actionSecondary": "¿Perdido? No pasa nada, a todos nos ocurre 😊"
+      "title": "Página no encontrada",
+      "message": "Esta página no existe o puede haberse movido.",
+      "action": "Volver a la lista de deseos"
     }
   },
   "toasts": {
     "products": {
       "createSuccess": {
         "title": "Producto añadido",
-        "description": "{{name}} se ha añadido a tu lista de deseos."
+        "description": "{{name}} se ha añadido a tu lista de deseos.",
+        "action": "Abrir"
       },
       "createError": {
         "title": "Error al añadir el producto",

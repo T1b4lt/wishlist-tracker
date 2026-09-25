@@ -75,6 +75,11 @@ const ProductPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // The overflow menu's own trigger unmounts its `Menu.Item`s (including
+  // "Delete") as soon as the menu closes, so the confirm dialog's
+  // focus-trap can no longer fall back to "whatever was focused before it
+  // opened" - it needs this ref as an explicit `finalFocusEl`.
+  const deleteMenuTriggerRef = useRef(null);
 
   // The range selector defaults to the configured `hist_window_size`
   // (rounded to the nearest offered option) until the user picks one
@@ -190,15 +195,15 @@ const ProductPage = () => {
   if (isNotFound) {
     return (
       <PageContainer>
-        <Card.Root shadow="sm">
+        <Card.Root>
           <Card.Body>
             <ErrorState
               title={t('pages.product.notFound.title')}
               message={t('pages.product.notFound.message')}
             />
             <Flex justify="center" mt={2}>
-              <Link href="/">
-                <Button variant="outline">
+              <Link href="/" asChild>
+                <Button as="a" variant="outline">
                   {t('common.actions.backToDashboard')}
                 </Button>
               </Link>
@@ -212,7 +217,7 @@ const ProductPage = () => {
   if (isOtherError || !product) {
     return (
       <PageContainer>
-        <Card.Root shadow="sm">
+        <Card.Root>
           <Card.Body>
             <ErrorState
               title={t('pages.product.loadError.title')}
@@ -220,8 +225,8 @@ const ProductPage = () => {
               onRetry={() => fetchDetail(productId)}
             />
             <Flex justify="center" mt={2}>
-              <Link href="/">
-                <Button variant="outline">
+              <Link href="/" asChild>
+                <Button as="a" variant="outline">
                   {t('common.actions.backToDashboard')}
                 </Button>
               </Link>
@@ -240,12 +245,12 @@ const ProductPage = () => {
         backLink={{ href: '/', label: t('common.actions.backToDashboard') }}
         actions={
           <HStack gap={2} wrap="wrap" justify="flex-end">
-            <a href={product.url} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline">
+            <Button variant="outline" asChild>
+              <a href={product.url} target="_blank" rel="noopener noreferrer">
                 <LuExternalLink size={16} aria-hidden="true" />
                 {t('pages.product.actions.openStorePage')}
-              </Button>
-            </a>
+              </a>
+            </Button>
             <Button onClick={() => setIsFormOpen(true)}>
               <LuPencil size={16} aria-hidden="true" />
               {t('common.actions.edit')}
@@ -253,6 +258,7 @@ const ProductPage = () => {
             <Menu.Root positioning={{ placement: 'bottom-end' }}>
               <Menu.Trigger asChild>
                 <IconButton
+                  ref={deleteMenuTriggerRef}
                   variant="ghost"
                   aria-label={t('pages.product.actions.moreActions', {
                     name: product.name
@@ -339,6 +345,7 @@ const ProductPage = () => {
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={handleDeleteConfirm}
+        finalFocusEl={() => deleteMenuTriggerRef.current}
         title={t('components.deleteProductDialog.title')}
         body={
           <>

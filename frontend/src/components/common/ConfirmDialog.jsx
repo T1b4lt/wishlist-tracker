@@ -35,6 +35,10 @@ import { useTranslation } from 'react-i18next';
  *   destructive (red) action. Defaults to `false`.
  * @param {boolean} [props.isLoading] - Disables both buttons and shows a
  *   spinner on the confirm button. Defaults to `false`.
+ * @param {() => (HTMLElement|null|undefined)} [props.finalFocusEl] - Element
+ *   to return focus to on close. Pass this when the trigger was a `Menu.Item`
+ *   (it unmounts as soon as the menu closes, so the dialog's own focus-trap
+ *   can no longer fall back to "whatever was focused before it opened").
  */
 export const ConfirmDialog = ({
   open,
@@ -45,12 +49,17 @@ export const ConfirmDialog = ({
   confirmLabel,
   cancelLabel,
   destructive = false,
-  isLoading = false
+  isLoading = false,
+  finalFocusEl
 }) => {
   const { t } = useTranslation();
 
   return (
-    <DialogRoot open={open} onOpenChange={(e) => !e.open && onClose?.()}>
+    <DialogRoot
+      open={open}
+      onOpenChange={(e) => !e.open && onClose?.()}
+      finalFocusEl={finalFocusEl}
+    >
       <Portal>
         <DialogBackdrop />
         <DialogContent>

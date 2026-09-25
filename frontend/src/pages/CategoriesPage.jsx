@@ -49,9 +49,13 @@ const CategoriesPage = () => {
     setIsFormOpen(true);
   };
 
+  // `editingCategory` is reset on *open* (`handleAddCategory`/
+  // `handleEditCategory`), not here: clearing it on close would flip the
+  // dialog's title/buttons from "edit" to "add" copy while it is still
+  // playing its close animation, since `category` is derived from it and
+  // the dialog stays mounted (just `open=false`) until then.
   const handleCloseForm = () => {
     setIsFormOpen(false);
-    setEditingCategory(null);
   };
 
   const handleSaveCategory = async (data) => {

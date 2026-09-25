@@ -113,7 +113,7 @@ export const PriceHistoryChart = ({
   );
 
   return (
-    <Card.Root shadow="sm">
+    <Card.Root>
       <Card.Body>
         <Flex
           justify="space-between"

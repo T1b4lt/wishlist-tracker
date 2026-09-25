@@ -37,8 +37,11 @@ export const semanticColors = defineSemanticTokens.colors({
     muted: {
       value: { _light: '{colors.neutral.600}', _dark: '{colors.neutral.400}' }
     },
+    // `550`, not `500`: on `bg.muted` in light mode `500` only reaches
+    // 4.28:1 (below AA's 4.5:1 for normal text); `550` clears it with
+    // margin on every surface this token is used against.
     subtle: {
-      value: { _light: '{colors.neutral.500}', _dark: '{colors.neutral.450}' }
+      value: { _light: '{colors.neutral.550}', _dark: '{colors.neutral.450}' }
     },
     inverted: {
       value: { _light: '{colors.neutral.50}', _dark: '{colors.neutral.975}' }

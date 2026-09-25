@@ -8,11 +8,10 @@ import {
   Text,
   VStack
 } from '@chakra-ui/react';
-import { useReducedMotion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { LuPencil, LuTrash2 } from 'react-icons/lu';
 import { AnimatedList, AnimatedListItem } from '@/components/motion';
-import { durationSeconds, easeOut, staggerStepSeconds } from '@/theme/motion';
+import { staggerStepSeconds } from '@/theme/motion';
 import { CategoryTag } from '@/components/common';
 import { Tooltip } from '@/components/ui/tooltip';
 
@@ -26,7 +25,6 @@ const CATEGORY_GRID_TEMPLATE_COLUMNS = 'repeat(auto-fill, minmax(280px, 1fr))';
 
 const CategoryCard = ({ category, index, onEdit, onDelete }) => {
   const { t } = useTranslation();
-  const shouldReduceMotion = useReducedMotion();
   const count = category.product_count ?? 0;
   const canDelete = count === 0;
 
@@ -54,15 +52,8 @@ const CategoryCard = ({ category, index, onEdit, onDelete }) => {
   );
 
   return (
-    <AnimatedListItem
-      as="li"
-      transition={{
-        duration: shouldReduceMotion ? 0 : durationSeconds.normal,
-        ease: easeOut,
-        delay: shouldReduceMotion ? 0 : index * staggerStepSeconds
-      }}
-    >
-      <Card.Root p={5} shadow="sm">
+    <AnimatedListItem as="li" delay={index * staggerStepSeconds}>
+      <Card.Root p={5}>
         <Flex justify="space-between" align="center" gap={3}>
           <VStack align="flex-start" gap={1.5} flex={1} minW={0}>
             <CategoryTag name={category.name} color={category.color} />
@@ -157,7 +148,7 @@ export const CategoryListSkeleton = ({ count = 6 }) => (
     aria-busy="true"
   >
     {Array.from({ length: count }, (_, index) => (
-      <Card.Root key={index} p={5} shadow="sm">
+      <Card.Root key={index} p={5}>
         <Flex justify="space-between" align="center" gap={3}>
           <VStack align="flex-start" gap={1.5} flex={1} minW={0}>
             <Skeleton height="20px" width="55%" borderRadius="full" />

@@ -21,6 +21,7 @@ import {
   useCategoriesStore,
   initialCategoriesState
 } from '@/stores/categoriesStore';
+import { toaster } from '@/components/ui/toaster';
 import { ProductFormDialog } from './ProductFormDialog';
 
 /** Same wrapping as `renderWithProviders`, for `rerender` calls (which
@@ -43,6 +44,10 @@ vi.mock('@/lib/api', () => ({
     list: vi.fn(),
     create: vi.fn()
   }
+}));
+
+vi.mock('@/components/ui/toaster', () => ({
+  toaster: { create: vi.fn() }
 }));
 
 const ELECTRONICS = { id: 5, name: 'Electronics', color: '#3B82F6' };
@@ -156,6 +161,13 @@ describe('ProductFormDialog', () => {
       currency: 'EUR'
     });
     expect(onClose).toHaveBeenCalledTimes(1);
+    // Its own key, not borrowed from `pages.dashboard.menu.open`, even
+    // though it renders the same "Open" text today.
+    expect(toaster.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: expect.objectContaining({ label: 'Open' })
+      })
+    );
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
@@ -190,8 +202,53 @@ describe('ProductFormDialog', () => {
     expect(screen.getByRole('combobox', { name: 'Currency' })).toHaveValue(
       'USD · $'
     );
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    // A successful extraction clears the error, so the button still reads
+    // "Generate Details", not "Retry" (that label is reserved for a failed
+    // attempt; see the next test).
+    expect(
+      screen.getByRole('button', { name: 'Generate Details' })
+    ).toBeInTheDocument();
     expect(getUnexpectedErrors()).toEqual([]);
+  });
+
+  it('shows Retry only after a failed extraction attempt, reverting to Generate Details on the next success', async () => {
+    const user = userEvent.setup();
+    // Extraction logs its own failure (expected here, already covered by
+    // other extraction-error tests): silence it instead of asserting no
+    // console.error, since this test intentionally triggers one.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    productsApi.extractInfo
+      .mockRejectedValueOnce(new Error('extraction failed'))
+      .mockResolvedValueOnce({
+        name: 'Standing Desk',
+        description: 'A nice desk',
+        category: 'electronics',
+        currency: 'usd'
+      });
+
+    renderWithProviders(
+      <ProductFormDialog open mode="create" onClose={vi.fn()} product={null} />
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Product URL' }),
+      'https://example.com/desk'
+    );
+    await user.click(screen.getByRole('button', { name: 'Generate Details' }));
+
+    const retryButton = await screen.findByRole('button', { name: 'Retry' });
+    expect(
+      screen.getByText(
+        'We could not extract details from that URL. You can fill them in manually or try again.'
+      )
+    ).toBeInTheDocument();
+
+    await user.click(retryButton);
+
+    expect(
+      await screen.findByRole('button', { name: 'Generate Details' })
+    ).toBeInTheDocument();
   });
 
   it('prefills from a full product in edit mode and submits an update', async () => {

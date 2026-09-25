@@ -1,8 +1,7 @@
 import { Box, Card, Flex, Text, VStack } from '@chakra-ui/react';
-import { useReducedMotion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { AnimatedList, AnimatedListItem } from '@/components/motion';
-import { durationSeconds, easeOut, staggerStepSeconds } from '@/theme/motion';
+import { staggerStepSeconds } from '@/theme/motion';
 import {
   SkeletonCards,
   CategoryTag,
@@ -15,25 +14,16 @@ import { useRowActivation } from './useRowActivation';
 
 const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
   const { t } = useTranslation();
-  const shouldReduceMotion = useReducedMotion();
   const activation = useRowActivation(`/product/${product.id}`);
 
   return (
-    <AnimatedListItem
-      as="li"
-      transition={{
-        duration: shouldReduceMotion ? 0 : durationSeconds.normal,
-        ease: easeOut,
-        delay: shouldReduceMotion ? 0 : index * staggerStepSeconds
-      }}
-    >
+    <AnimatedListItem as="li" delay={index * staggerStepSeconds}>
       <Card.Root
         {...activation}
         aria-label={t('pages.dashboard.aria.openProduct', {
           name: product.name
         })}
         p={4}
-        shadow="sm"
         transitionProperty="background"
         transitionDuration="fast"
         transitionTimingFunction="easeOut"

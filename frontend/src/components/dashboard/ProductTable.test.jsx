@@ -127,7 +127,10 @@ describe('ProductTable', () => {
 
     await user.click(screen.getByRole('menuitem', { name: /edit/i }));
     expect(screen.getByTestId('location')).toHaveTextContent('/');
-    expect(onEdit).toHaveBeenCalledWith(PRODUCT);
+    // Also receives the ellipsis trigger's DOM node (for `finalFocusEl`; see
+    // `ProductRowActions`), since the `Menu.Item` that was actually clicked
+    // unmounts as soon as the menu closes.
+    expect(onEdit).toHaveBeenCalledWith(PRODUCT, expect.any(HTMLElement));
   });
 
   it('renders skeleton placeholder rows while loading, with aria-busy on the tbody', () => {

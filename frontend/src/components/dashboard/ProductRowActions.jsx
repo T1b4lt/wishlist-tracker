@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Box, HStack, IconButton, Menu, Portal } from '@chakra-ui/react';
 import {
   LuEllipsis,
@@ -15,20 +16,28 @@ import { useLocation } from 'wouter';
  * itself, so activating the trigger or any menu item never also triggers
  * the surrounding row's/card's own "navigate to detail" click handler.
  *
+ * `onEdit`/`onDelete` are also passed the ellipsis trigger's DOM node, so
+ * the caller can hand it to the dialog it opens as `finalFocusEl`: the
+ * `Menu.Item` that was actually focused/clicked unmounts as soon as the
+ * menu closes, so the dialog's own focus-trap can no longer fall back to
+ * "whatever was focused before it opened" (it would land on `<body>`).
+ *
  * @param {object} props
  * @param {{ id: number|string, name: string, url: string }} props.product
- * @param {(product: object) => void} props.onEdit
- * @param {(product: object) => void} props.onDelete
+ * @param {(product: object, triggerEl: HTMLElement|null) => void} props.onEdit
+ * @param {(product: object, triggerEl: HTMLElement|null) => void} props.onDelete
  */
 export const ProductRowActions = ({ product, onEdit, onDelete }) => {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
+  const triggerRef = useRef(null);
 
   return (
     <Box onClick={(event) => event.stopPropagation()}>
       <Menu.Root positioning={{ placement: 'bottom-end' }}>
         <Menu.Trigger asChild>
           <IconButton
+            ref={triggerRef}
             variant="ghost"
             size="sm"
             aria-label={t('pages.dashboard.aria.rowActions', {
@@ -50,7 +59,10 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
                   {t('pages.dashboard.menu.open')}
                 </HStack>
               </Menu.Item>
-              <Menu.Item value="edit" onSelect={() => onEdit(product)}>
+              <Menu.Item
+                value="edit"
+                onSelect={() => onEdit(product, triggerRef.current)}
+              >
                 <HStack gap={2}>
                   <LuPencil size={16} aria-hidden="true" />
                   {t('common.actions.edit')}
@@ -68,7 +80,10 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
                 </HStack>
               </Menu.Item>
               <Menu.Separator />
-              <Menu.Item value="delete" onSelect={() => onDelete(product)}>
+              <Menu.Item
+                value="delete"
+                onSelect={() => onDelete(product, triggerRef.current)}
+              >
                 <HStack gap={2}>
                   <LuTrash2 size={16} aria-hidden="true" />
                   {t('common.actions.delete')}

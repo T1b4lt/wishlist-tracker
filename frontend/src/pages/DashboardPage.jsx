@@ -23,8 +23,15 @@ const DashboardPage = () => {
   // means "edit" that product (`mode="edit"`), set by the row/card actions
   // menu's "Edit" item (`handleEditProduct`).
   const [editingProduct, setEditingProduct] = useState(null);
+  // The DOM node (the row's/card's actions-menu trigger) each dialog should
+  // return focus to on close, passed as `finalFocusEl`: since it opens from
+  // a `Menu.Item` (which unmounts as soon as the menu closes), the dialog's
+  // own focus-trap can no longer rely on "restore focus to whatever was
+  // focused" by the time it activates.
+  const [editTriggerEl, setEditTriggerEl] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [deleteTriggerEl, setDeleteTriggerEl] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { t, i18n } = useTranslation();
   const locale = useMemo(() => getLocale(i18n.language), [i18n.language]);
@@ -50,21 +57,27 @@ const DashboardPage = () => {
 
   const handleAddProduct = () => {
     setEditingProduct(null);
+    setEditTriggerEl(null);
     setIsFormOpen(true);
   };
 
-  const handleEditProduct = (product) => {
+  const handleEditProduct = (product, triggerEl) => {
     setEditingProduct(product);
+    setEditTriggerEl(triggerEl ?? null);
     setIsFormOpen(true);
   };
 
+  // `editingProduct` is reset on *open* (above), not here: clearing it on
+  // close would flip the dialog's title/buttons from "edit" to "add" copy
+  // while it is still playing its close animation, since `mode` is derived
+  // from it and the dialog stays mounted (just `open=false`) until then.
   const handleCloseForm = () => {
     setIsFormOpen(false);
-    setEditingProduct(null);
   };
 
-  const handleDeleteRequest = (product) => {
+  const handleDeleteRequest = (product, triggerEl) => {
     setProductToDelete(product);
+    setDeleteTriggerEl(triggerEl ?? null);
     setDeleteDialogOpen(true);
   };
 
@@ -161,6 +174,7 @@ const DashboardPage = () => {
         onClose={handleCloseForm}
         mode={editingProduct ? 'edit' : 'create'}
         product={editingProduct}
+        finalFocusEl={editTriggerEl ? () => editTriggerEl : undefined}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -168,6 +182,7 @@ const DashboardPage = () => {
         open={deleteDialogOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
+        finalFocusEl={deleteTriggerEl ? () => deleteTriggerEl : undefined}
         title={t('components.deleteProductDialog.title')}
         body={
           <>

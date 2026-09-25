@@ -103,7 +103,9 @@ describe('SettingsPage', () => {
       'a-new-key'
     );
 
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
   });
 
   it('discards edits back to the saved configuration', async () => {
@@ -198,7 +200,9 @@ describe('SettingsPage', () => {
     // The in-flight edit survives instead of being reverted to what the
     // now-resolved save sent, and the form is correctly still dirty.
     expect(apiKeyInput).toHaveValue('second-value');
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
   });
 
   it('keeps an edit made to a different field during an in-flight save, leaving only that field dirty', async () => {
@@ -249,7 +253,9 @@ describe('SettingsPage', () => {
     // ...while the field edited mid-save keeps that in-progress edit,
     // leaving the form dirty because of it alone.
     expect(tokenInput).toHaveValue('mid-edit-token');
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
   });
 
   it('clears a previously saved secret by sending an empty string, and ends clean', async () => {
@@ -281,7 +287,9 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Configured')).toBeInTheDocument();
 
     await user.clear(apiKeyInput);
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -312,7 +320,9 @@ describe('SettingsPage', () => {
       'Google AI Studio API Key'
     );
     await user.type(apiKeyInput, 'in-progress-key');
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
 
     // The chat id action refreshes the config in the background.
     configApi.get.mockResolvedValue({
@@ -326,7 +336,9 @@ describe('SettingsPage', () => {
     // because of it, not because of anything the refresh touched.
     expect(await screen.findByDisplayValue('999')).toBeInTheDocument();
     expect(apiKeyInput).toHaveValue('in-progress-key');
-    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('You have unsaved changes')[0]
+    ).toBeInTheDocument();
     // The status badge cross-fades to its new label, so it is only
     // guaranteed to have finished updating asynchronously.
     expect(await screen.findByText('Connected')).toBeInTheDocument();

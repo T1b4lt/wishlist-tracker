@@ -96,8 +96,18 @@ function isValidProductUrl(value) {
  * @param {object|null} [props.product] - Required for `mode="edit"`. Either
  *   a full product record or a lighter one (e.g. a dashboard summary row);
  *   the dialog fetches the rest when needed.
+ * @param {() => (HTMLElement|null|undefined)} [props.finalFocusEl] - Element
+ *   to return focus to on close. Pass this when the trigger was a `Menu.Item`
+ *   (it unmounts as soon as the menu closes, so the dialog's own focus-trap
+ *   can no longer fall back to "whatever was focused before it opened").
  */
-export const ProductFormDialog = ({ open, onClose, mode, product }) => {
+export const ProductFormDialog = ({
+  open,
+  onClose,
+  mode,
+  product,
+  finalFocusEl
+}) => {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
 
@@ -425,7 +435,7 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
           type: 'success',
           action: created
             ? {
-                label: t('pages.dashboard.menu.open'),
+                label: t('toasts.products.createSuccess.action'),
                 onClick: () => navigate(`/product/${created.id}`)
               }
             : undefined
@@ -523,6 +533,7 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
       placement="center"
       size={{ base: 'full', sm: 'lg' }}
       scrollBehavior="inside"
+      finalFocusEl={finalFocusEl}
     >
       <DialogBackdrop />
       <DialogContent>
@@ -607,7 +618,11 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
                     <Flex align="center" gap={2}>
                       <LuSparkles size={16} aria-hidden="true" />
                       <Text>
-                        {hasAttemptedExtraction
+                        {/* "Retry" only after a failed attempt: a
+                            successful extraction clears `extractionError`,
+                            so a further click (e.g. after changing the URL)
+                            reads "Generate Details" again, not "Retry". */}
+                        {extractionError
                           ? t('common.actions.retry')
                           : t('common.actions.generateDetails')}
                       </Text>

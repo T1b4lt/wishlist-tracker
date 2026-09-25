@@ -1,9 +1,8 @@
 import { Card, Table, Text, VStack } from '@chakra-ui/react';
 import { Link } from 'wouter';
-import { useReducedMotion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { AnimatedList, AnimatedListItem } from '@/components/motion';
-import { durationSeconds, easeOut, staggerStepSeconds } from '@/theme/motion';
+import { staggerStepSeconds } from '@/theme/motion';
 import {
   SkeletonRows,
   CategoryTag,
@@ -17,22 +16,17 @@ import { ProductRowActions } from './ProductRowActions';
 import { useTableRowActivation } from './useRowActivation';
 
 const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
-  const shouldReduceMotion = useReducedMotion();
   const activation = useTableRowActivation(`/product/${product.id}`);
 
   return (
     <AnimatedListItem
       as="tr"
       {...activation}
+      delay={index * staggerStepSeconds}
       transitionProperty="background"
       transitionDuration="fast"
       transitionTimingFunction="easeOut"
       _hover={{ bg: 'bg.muted' }}
-      transition={{
-        duration: shouldReduceMotion ? 0 : durationSeconds.normal,
-        ease: easeOut,
-        delay: shouldReduceMotion ? 0 : index * staggerStepSeconds
-      }}
     >
       <Table.Cell>
         <VStack align="flex-start" gap={1}>
@@ -115,7 +109,7 @@ export const ProductTable = ({
   const { t } = useTranslation();
 
   return (
-    <Card.Root p={0} overflow="hidden" shadow="sm" hideBelow="md">
+    <Card.Root p={0} overflow="hidden" hideBelow="md">
       <Table.ScrollArea>
         <Table.Root size="md" variant="line">
           <Table.Header>

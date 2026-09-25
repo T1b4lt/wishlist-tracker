@@ -10,17 +10,12 @@
       "delete": "Delete",
       "edit": "Edit",
       "save": "Save",
-      "saveItem": "Save Item",
-      "saving": "Saving...",
       "generateDetails": "Generate Details",
       "generating": "Generating...",
       "getChatId": "Get Chat ID",
       "testBot": "Test Bot",
       "gotIt": "Got it",
-      "ok": "OK",
       "retry": "Retry",
-      "addCategory": "Add Category",
-      "addNewProduct": "Add New Product",
       "backToDashboard": "Back to Dashboard",
       "discard": "Discard"
     },
@@ -35,13 +30,10 @@
     },
     "placeholders": {
       "selectLanguage": "Select language",
-      "selectCategory": "Select category",
       "selectHour": "Select hour",
       "googleApiKey": "Enter your Google AI Studio API key",
       "telegramBotToken": "Enter your Telegram bot token",
-      "productUrl": "https://example.com/product...",
-      "currencyCode": "e.g., EUR, USD, GBP, MXN",
-      "categoryName": "e.g. Electronics"
+      "productUrl": "https://example.com/product..."
     },
     "messages": {
       "loading": "Loading...",
@@ -154,7 +146,7 @@
     "dashboard": {
       "title": "Your Wishlist",
       "subtitle": "Track prices and availability of products you want to buy",
-      "addButton": "Add New Product",
+      "addButton": "Add product",
       "summary": {
         "items": "Items",
         "totalValue": "Total value",
@@ -173,7 +165,7 @@
         },
         "empty": {
           "title": "No products in your wishlist yet",
-          "subtitle": "Click \"Add New Product\" to start tracking your first item"
+          "subtitle": "Click \"Add product\" to start tracking your first item"
         }
       },
       "menu": {
@@ -283,8 +275,7 @@
           "helper": "Create a bot with @BotFather on Telegram and paste the token here"
         },
         "telegramChatId": {
-          "label": "Telegram Chat ID",
-          "helper": "This is your unique chat ID for receiving notifications"
+          "label": "Telegram Chat ID"
         }
       },
       "alerts": {
@@ -327,6 +318,7 @@
         "unsavedChanges": "You have unsaved changes"
       },
       "telegram": {
+        "title": "Telegram integration",
         "steps": {
           "token": "1. Bot token",
           "chat": "2. Link chat",
@@ -337,7 +329,6 @@
           "tokenOnly": "Waiting for chat",
           "connected": "Connected"
         },
-        "chatIdLinkedLabel": "Linked chat ID",
         "chatIdDisabledReason": "Save your bot token first to continue",
         "testDisabledReason": "Finish linking your chat first"
       },
@@ -348,17 +339,17 @@
       }
     },
     "notFound": {
-      "title": "Oops! Page Not Found",
-      "quote": "\"Even our AI couldn't track down this page. Maybe it's on someone else's wishlist?\" 🤔",
-      "actionPrimary": "Go Back Home",
-      "actionSecondary": "Lost? Don't worry, we all get lost sometimes 😊"
+      "title": "Page not found",
+      "message": "This page does not exist or may have been moved.",
+      "action": "Back to wishlist"
     }
   },
   "toasts": {
     "products": {
       "createSuccess": {
         "title": "Product added",
-        "description": "{{name}} has been added to your wishlist."
+        "description": "{{name}} has been added to your wishlist.",
+        "action": "Open"
       },
       "createError": {
         "title": "Error adding product",

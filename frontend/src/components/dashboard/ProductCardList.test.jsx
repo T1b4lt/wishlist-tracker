@@ -95,7 +95,10 @@ describe('ProductCardList', () => {
 
     await user.click(screen.getByRole('menuitem', { name: /delete/i }));
     expect(screen.getByTestId('location')).toHaveTextContent('/');
-    expect(onDelete).toHaveBeenCalledWith(PRODUCT);
+    // Also receives the ellipsis trigger's DOM node (for `finalFocusEl`; see
+    // `ProductRowActions`), since the `Menu.Item` that was actually clicked
+    // unmounts as soon as the menu closes.
+    expect(onDelete).toHaveBeenCalledWith(PRODUCT, expect.any(HTMLElement));
   });
 
   it('renders skeleton placeholder cards while loading', () => {

@@ -134,9 +134,7 @@ export const TelegramSetup = ({
   return (
     <VStack gap={5} align="stretch">
       <HStack justify="space-between" wrap="wrap" gap={2}>
-        <Text fontWeight="semibold">
-          {t('pages.settings.fields.telegramBotToken.label')}
-        </Text>
+        <Text fontWeight="semibold">{t('pages.settings.telegram.title')}</Text>
         <TelegramStatusBadge status={status} />
       </HStack>
 
