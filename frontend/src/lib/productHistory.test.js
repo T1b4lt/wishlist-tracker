@@ -204,44 +204,78 @@ describe('computeOutOfStockBands', () => {
     expect(computeOutOfStockBands(history)).toEqual([]);
   });
 
-  it('finds a single contiguous out-of-stock run in the middle', () => {
+  it('closes a contiguous run at the timestamp stock came back (covering the real period), for a single out-of-stock sample between two in-stock ones', () => {
+    const history = [
+      { timestamp: 1, price: 10, is_in_stock: true },
+      { timestamp: 2, price: 10, is_in_stock: false },
+      { timestamp: 4, price: 10, is_in_stock: true }
+    ];
+    // Not {x1: 2, x2: 2} (zero-width, invisible): the band spans the whole
+    // interval up to when stock actually returned.
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 4 }]);
+  });
+
+  it('closes a multi-sample run at the timestamp stock came back, not at its last out-of-stock sample', () => {
     const history = [
       { timestamp: 1, price: 10, is_in_stock: true },
       { timestamp: 2, price: 10, is_in_stock: false },
       { timestamp: 3, price: 10, is_in_stock: false },
-      { timestamp: 4, price: 10, is_in_stock: true }
+      { timestamp: 5, price: 10, is_in_stock: true }
     ];
-    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 3 }]);
+    // Not {x1: 2, x2: 3}: the period the product was actually out of stock
+    // extends to timestamp 5, when the next check found it back in stock.
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 5 }]);
   });
 
-  it('closes a run that extends to the last record', () => {
+  it('extends a run trailing off the end of the data past its last sample, by half the gap to its preceding neighbour', () => {
     const history = [
       { timestamp: 1, price: 10, is_in_stock: true },
-      { timestamp: 2, price: 10, is_in_stock: false }
+      { timestamp: 3, price: 10, is_in_stock: false }
     ];
-    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 2 }]);
+    // Gap to the preceding sample is 3 - 1 = 2, so the band extends 1 past
+    // timestamp 3, instead of collapsing to a zero-width {x1: 3, x2: 3}.
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 3, x2: 4 }]);
   });
 
-  it('finds a run that starts at the first record', () => {
+  it('extends a multi-sample trailing run past its last sample too', () => {
+    const history = [
+      { timestamp: 1, price: 10, is_in_stock: true },
+      { timestamp: 2, price: 10, is_in_stock: false },
+      { timestamp: 3, price: 10, is_in_stock: false }
+    ];
+    // Gap between the last two samples is 3 - 2 = 1, so the band extends
+    // 0.5 past timestamp 3.
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 3.5 }]);
+  });
+
+  it('finds a run that starts at the first record and closes when stock returns', () => {
     const history = [
       { timestamp: 1, price: 10, is_in_stock: false },
       { timestamp: 2, price: 10, is_in_stock: true }
     ];
-    expect(computeOutOfStockBands(history)).toEqual([{ x1: 1, x2: 1 }]);
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 1, x2: 2 }]);
   });
 
-  it('finds multiple separate runs', () => {
+  it('finds multiple separate runs, each closed at its own "back in stock" timestamp', () => {
     const history = [
       { timestamp: 1, price: 10, is_in_stock: false },
       { timestamp: 2, price: 10, is_in_stock: true },
       { timestamp: 3, price: 10, is_in_stock: false },
       { timestamp: 4, price: 10, is_in_stock: false },
-      { timestamp: 5, price: 10, is_in_stock: true }
+      { timestamp: 6, price: 10, is_in_stock: true }
     ];
     expect(computeOutOfStockBands(history)).toEqual([
-      { x1: 1, x2: 1 },
-      { x1: 3, x2: 4 }
+      { x1: 1, x2: 2 },
+      { x1: 3, x2: 6 }
     ]);
+  });
+
+  it('leaves a trailing run zero-width when there is no neighbouring sample to measure a gap from', () => {
+    const history = [{ timestamp: 5, price: 10, is_in_stock: false }];
+    // Documented edge case: with only 1 record total there is no gap to
+    // extend by. The chart itself never renders with fewer than 2 points
+    // regardless (see `hasEnoughHistory`).
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 5, x2: 5 }]);
   });
 });
 

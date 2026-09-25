@@ -187,28 +187,55 @@ export function computeYDomain(filteredHistory, paddingRatio = 0.1) {
 
 /**
  * Find every contiguous run of out-of-stock records in the filtered history,
- * as timestamp pairs suitable for a chart's `ReferenceArea` bands.
+ * as timestamp pairs suitable for a chart's `ReferenceArea` bands. Each band
+ * covers the real out-of-stock *period*: it starts at the first out-of-stock
+ * record and ends at the timestamp of the record where stock came back (not
+ * at the last out-of-stock record itself), so a single out-of-stock check
+ * between two in-stock ones still produces a visible band spanning that
+ * whole interval, and a multi-sample run is not drawn shorter than the
+ * period it actually covers.
+ *
+ * A run still open at the end of `filteredHistory` (out of stock as of the
+ * last check, with no later "back in stock" record to close it at) has no
+ * such endpoint to use, so it is instead extended past its last sample by
+ * half the gap to that sample's preceding neighbour (the typical interval
+ * between checks near the end of the data), giving it a visible width
+ * instead of collapsing to a zero-width band. With fewer than 2 records
+ * total there is no neighbouring gap to measure, so a trailing run in that
+ * case is left as a zero-width `{x1, x2}` pair (an unavoidable edge case;
+ * the chart itself never renders with fewer than 2 points regardless).
  *
  * @param {PriceHistoryRecord[]} filteredHistory - Ascending by timestamp.
  * @returns {Array<{x1: number, x2: number}>}
  */
 export function computeOutOfStockBands(filteredHistory) {
-  if (!Array.isArray(filteredHistory)) return [];
+  if (!Array.isArray(filteredHistory) || filteredHistory.length === 0) {
+    return [];
+  }
 
   const bands = [];
   let runStart = null;
 
-  filteredHistory.forEach((record, index) => {
+  filteredHistory.forEach((record) => {
     if (record.is_in_stock === false) {
       if (runStart === null) runStart = record.timestamp;
-      if (index === filteredHistory.length - 1) {
-        bands.push({ x1: runStart, x2: record.timestamp });
-      }
     } else if (runStart !== null) {
-      bands.push({ x1: runStart, x2: filteredHistory[index - 1].timestamp });
+      // Stock came back at this record: the period covers up to here.
+      bands.push({ x1: runStart, x2: record.timestamp });
       runStart = null;
     }
   });
+
+  if (runStart !== null) {
+    const lastTimestamp = filteredHistory[filteredHistory.length - 1].timestamp;
+    const previousTimestamp =
+      filteredHistory.length > 1
+        ? filteredHistory[filteredHistory.length - 2].timestamp
+        : null;
+    const halfGap =
+      previousTimestamp !== null ? (lastTimestamp - previousTimestamp) / 2 : 0;
+    bands.push({ x1: runStart, x2: lastTimestamp + halfGap });
+  }
 
   return bands;
 }

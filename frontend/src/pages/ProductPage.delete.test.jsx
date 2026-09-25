@@ -120,8 +120,11 @@ describe('ProductPage delete action', () => {
     );
 
     await waitFor(() => expect(productsApi.remove).toHaveBeenCalledWith(7));
+    // Exact match (`/^\/$/`), not a substring: the starting location is
+    // already `/product/7`, which itself contains `/`, so a plain
+    // `toHaveTextContent('/')` would pass even if `navigate('/')` never ran.
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/')
+      expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/)
     );
     expect(toaster.create).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Product deleted' })
