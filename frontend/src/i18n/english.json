@@ -69,61 +69,67 @@
       "descriptionCreate": "Enter a name and choose a color for your new category.",
       "descriptionEdit": "Enter a name and choose a color for your category.",
       "fields": {
-        "name": "Category Name",
-        "color": "Color"
+        "name": "Category Name"
       },
-      "customColor": "Or pick a custom color",
       "placeholderName": "e.g. Electronics",
       "buttons": {
         "create": "Create Category",
         "update": "Update Category"
       }
     },
+    "categoryColorPicker": {
+      "label": "Color",
+      "customColor": "Or pick a custom color",
+      "swatchLabel": "Color {{hex}}"
+    },
     "deleteProductDialog": {
       "title": "Delete Product",
       "description": "Are you sure you want to delete <strong>{{name}}</strong>?",
       "warning": "This action cannot be undone. This will permanently delete the product and all its price history."
     },
-    "newProductModal": {
-      "title": "Add New Wishlist Item",
+    "productFormDialog": {
+      "titleCreate": "Add product",
+      "titleEdit": "Edit product",
       "fields": {
-        "productUrl": {
+        "url": {
           "label": "Product URL",
-          "helper": "We'll try to fetch the item details automatically."
+          "helper": "Paste a product page URL. We will try to extract its details automatically."
         },
-        "priority": "Priority",
-        "itemName": "Item Name",
+        "name": "Item name",
         "description": "Description",
         "category": {
           "label": "Category",
-          "placeholder": "Select category"
+          "placeholder": "Select category",
+          "newOption": "New category"
         },
+        "priority": "Priority",
         "currency": {
-          "label": "Currency Code",
-          "helper": "Enter a 3-letter <link>ISO 4217 currency code</link> (e.g., EUR, USD, GBP, JPY, MXN, BRL)"
+          "label": "Currency",
+          "placeholder": "Select currency",
+          "empty": "No matching currency"
         }
       },
-      "ai": {
-        "title": "✨ AI Generated Details",
-        "description": "Review the details below. You can edit them before saving."
+      "actions": {
+        "submitCreate": "Add product",
+        "submitEdit": "Save changes"
       },
       "errors": {
-        "urlRequired": {
-          "title": "URL Required",
-          "message": "Please enter a product URL first"
-        },
-        "missingFields": {
-          "title": "Missing Fields",
-          "message": "Please fill in all required fields"
-        },
-        "invalidCategory": {
-          "title": "Invalid Category",
-          "message": "Please select a valid category"
-        },
-        "generationError": {
-          "title": "Generation Error",
-          "message": "Failed to extract product info. Please try again."
-        }
+        "urlRequired": "Enter a product URL.",
+        "urlInvalid": "Enter a valid http or https URL.",
+        "nameRequired": "Enter a name.",
+        "categoryRequired": "Select a category.",
+        "currencyInvalid": "Enter a valid 3 letter currency code.",
+        "extraction": "We could not extract details from that URL. You can fill them in manually or try again."
+      },
+      "newCategory": {
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Electronics",
+        "nameRequired": "Enter a name.",
+        "submit": "Create category"
+      },
+      "loadError": {
+        "title": "We could not load this product",
+        "message": "Something went wrong loading the product details. Please try again."
       }
     }
   },
@@ -289,6 +295,14 @@
       "createError": {
         "title": "Error adding product",
         "description": "Failed to add the product. Please try again."
+      },
+      "updateSuccess": {
+        "title": "Product updated",
+        "description": "{{name}} has been updated."
+      },
+      "updateError": {
+        "title": "Error updating product",
+        "description": "Failed to update the product. Please try again."
       },
       "deleteSuccess": {
         "title": "Product deleted",

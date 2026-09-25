@@ -26,3 +26,13 @@ if (typeof window !== 'undefined' && !window.ResizeObserver) {
     disconnect() {}
   };
 }
+
+// jsdom does not implement `Element.scrollTo`/`scrollIntoView`. Zag-js's
+// Select/Combobox call `scrollTo` on their open listbox to reset or adjust
+// its scroll position, so any test that opens one needs a stub.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = () => {};
+}
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}

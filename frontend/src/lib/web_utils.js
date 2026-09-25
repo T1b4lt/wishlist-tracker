@@ -1,19 +1,51 @@
 /**
+ * Common ISO 4217 currency codes offered by the product form's currency
+ * picker, in display order.
+ * @type {string[]}
+ */
+export const CURRENCY_CODES = [
+  'EUR',
+  'USD',
+  'GBP',
+  'JPY',
+  'CNY',
+  'CAD',
+  'AUD',
+  'CHF',
+  'SEK',
+  'NOK',
+  'DKK',
+  'PLN',
+  'MXN',
+  'BRL',
+  'INR'
+];
+
+const CURRENCY_SYMBOLS = {
+  EUR: '€',
+  USD: '$',
+  GBP: '£',
+  JPY: '¥',
+  CNY: '¥',
+  CAD: '$',
+  AUD: '$',
+  CHF: 'CHF',
+  SEK: 'kr',
+  NOK: 'kr',
+  DKK: 'kr',
+  PLN: 'zł',
+  MXN: '$',
+  BRL: 'R$',
+  INR: '₹'
+};
+
+/**
  * Get the currency symbol for a given currency code
  * @param {string} currency - Currency code (e.g., EUR, USD, GBP)
  * @returns {string} Currency symbol (e.g., €, $, £)
  */
 export const getCurrencySymbol = (currency) => {
-  const currencySymbols = {
-    EUR: '€',
-    USD: '$',
-    GBP: '£',
-    JPY: '¥',
-    CNY: '¥',
-    CAD: '$',
-    AUD: '$'
-  };
-  return currencySymbols[currency?.toUpperCase()] || currency || '$';
+  return CURRENCY_SYMBOLS[currency?.toUpperCase()] || currency || '$';
 };
 
 /**

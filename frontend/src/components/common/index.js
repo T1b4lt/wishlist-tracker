@@ -4,6 +4,7 @@ export { LoadingState } from './LoadingState';
 export { SkeletonRows } from './SkeletonRows';
 export { SkeletonCards } from './SkeletonCards';
 export { ConfirmDialog } from './ConfirmDialog';
+export { CategoryColorPicker } from './CategoryColorPicker';
 export { PriorityBadge } from './PriorityBadge';
 export { CategoryTag } from './CategoryTag';
 export { PriceChange } from './PriceChange';

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button, Text } from '@chakra-ui/react';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
-import NewProductModal from '@/components/NewProductModal';
+import { ProductFormDialog } from '@/components/products';
 import { EmptyState, ErrorState, ConfirmDialog } from '@/components/common';
 import {
   DashboardSummary,
@@ -18,19 +18,14 @@ import { useConfigStore } from '@/stores/configStore';
 import { useProductsStore } from '@/stores/productsStore';
 
 const DashboardPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  // `null` means "add" (`ProductFormDialog`'s `mode="create"`); a product
+  // means "edit" that product (`mode="edit"`), set by the row/card actions
+  // menu's "Edit" item (`handleEditProduct`).
+  const [editingProduct, setEditingProduct] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  // Edit hook point for Task 11: the row/card actions menu's "Edit" item
-  // calls `handleEditProduct`, which sets this. `NewProductModal` only
-  // supports creating today; Task 11's shared `ProductFormDialog` will read
-  // `editingProduct` to open in edit mode and clear it (via
-  // `setEditingProduct(null)`) when it closes. Nothing renders from it yet,
-  // so it is read here only to keep the setter meaningful without an
-  // unused-variable lint error.
-  const [editingProduct, setEditingProduct] = useState(null);
-  void editingProduct;
   const { t, i18n } = useTranslation();
   const locale = useMemo(() => getLocale(i18n.language), [i18n.language]);
 
@@ -43,7 +38,6 @@ const DashboardPage = () => {
   const products = useProductsStore((state) => state.items);
   const status = useProductsStore((state) => state.status);
   const fetchSummary = useProductsStore((state) => state.fetchSummary);
-  const createProduct = useProductsStore((state) => state.create);
   const removeProduct = useProductsStore((state) => state.remove);
 
   useEffect(() => {
@@ -54,28 +48,19 @@ const DashboardPage = () => {
     fetchSummary();
   }, [fetchSummary]);
 
-  const handleSaveProduct = async (productData) => {
-    try {
-      const created = await createProduct(productData);
-      toaster.create({
-        title: t('toasts.products.createSuccess.title'),
-        description: t('toasts.products.createSuccess.description', {
-          name: created?.name ?? productData.name
-        }),
-        type: 'success'
-      });
-    } catch (err) {
-      toaster.create({
-        title: t('toasts.products.createError.title'),
-        description: t('toasts.products.createError.description'),
-        type: 'error'
-      });
-      throw err;
-    }
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setIsFormOpen(true);
   };
 
   const handleEditProduct = (product) => {
     setEditingProduct(product);
+    setIsFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingProduct(null);
   };
 
   const handleDeleteRequest = (product) => {
@@ -125,11 +110,7 @@ const DashboardPage = () => {
         title={t('pages.dashboard.title')}
         description={t('pages.dashboard.subtitle')}
         actions={
-          <Button
-            size="lg"
-            variant="solid"
-            onClick={() => setIsModalOpen(true)}
-          >
+          <Button size="lg" variant="solid" onClick={handleAddProduct}>
             <LuPlus size={20} />
             {t('pages.dashboard.addButton')}
           </Button>
@@ -147,7 +128,7 @@ const DashboardPage = () => {
           title={t('pages.dashboard.table.empty.title')}
           description={t('pages.dashboard.table.empty.subtitle')}
           action={
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={handleAddProduct}>
               <LuPlus size={18} />
               {t('pages.dashboard.addButton')}
             </Button>
@@ -174,11 +155,12 @@ const DashboardPage = () => {
         </>
       )}
 
-      {/* New Product Modal */}
-      <NewProductModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveProduct}
+      {/* Add / edit product dialog */}
+      <ProductFormDialog
+        open={isFormOpen}
+        onClose={handleCloseForm}
+        mode={editingProduct ? 'edit' : 'create'}
+        product={editingProduct}
       />
 
       {/* Delete Confirmation Dialog */}

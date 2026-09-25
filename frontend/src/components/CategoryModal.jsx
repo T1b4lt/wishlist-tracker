@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, Input, Flex, Text, Grid, VStack } from '@chakra-ui/react';
+import { Box, Button, Input, Flex, Text, VStack } from '@chakra-ui/react';
 import {
   DialogRoot,
   DialogContent,
@@ -10,27 +10,13 @@ import {
   DialogBackdrop,
   DialogCloseTrigger
 } from '@/components/ui/dialog';
+import { CategoryColorPicker } from '@/components/common';
+import { DEFAULT_CATEGORY_COLOR } from '@/lib/categoryColors';
 import { useTranslation } from 'react-i18next';
-
-const PREDEFINED_COLORS = [
-  '#EF4444', // red
-  '#F97316', // orange
-  '#EAB308', // yellow
-  '#22C55E', // green
-  '#3B82F6', // blue
-  '#A855F7', // purple
-  '#EC4899', // pink
-  '#14B8A6', // teal
-  '#6366F1', // indigo
-  '#06B6D4', // cyan
-  '#94A3B8', // slate
-  '#64748B' // gray
-];
 
 const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
   const [name, setName] = useState('');
-  const [selectedColor, setSelectedColor] = useState(PREDEFINED_COLORS[0]);
-  const [customColor, setCustomColor] = useState('');
+  const [color, setColor] = useState(DEFAULT_CATEGORY_COLOR);
   const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslation();
 
@@ -42,11 +28,10 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
     setSyncedProps({ category, isOpen });
     if (category) {
       setName(category.name);
-      setSelectedColor(category.color);
+      setColor(category.color);
     } else {
       setName('');
-      setSelectedColor(PREDEFINED_COLORS[0]);
-      setCustomColor('');
+      setColor(DEFAULT_CATEGORY_COLOR);
     }
   }
 
@@ -57,7 +42,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
     try {
       await onSave({
         name: name.trim(),
-        color: customColor || selectedColor
+        color
       });
       handleClose();
     } catch (error) {
@@ -69,12 +54,9 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
 
   const handleClose = () => {
     setName('');
-    setSelectedColor(PREDEFINED_COLORS[0]);
-    setCustomColor('');
+    setColor(DEFAULT_CATEGORY_COLOR);
     onClose();
   };
-
-  const activeColor = customColor || selectedColor;
 
   return (
     <DialogRoot open={isOpen} onOpenChange={(e) => !e.open && handleClose()}>
@@ -110,55 +92,11 @@ const CategoryModal = ({ isOpen, onClose, onSave, category = null }) => {
             </Box>
 
             {/* Color Selection */}
-            <Box>
-              <Text fontWeight="medium" mb={3}>
-                {t('components.categoryModal.fields.color')}
-              </Text>
-              <Grid templateColumns="repeat(6, 1fr)" gap={3} mb={4}>
-                {PREDEFINED_COLORS.map((color) => (
-                  <Box
-                    key={color}
-                    as="button"
-                    w="40px"
-                    h="40px"
-                    borderRadius="full"
-                    bg={color}
-                    cursor="pointer"
-                    border={
-                      activeColor === color
-                        ? '3px solid'
-                        : '2px solid transparent'
-                    }
-                    borderColor={activeColor === color ? 'fg' : 'transparent'}
-                    transition="all 0.2s"
-                    _hover={{
-                      transform: 'scale(1.1)',
-                      boxShadow: 'lg'
-                    }}
-                    onClick={() => {
-                      setSelectedColor(color);
-                      setCustomColor('');
-                    }}
-                  />
-                ))}
-              </Grid>
-
-              {/* Custom Color Picker */}
-              <Flex align="center" gap={3}>
-                <Input
-                  type="color"
-                  value={customColor || selectedColor}
-                  onChange={(e) => setCustomColor(e.target.value)}
-                  w="60px"
-                  h="40px"
-                  p={1}
-                  cursor="pointer"
-                />
-                <Text fontSize="sm" color="fg.muted">
-                  {t('components.categoryModal.customColor')}
-                </Text>
-              </Flex>
-            </Box>
+            <CategoryColorPicker
+              value={color}
+              onChange={setColor}
+              disabled={isLoading}
+            />
           </VStack>
         </DialogBody>
         <DialogFooter>

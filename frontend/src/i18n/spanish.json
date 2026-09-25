@@ -69,61 +69,67 @@
       "descriptionCreate": "Introduce un nombre y elige un color para tu nueva categoría.",
       "descriptionEdit": "Introduce un nombre y elige un color para tu categoría.",
       "fields": {
-        "name": "Nombre de la categoría",
-        "color": "Color"
+        "name": "Nombre de la categoría"
       },
-      "customColor": "O elige un color personalizado",
       "placeholderName": "p. ej. Electrónica",
       "buttons": {
         "create": "Crear categoría",
         "update": "Actualizar categoría"
       }
     },
+    "categoryColorPicker": {
+      "label": "Color",
+      "customColor": "O elige un color personalizado",
+      "swatchLabel": "Color {{hex}}"
+    },
     "deleteProductDialog": {
       "title": "Eliminar producto",
       "description": "¿Seguro que quieres eliminar <strong>{{name}}</strong>?",
       "warning": "Esta acción no se puede deshacer. Se eliminará el producto y todo su historial de precios."
     },
-    "newProductModal": {
-      "title": "Añadir nuevo artículo a la lista",
+    "productFormDialog": {
+      "titleCreate": "Añadir producto",
+      "titleEdit": "Editar producto",
       "fields": {
-        "productUrl": {
+        "url": {
           "label": "URL del producto",
-          "helper": "Intentaremos obtener los detalles del artículo automáticamente."
+          "helper": "Pega la URL de la página del producto. Intentaremos extraer sus detalles automáticamente."
         },
-        "priority": "Prioridad",
-        "itemName": "Nombre del artículo",
+        "name": "Nombre del artículo",
         "description": "Descripción",
         "category": {
           "label": "Categoría",
-          "placeholder": "Selecciona una categoría"
+          "placeholder": "Selecciona una categoría",
+          "newOption": "Nueva categoría"
         },
+        "priority": "Prioridad",
         "currency": {
-          "label": "Código de moneda",
-          "helper": "Introduce un <link>código de moneda ISO 4217</link> de 3 letras (p. ej., EUR, USD, GBP, JPY, MXN, BRL)"
+          "label": "Moneda",
+          "placeholder": "Selecciona una moneda",
+          "empty": "No hay monedas que coincidan"
         }
       },
-      "ai": {
-        "title": "✨ Detalles generados por IA",
-        "description": "Revisa los detalles a continuación. Puedes editarlos antes de guardar."
+      "actions": {
+        "submitCreate": "Añadir producto",
+        "submitEdit": "Guardar cambios"
       },
       "errors": {
-        "urlRequired": {
-          "title": "URL obligatoria",
-          "message": "Introduce primero la URL del producto"
-        },
-        "missingFields": {
-          "title": "Faltan campos",
-          "message": "Rellena todos los campos obligatorios"
-        },
-        "invalidCategory": {
-          "title": "Categoría no válida",
-          "message": "Selecciona una categoría válida"
-        },
-        "generationError": {
-          "title": "Error al generar",
-          "message": "No se pudo extraer la información del producto. Inténtalo de nuevo."
-        }
+        "urlRequired": "Introduce la URL del producto.",
+        "urlInvalid": "Introduce una URL http o https válida.",
+        "nameRequired": "Introduce un nombre.",
+        "categoryRequired": "Selecciona una categoría.",
+        "currencyInvalid": "Introduce un código de moneda de 3 letras válido.",
+        "extraction": "No pudimos extraer los detalles de esa URL. Puedes rellenarlos manualmente o volver a intentarlo."
+      },
+      "newCategory": {
+        "nameLabel": "Nombre",
+        "namePlaceholder": "p. ej. Electrónica",
+        "nameRequired": "Introduce un nombre.",
+        "submit": "Crear categoría"
+      },
+      "loadError": {
+        "title": "No pudimos cargar este producto",
+        "message": "Ocurrió un problema al cargar los detalles del producto. Inténtalo de nuevo."
       }
     }
   },
@@ -289,6 +295,14 @@
       "createError": {
         "title": "Error al añadir el producto",
         "description": "No se pudo añadir el producto. Inténtalo de nuevo."
+      },
+      "updateSuccess": {
+        "title": "Producto actualizado",
+        "description": "{{name}} se ha actualizado correctamente."
+      },
+      "updateError": {
+        "title": "Error al actualizar el producto",
+        "description": "No se pudo actualizar el producto. Inténtalo de nuevo."
       },
       "deleteSuccess": {
         "title": "Producto eliminado",

@@ -1,11 +1,47 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getCurrencySymbol, getPriorityLabel } from './web_utils';
+import {
+  CURRENCY_CODES,
+  getCurrencySymbol,
+  getPriorityLabel
+} from './web_utils';
+
+describe('CURRENCY_CODES', () => {
+  it('includes every currency the product form must offer', () => {
+    expect(CURRENCY_CODES).toEqual(
+      expect.arrayContaining([
+        'EUR',
+        'USD',
+        'GBP',
+        'JPY',
+        'CNY',
+        'CAD',
+        'AUD',
+        'CHF',
+        'SEK',
+        'NOK',
+        'DKK',
+        'PLN',
+        'MXN',
+        'BRL',
+        'INR'
+      ])
+    );
+  });
+});
 
 describe('getCurrencySymbol', () => {
   it('returns the symbol for a known currency code', () => {
     expect(getCurrencySymbol('EUR')).toBe('€');
     expect(getCurrencySymbol('USD')).toBe('$');
     expect(getCurrencySymbol('GBP')).toBe('£');
+  });
+
+  it('returns the symbol for every extended currency code', () => {
+    expect(getCurrencySymbol('CHF')).toBe('CHF');
+    expect(getCurrencySymbol('SEK')).toBe('kr');
+    expect(getCurrencySymbol('PLN')).toBe('zł');
+    expect(getCurrencySymbol('BRL')).toBe('R$');
+    expect(getCurrencySymbol('INR')).toBe('₹');
   });
 
   it('is case-insensitive', () => {
