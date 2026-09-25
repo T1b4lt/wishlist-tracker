@@ -192,7 +192,7 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
 
   // Reset/populate the form whenever the dialog opens, switches product or
   // fully closes. Done during render (instead of in an effect) to avoid an
-  // extra render pass, mirroring `SettingsPage`/`CategoryModal`:
+  // extra render pass, mirroring `SettingsPage`/`CategoryFormDialog`:
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const syncKey = !open
     ? 'closed'

@@ -61,15 +61,20 @@
     "footer": {
       "credits": "Desarrollado por {{author}} - <link>Github</link>"
     },
-    "categoryModal": {
+    "categoryFormDialog": {
       "titleCreate": "Crear nueva categoría",
       "titleEdit": "Editar categoría",
       "descriptionCreate": "Introduce un nombre y elige un color para tu nueva categoría.",
       "descriptionEdit": "Introduce un nombre y elige un color para tu categoría.",
       "fields": {
-        "name": "Nombre de la categoría"
+        "name": "Nombre de la categoría",
+        "preview": "Vista previa"
       },
       "placeholderName": "p. ej. Electrónica",
+      "previewPlaceholder": "Nombre de la categoría",
+      "errors": {
+        "nameRequired": "Introduce un nombre de categoría."
+      },
       "buttons": {
         "create": "Crear categoría",
         "update": "Actualizar categoría"
@@ -78,7 +83,20 @@
     "categoryColorPicker": {
       "label": "Color",
       "customColor": "O elige un color personalizado",
-      "swatchLabel": "Color {{hex}}"
+      "colorNames": {
+        "red": "Rojo",
+        "orange": "Naranja",
+        "yellow": "Amarillo",
+        "green": "Verde",
+        "blue": "Azul",
+        "purple": "Morado",
+        "pink": "Rosa",
+        "teal": "Verde azulado",
+        "indigo": "Índigo",
+        "cyan": "Cian",
+        "slate": "Pizarra",
+        "gray": "Gris"
+      }
     },
     "deleteProductDialog": {
       "title": "Eliminar producto",
@@ -175,10 +193,12 @@
       "subtitle": "Organiza tus artículos en categorías personalizadas.",
       "addButton": "Añadir categoría",
       "existingSection": {
-        "title": "Categorías existentes",
-        "loading": "Cargando categorías...",
         "empty": "Aún no hay categorías. ¡Crea la primera para empezar!"
       },
+      "productCount_one": "{{count}} producto",
+      "productCount_other": "{{count}} productos",
+      "deleteDisabledTooltip_one": "Usada por {{count}} producto",
+      "deleteDisabledTooltip_other": "Usada por {{count}} productos",
       "deleteDialog": {
         "title": "Eliminar categoría",
         "message": "¿Seguro que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer."
@@ -188,8 +208,8 @@
         "message": "Ocurrió un problema al obtener tus categorías. Inténtalo de nuevo."
       },
       "aria": {
-        "editCategory": "Editar categoría",
-        "deleteCategory": "Eliminar categoría"
+        "editCategory": "Editar categoría {{name}}",
+        "deleteCategory": "Eliminar categoría {{name}}"
       }
     },
     "product": {

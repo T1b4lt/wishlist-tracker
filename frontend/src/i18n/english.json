@@ -61,15 +61,20 @@
     "footer": {
       "credits": "Developed by {{author}} - <link>Github</link>"
     },
-    "categoryModal": {
+    "categoryFormDialog": {
       "titleCreate": "Create New Category",
       "titleEdit": "Edit Category",
       "descriptionCreate": "Enter a name and choose a color for your new category.",
       "descriptionEdit": "Enter a name and choose a color for your category.",
       "fields": {
-        "name": "Category Name"
+        "name": "Category Name",
+        "preview": "Preview"
       },
       "placeholderName": "e.g. Electronics",
+      "previewPlaceholder": "Category name",
+      "errors": {
+        "nameRequired": "Enter a category name."
+      },
       "buttons": {
         "create": "Create Category",
         "update": "Update Category"
@@ -78,7 +83,20 @@
     "categoryColorPicker": {
       "label": "Color",
       "customColor": "Or pick a custom color",
-      "swatchLabel": "Color {{hex}}"
+      "colorNames": {
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "green": "Green",
+        "blue": "Blue",
+        "purple": "Purple",
+        "pink": "Pink",
+        "teal": "Teal",
+        "indigo": "Indigo",
+        "cyan": "Cyan",
+        "slate": "Slate",
+        "gray": "Gray"
+      }
     },
     "deleteProductDialog": {
       "title": "Delete Product",
@@ -175,10 +193,12 @@
       "subtitle": "Organize your wishlist items into custom categories.",
       "addButton": "Add Category",
       "existingSection": {
-        "title": "Existing Categories",
-        "loading": "Loading categories...",
         "empty": "No categories yet. Create your first category to get started!"
       },
+      "productCount_one": "{{count}} product",
+      "productCount_other": "{{count}} products",
+      "deleteDisabledTooltip_one": "Used by {{count}} product",
+      "deleteDisabledTooltip_other": "Used by {{count}} products",
       "deleteDialog": {
         "title": "Delete Category",
         "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
@@ -188,8 +208,8 @@
         "message": "Something went wrong while fetching your categories. Please try again."
       },
       "aria": {
-        "editCategory": "Edit category",
-        "deleteCategory": "Delete category"
+        "editCategory": "Edit category {{name}}",
+        "deleteCategory": "Delete category {{name}}"
       }
     },
     "product": {

@@ -21,3 +21,24 @@ export const CATEGORY_COLOR_SWATCHES = [
 
 /** The swatch a new category starts with when nothing else is selected. */
 export const DEFAULT_CATEGORY_COLOR = CATEGORY_COLOR_SWATCHES[0];
+
+/**
+ * Translation key suffix (`components.categoryColorPicker.colorNames.<key>`)
+ * for each swatch, in the same order as `CATEGORY_COLOR_SWATCHES`. Used as
+ * the accessible name for each swatch's radio in `CategoryColorPicker`, so
+ * a screen reader announces "Red", "Orange", etc. instead of a raw hex code.
+ */
+export const CATEGORY_COLOR_NAMES = [
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'pink',
+  'teal',
+  'indigo',
+  'cyan',
+  'slate',
+  'gray'
+];

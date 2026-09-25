@@ -1,58 +1,94 @@
-import { Box, Flex, Grid, Input, Text } from '@chakra-ui/react';
+import {
+  Box,
+  Flex,
+  Grid,
+  Input,
+  RadioGroup,
+  Text,
+  VisuallyHidden
+} from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
-import { CATEGORY_COLOR_SWATCHES } from '@/lib/categoryColors';
+import {
+  CATEGORY_COLOR_NAMES,
+  CATEGORY_COLOR_SWATCHES
+} from '@/lib/categoryColors';
 
 /**
- * A category color picker: a grid of preset swatches plus a native color
- * input for any custom value. Fully controlled (`value`/`onChange`) so it
- * can be embedded both in `CategoryModal` and in `ProductFormDialog`'s
- * "new category" popover.
+ * A category color picker: a radio group of preset swatches plus a native
+ * color input for any custom value. Fully controlled (`value`/`onChange`)
+ * so it can be embedded both in `CategoryFormDialog` and in
+ * `ProductFormDialog`'s "new category" popover.
+ *
+ * The swatches are real radio inputs (one native group, sharing a `name`),
+ * so left/right and up/down arrow keys move the browser's own roving
+ * selection between them; each carries an `aria-label`-equivalent
+ * accessible name (its color, e.g. "Red"/"Rojo", via a visually hidden
+ * `RadioGroup.ItemText`) instead of a raw hex code. The selected swatch
+ * scales up slightly (`_checked`), skipped entirely when the user prefers
+ * reduced motion (`_motionReduce`).
  *
  * @param {object} props
  * @param {string} props.value - The currently selected color (any CSS color
  *   value; only exact matches against `CATEGORY_COLOR_SWATCHES` are shown as
- *   selected in the grid).
+ *   checked in the radio group).
  * @param {(color: string) => void} props.onChange
  * @param {boolean} [props.disabled]
  */
 export const CategoryColorPicker = ({ value, onChange, disabled = false }) => {
   const { t } = useTranslation();
+  const presetValue = CATEGORY_COLOR_SWATCHES.includes(value) ? value : '';
 
   return (
     <Box>
-      <Text fontWeight="medium" mb={3}>
-        {t('components.categoryColorPicker.label')}
-      </Text>
-      <Grid templateColumns="repeat(6, 1fr)" gap={3} mb={4}>
-        {CATEGORY_COLOR_SWATCHES.map((color) => (
-          <Box
-            key={color}
-            as="button"
-            type="button"
-            aria-label={t('components.categoryColorPicker.swatchLabel', {
-              hex: color
-            })}
-            aria-pressed={value === color}
-            disabled={disabled}
-            w="40px"
-            h="40px"
-            borderRadius="full"
-            bg={color}
-            cursor="pointer"
-            border={value === color ? '3px solid' : '2px solid transparent'}
-            borderColor={value === color ? 'fg' : 'transparent'}
-            transitionProperty="transform, box-shadow"
-            transitionDuration="fast"
-            transitionTimingFunction="easeOut"
-            _hover={{ transform: 'scale(1.1)', boxShadow: 'lg' }}
-            _motionReduce={{ _hover: { transform: 'none' } }}
-            onClick={() => onChange(color)}
-          />
-        ))}
-      </Grid>
+      <RadioGroup.Root
+        value={presetValue}
+        onValueChange={(details) => onChange(details.value)}
+        disabled={disabled}
+        mb={4}
+      >
+        <RadioGroup.Label>
+          <Text fontWeight="medium" mb={3}>
+            {t('components.categoryColorPicker.label')}
+          </Text>
+        </RadioGroup.Label>
+        <Grid templateColumns="repeat(6, 1fr)" gap={3}>
+          {CATEGORY_COLOR_SWATCHES.map((color, index) => (
+            <RadioGroup.Item key={color} value={color}>
+              <VisuallyHidden asChild>
+                <RadioGroup.ItemText>
+                  {t(
+                    `components.categoryColorPicker.colorNames.${CATEGORY_COLOR_NAMES[index]}`
+                  )}
+                </RadioGroup.ItemText>
+              </VisuallyHidden>
+              <RadioGroup.ItemControl
+                w="40px"
+                h="40px"
+                borderRadius="full"
+                bg={color}
+                cursor="pointer"
+                borderWidth="2px"
+                borderColor="transparent"
+                transitionProperty="transform, box-shadow, border-color"
+                transitionDuration="fast"
+                transitionTimingFunction="easeOut"
+                _checked={{ borderColor: 'fg', transform: 'scale(1.08)' }}
+                _motionReduce={{ transform: 'none' }}
+                _focusVisible={{
+                  outline: '2px solid',
+                  outlineColor: 'fg',
+                  outlineOffset: '2px'
+                }}
+              />
+              <RadioGroup.ItemHiddenInput />
+            </RadioGroup.Item>
+          ))}
+        </Grid>
+      </RadioGroup.Root>
       <Flex align="center" gap={3}>
         <Input
           type="color"
+          aria-label={t('components.categoryColorPicker.customColor')}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
