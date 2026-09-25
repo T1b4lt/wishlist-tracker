@@ -31,6 +31,12 @@ function isPlainLeftClick(event) {
  * intercepted: a same-path link (e.g. an in-page `#section` anchor) is left
  * alone, since it never leaves the page or loses the draft.
  *
+ * Accepted limitation: the browser's own back/forward buttons (`popstate`)
+ * are **not** guarded. Reliably trapping those would mean pushing a
+ * synthetic history entry to intercept the pop and re-pushing it on cancel,
+ * which is substantially more complex than the click/`beforeunload` cases
+ * above and is not implemented here.
+ *
  * @param {boolean} isDirty - Whether there are unsaved changes to guard.
  * @returns {{
  *   isConfirmOpen: boolean,

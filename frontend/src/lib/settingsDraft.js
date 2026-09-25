@@ -82,9 +82,14 @@ export function mergeUpstreamChanges(draft, prevBaseline, nextBaseline) {
 }
 
 /**
- * Builds the `PATCH /config/` payload from a draft. Empty secret strings
- * are sent as `null` (matching how the backend already treats "not
- * provided" secrets), mirroring the pre-Task-14 behavior.
+ * Builds the `PATCH /config/` payload from a draft. Secret fields are sent
+ * as-is, including an empty string when the user cleared a previously
+ * configured secret: the backend (`ConfigUpdate`/`update_config`) treats a
+ * JSON `null` as "field not provided, leave it alone", so sending `null`
+ * for an emptied field would silently keep the old secret instead of
+ * clearing it. An empty string, by contrast, is a real value the backend
+ * applies (and `telegram_status` correctly recomputes to `"not_configured"`
+ * for an empty token).
  * @param {object} draft
  * @returns {object}
  */
@@ -93,8 +98,8 @@ export function buildConfigPatch(draft) {
     selected_language: draft.selected_language,
     analysis_hour: draft.analysis_hour,
     hist_window_size: draft.hist_window_size,
-    google_api_key: draft.google_api_key || null,
-    telegram_bot_token: draft.telegram_bot_token || null,
+    google_api_key: draft.google_api_key,
+    telegram_bot_token: draft.telegram_bot_token,
     is_price_drop_alert: draft.is_price_drop_alert,
     is_stock_change_alert: draft.is_stock_change_alert
   };

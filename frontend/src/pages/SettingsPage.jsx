@@ -52,16 +52,19 @@ const SettingsPage = () => {
     fetchConfig();
   }, [fetchConfig]);
 
-  // Reconcile the draft whenever the config store (re)loads: the initial
-  // fetch, a save (the store returns the freshly-saved config), or a forced
-  // background refresh (e.g. `NotificationsSection` -> `TelegramSetup`
-  // calling `fetch(true)` after obtaining a Telegram chat id). On the very
-  // first load the draft simply becomes the config-derived baseline;
-  // afterward, `mergeUpstreamChanges` keeps any field the user has since
-  // edited and only adopts the new value for fields still untouched, so a
-  // background refresh can never discard an in-progress, unrelated edit
-  // (see `src/lib/settingsDraft.js`). Done during render (instead of in an
-  // effect) to avoid an extra render pass:
+  // Reconcile the draft whenever the config store (re)loads *in the
+  // background*: the initial fetch, or a forced refresh (e.g.
+  // `NotificationsSection` -> `TelegramSetup` calling `fetch(true)` after
+  // obtaining a Telegram chat id). A save is handled separately, directly
+  // in `handleSave` below (it resyncs the draft/baseline from the saved
+  // config unconditionally, rather than through `mergeUpstreamChanges`), so
+  // this branch only ever runs for the initial load or a background
+  // refresh. On the very first load the draft simply becomes the
+  // config-derived baseline; afterward, `mergeUpstreamChanges` keeps any
+  // field the user has since edited and only adopts the new value for
+  // fields still untouched, so a background refresh can never discard an
+  // in-progress, unrelated edit (see `src/lib/settingsDraft.js`). Done
+  // during render (instead of in an effect) to avoid an extra render pass:
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   if (config && syncedConfig !== config) {
     const nextBaseline = draftFromConfig(config);
@@ -86,7 +89,20 @@ const SettingsPage = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await saveConfig(buildConfigPatch(draft));
+      const saved = await saveConfig(buildConfigPatch(draft));
+      // Resync the draft and baseline directly from what was actually
+      // saved, rather than letting the render-time reconciliation above
+      // merge it in: every field in the patch was just saved, so the form
+      // must end clean regardless of `mergeUpstreamChanges`'s "keep it if
+      // it still differs from the previous baseline" rule (which otherwise
+      // never adopts the new value for a field the user just edited).
+      // `syncedConfig` is set to the same `saved` reference the store just
+      // stored as `config`, so the reconciliation branch above sees nothing
+      // new to process for this update.
+      const savedDraft = draftFromConfig(saved);
+      setDraft(savedDraft);
+      setBaseline(savedDraft);
+      setSyncedConfig(saved);
       toaster.create({
         title: t('toasts.settings.saveSuccess.title'),
         description: t('toasts.settings.saveSuccess.description'),

@@ -158,6 +158,55 @@ describe('SettingsPage', () => {
     );
   });
 
+  it('clears a previously saved secret by sending an empty string, and ends clean', async () => {
+    const user = userEvent.setup();
+    // No Telegram token here, so there is exactly one "Configured" badge
+    // (the Google API key's) to assert on.
+    configApi.get.mockResolvedValue({
+      ...CONFIG,
+      google_api_key: 'existing-key',
+      telegram_bot_token: null,
+      telegram_status: 'not_configured'
+    });
+    configApi.update.mockResolvedValue({
+      ...CONFIG,
+      google_api_key: null,
+      telegram_bot_token: null,
+      telegram_status: 'not_configured'
+    });
+    renderSettingsPage();
+
+    // By placeholder, not label text: the field's label also contains the
+    // "Configured" badge while the saved secret is untouched, and the
+    // reveal button's own `aria-label` ("Show Google AI Studio API Key")
+    // would otherwise ambiguously match a label-text query too.
+    const apiKeyInput = await screen.findByPlaceholderText(
+      'Enter your Google AI Studio API key'
+    );
+    expect(apiKeyInput).toHaveValue('existing-key');
+    expect(screen.getByText('Configured')).toBeInTheDocument();
+
+    await user.clear(apiKeyInput);
+    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(configApi.update).toHaveBeenCalledTimes(1));
+    // A JSON `null` here would make the backend leave the old secret in
+    // place (see `buildConfigPatch`'s doc comment): the empty field must be
+    // sent as a real empty string so it is actually cleared.
+    expect(configApi.update).toHaveBeenCalledWith(
+      expect.objectContaining({ google_api_key: '' })
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByText('You have unsaved changes')
+      ).not.toBeInTheDocument()
+    );
+    expect(apiKeyInput).toHaveValue('');
+    expect(screen.queryByText('Configured')).not.toBeInTheDocument();
+  });
+
   it('refreshing the config after obtaining a Telegram chat id does not discard an unrelated unsaved edit', async () => {
     const user = userEvent.setup();
     configApi.get.mockResolvedValue(CONFIG);

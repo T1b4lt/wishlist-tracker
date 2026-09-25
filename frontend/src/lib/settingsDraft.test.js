@@ -111,15 +111,18 @@ describe('mergeUpstreamChanges', () => {
 });
 
 describe('buildConfigPatch', () => {
-  it('sends empty secret strings as null', () => {
+  it('sends an emptied secret as an empty string, not null, so the backend actually clears it', () => {
+    // The backend treats a JSON `null` as "field not provided" and leaves
+    // the existing secret untouched, so a cleared field must be sent as a
+    // real empty string instead.
     const draft = {
       ...draftFromConfig(CONFIG),
       google_api_key: '',
       telegram_bot_token: ''
     };
     const patch = buildConfigPatch(draft);
-    expect(patch.google_api_key).toBeNull();
-    expect(patch.telegram_bot_token).toBeNull();
+    expect(patch.google_api_key).toBe('');
+    expect(patch.telegram_bot_token).toBe('');
   });
 
   it('carries the rest of the fields through unchanged', () => {

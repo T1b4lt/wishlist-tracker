@@ -173,7 +173,13 @@ export const TelegramSetup = ({
               label={t('pages.settings.fields.telegramChatId.label')}
               mb={0}
             >
-              <Input value={chatId} disabled maxW="200px" />
+              <Input
+                value={chatId}
+                readOnly
+                maxW="200px"
+                bg="bg.muted"
+                cursor="default"
+              />
             </Field>
           )}
         </HStack>

@@ -161,7 +161,13 @@ describe('TelegramSetup', () => {
     await user.click(screen.getByRole('button', { name: 'Get Chat ID' }));
 
     expect(telegramApi.getChatId).toHaveBeenCalledTimes(1);
-    expect(await screen.findByDisplayValue('999')).toBeInTheDocument();
+    const chatIdInput = await screen.findByDisplayValue('999');
+    expect(chatIdInput).toBeInTheDocument();
+    // Read-only (so it keeps full-contrast text), not disabled (which would
+    // apply the theme's ~50% opacity "disabled" look to a value that is
+    // meant to stay legible).
+    expect(chatIdInput).toHaveAttribute('readonly');
+    expect(chatIdInput).not.toBeDisabled();
     expect(toaster.create).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'success' })
     );
