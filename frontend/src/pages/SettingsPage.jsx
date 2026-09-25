@@ -1,247 +1,92 @@
-import { useState, useEffect, useMemo } from 'react';
-import {
-  Box,
-  Button,
-  Heading,
-  IconButton,
-  Input,
-  InputGroup,
-  Text,
-  VStack,
-  Flex,
-  createListCollection,
-  HStack,
-  Stack,
-  Link
-} from '@chakra-ui/react';
-import {
-  LuSave,
-  LuTrendingDown,
-  LuPackage,
-  LuDownload,
-  LuSend,
-  LuEye,
-  LuEyeOff
-} from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
-import {
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-  SelectContent,
-  SelectItem
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Field } from '@/components/ui/field';
-import {
-  DialogRoot,
-  DialogContent,
-  DialogHeader,
-  DialogBody,
-  DialogFooter,
-  DialogTitle,
-  DialogCloseTrigger
-} from '@/components/ui/dialog';
-import { Trans, useTranslation } from 'react-i18next';
-import { SUPPORTED_LANGUAGES } from '@/i18n';
+import { useEffect, useState } from 'react';
+import { Box, Grid } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { telegram as telegramApi } from '@/lib/api';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { ConfirmDialog, ErrorState, LoadingState } from '@/components/common';
+import {
+  AnalysisSection,
+  GeneralSection,
+  NotificationsSection,
+  SaveBar,
+  SettingsNav
+} from '@/components/settings';
+import { toaster } from '@/components/ui/toaster';
 import { useConfigStore } from '@/stores/configStore';
-import { ErrorState, LoadingState } from '@/components/common';
+import {
+  buildConfigPatch,
+  draftFromConfig,
+  isDraftDirty,
+  mergeUpstreamChanges
+} from '@/lib/settingsDraft';
 
-const hourCollection = createListCollection({
-  items: Array.from({ length: 24 }, (_, i) => ({
-    label: `${i.toString().padStart(2, '0')}:00`,
-    value: i.toString()
-  }))
-});
-
-const histWindowSizeValues = [30, 60, 90, 180];
+/** Draft shape before the first config load. Overwritten wholesale by the
+ * config-derived draft on that first load (see the reconciliation below). */
+const DEFAULT_DRAFT = {
+  selected_language: 'english',
+  analysis_hour: 12,
+  hist_window_size: 60,
+  google_api_key: '',
+  telegram_bot_token: '',
+  is_price_drop_alert: false,
+  is_stock_change_alert: false
+};
 
 const SettingsPage = () => {
   const { t } = useTranslation();
   useDocumentTitle(t('pages.settings.title'));
-  const [isSaving, setIsSaving] = useState(false);
 
   const configStatus = useConfigStore((state) => state.status);
   const config = useConfigStore((state) => state.config);
   const fetchConfig = useConfigStore((state) => state.fetch);
   const saveConfig = useConfigStore((state) => state.save);
 
-  // Configuration states
-  const [selectedLanguage, setSelectedLanguage] = useState('english');
-  const [analysisHour, setAnalysisHour] = useState(12);
-  const [histWindowSize, setHistWindowSize] = useState(60);
-  const [googleApiKey, setGoogleApiKey] = useState('');
-  const [telegramBotString, setTelegramBotString] = useState('');
-  const [telegramBotChatId, setTelegramBotChatId] = useState('');
-  const [isPriceDropAlert, setIsPriceDropAlert] = useState(false);
-  const [isStockChangeAlert, setIsStockChangeAlert] = useState(false);
-
-  // UI states for Telegram functionality
-  const [isGettingChatId, setIsGettingChatId] = useState(false);
-  const [isSendingTestMessage, setIsSendingTestMessage] = useState(false);
-  const [showStartBotModal, setShowStartBotModal] = useState(false);
-  const [isTelegramTokenVisible, setIsTelegramTokenVisible] = useState(false);
-
-  const languageCollection = useMemo(
-    () =>
-      createListCollection({
-        items: SUPPORTED_LANGUAGES.map((language) => ({
-          label: t(`common.language.${language}`),
-          value: language
-        }))
-      }),
-    [t]
-  );
-
-  const histWindowSizeOptions = useMemo(
-    () =>
-      histWindowSizeValues.map((value) => ({
-        label: t('pages.settings.histWindowOption', { days: value }),
-        value: value.toString()
-      })),
-    [t]
-  );
+  const [draft, setDraft] = useState(DEFAULT_DRAFT);
+  const [baseline, setBaseline] = useState(DEFAULT_DRAFT);
+  const [syncedConfig, setSyncedConfig] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
 
-  // Sync the form fields from the store's config whenever it (re)loads: the
-  // initial fetch, a save (the store returns the freshly-saved config), or a
-  // forced refetch (e.g. after getting a Telegram chat id). Done during
-  // render (instead of in an effect) to avoid an extra render pass:
+  // Reconcile the draft whenever the config store (re)loads: the initial
+  // fetch, a save (the store returns the freshly-saved config), or a forced
+  // background refresh (e.g. `NotificationsSection` -> `TelegramSetup`
+  // calling `fetch(true)` after obtaining a Telegram chat id). On the very
+  // first load the draft simply becomes the config-derived baseline;
+  // afterward, `mergeUpstreamChanges` keeps any field the user has since
+  // edited and only adopts the new value for fields still untouched, so a
+  // background refresh can never discard an in-progress, unrelated edit
+  // (see `src/lib/settingsDraft.js`). Done during render (instead of in an
+  // effect) to avoid an extra render pass:
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  const [syncedConfig, setSyncedConfig] = useState(null);
   if (config && syncedConfig !== config) {
+    const nextBaseline = draftFromConfig(config);
+    setDraft((prevDraft) =>
+      syncedConfig === null
+        ? nextBaseline
+        : mergeUpstreamChanges(prevDraft, baseline, nextBaseline)
+    );
+    setBaseline(nextBaseline);
     setSyncedConfig(config);
-    setSelectedLanguage(config.selected_language);
-    setAnalysisHour(config.analysis_hour);
-    setHistWindowSize(config.hist_window_size);
-    setGoogleApiKey(config.google_api_key || '');
-    setTelegramBotString(config.telegram_bot_token || '');
-    setTelegramBotChatId(config.telegram_bot_chat_id || '');
-    setIsPriceDropAlert(config.is_price_drop_alert);
-    setIsStockChangeAlert(config.is_stock_change_alert);
   }
 
-  // Derive whether the form differs from the last loaded/saved configuration
-  const hasChanges = useMemo(() => {
-    if (!config) return false; // Wait for the config to load
+  const isDirty = config !== null && isDraftDirty(draft, baseline);
+  const { isConfirmOpen, confirmNavigation, cancelNavigation } =
+    useUnsavedChangesGuard(isDirty);
 
-    return (
-      selectedLanguage !== config.selected_language ||
-      analysisHour !== config.analysis_hour ||
-      histWindowSize !== config.hist_window_size ||
-      googleApiKey !== (config.google_api_key || '') ||
-      telegramBotString !== (config.telegram_bot_token || '') ||
-      isPriceDropAlert !== config.is_price_drop_alert ||
-      isStockChangeAlert !== config.is_stock_change_alert
-    );
-  }, [
-    selectedLanguage,
-    analysisHour,
-    histWindowSize,
-    googleApiKey,
-    telegramBotString,
-    isPriceDropAlert,
-    isStockChangeAlert,
-    config
-  ]);
+  const setField = (field) => (value) =>
+    setDraft((prev) => ({ ...prev, [field]: value }));
 
-  // Get Telegram Chat ID
-  const handleGetChatId = async () => {
-    setIsGettingChatId(true);
-    try {
-      await telegramApi.getChatId();
+  const handleDiscard = () => setDraft(baseline);
 
-      // Refresh config to get the saved chat_id. fetchConfig never rejects
-      // (it stores the failure in the store instead), so check its status
-      // afterward to report a refresh failure.
-      await fetchConfig(true);
-      if (useConfigStore.getState().status === 'error') {
-        toaster.create({
-          title: t('toasts.settings.chatIdError.title'),
-          description: t('toasts.settings.chatIdError.description'),
-          type: 'error'
-        });
-        return;
-      }
-
-      toaster.create({
-        title: t('toasts.settings.chatIdSaved.title'),
-        description: t('toasts.settings.chatIdSaved.description'),
-        type: 'success'
-      });
-    } catch (error) {
-      if (error.status === 400) {
-        toaster.create({
-          title: t('toasts.settings.botTokenMissing.title'),
-          description: t('toasts.settings.botTokenMissing.description'),
-          type: 'error'
-        });
-        return;
-      }
-
-      if (error.status === 404) {
-        setShowStartBotModal(true);
-        return;
-      }
-
-      console.error('Error getting chat ID:', error);
-      toaster.create({
-        title: t('toasts.settings.chatIdError.title'),
-        description:
-          error.message || t('toasts.settings.chatIdError.description'),
-        type: 'error'
-      });
-    } finally {
-      setIsGettingChatId(false);
-    }
-  };
-
-  // Send test message
-  const handleSendTestMessage = async () => {
-    setIsSendingTestMessage(true);
-    try {
-      await telegramApi.sendTestMessage();
-
-      toaster.create({
-        title: t('toasts.settings.testMessageSuccess.title'),
-        description: t('toasts.settings.testMessageSuccess.description'),
-        type: 'success'
-      });
-    } catch (error) {
-      console.error('Error sending test message:', error);
-      toaster.create({
-        title: t('toasts.settings.testMessageError.title'),
-        description:
-          error.message || t('toasts.settings.testMessageError.description'),
-        type: 'error'
-      });
-    } finally {
-      setIsSendingTestMessage(false);
-    }
-  };
-
-  // Save configuration
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await saveConfig({
-        selected_language: selectedLanguage,
-        analysis_hour: analysisHour,
-        hist_window_size: histWindowSize,
-        google_api_key: googleApiKey || null,
-        telegram_bot_token: telegramBotString || null,
-        is_price_drop_alert: isPriceDropAlert,
-        is_stock_change_alert: isStockChangeAlert
-      });
-
+      await saveConfig(buildConfigPatch(draft));
       toaster.create({
         title: t('toasts.settings.saveSuccess.title'),
         description: t('toasts.settings.saveSuccess.description'),
@@ -285,333 +130,60 @@ const SettingsPage = () => {
         title={t('pages.settings.title')}
         description={t('pages.settings.subtitle')}
       />
-      <VStack gap={8} align="stretch">
-        {/* General Section */}
-        <Box
-          p={6}
-          borderRadius="lg"
-          borderWidth="1px"
-          borderColor="border"
-          bg="bg.panel"
-        >
-          <Heading size="lg" mb={4}>
-            {t('pages.settings.sections.general')}
-          </Heading>
 
-          <Field label={t('pages.settings.fields.language')} mb={4}>
-            <SelectRoot
-              collection={languageCollection}
-              value={[selectedLanguage]}
-              onValueChange={(details) => {
-                const nextLanguage = details.value[0];
-                if (!nextLanguage) return;
-                // Only update the form value here. The language is applied
-                // and persisted only after a successful Save (see B4).
-                setSelectedLanguage(nextLanguage);
-              }}
-              size="md"
-            >
-              <SelectTrigger>
-                <SelectValueText
-                  placeholder={t('common.placeholders.selectLanguage')}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {languageCollection.items.map((item) => (
-                  <SelectItem key={item.value} item={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </SelectRoot>
-          </Field>
-
-          <Field
-            label={t('pages.settings.fields.googleApiKey.label')}
-            helperText={
-              <Trans
-                i18nKey="pages.settings.fields.googleApiKey.helper"
-                components={{
-                  link: (
-                    <Link
-                      href="https://aistudio.google.com/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      isExternal
-                      color="fg"
-                      textDecoration="underline"
-                    />
-                  )
-                }}
-              />
-            }
-          >
-            <Input
-              value={googleApiKey}
-              onChange={(e) => setGoogleApiKey(e.target.value)}
-              placeholder={t('common.placeholders.googleApiKey')}
-              type="password"
-            />
-          </Field>
-        </Box>
-
-        {/* Analysis Section */}
-        <Box
-          p={6}
-          borderRadius="lg"
-          borderWidth="1px"
-          borderColor="border"
-          bg="bg.panel"
-        >
-          <Heading size="lg" mb={4}>
-            {t('pages.settings.sections.analysis')}
-          </Heading>
-
-          <Field
-            label={t('pages.settings.fields.analysisHour.label')}
-            helperText={t('pages.settings.fields.analysisHour.helper')}
-          >
-            <SelectRoot
-              collection={hourCollection}
-              value={[analysisHour.toString()]}
-              onValueChange={(details) =>
-                setAnalysisHour(parseInt(details.value[0]))
-              }
-              size="md"
-            >
-              <SelectTrigger>
-                <SelectValueText
-                  placeholder={t('common.placeholders.selectHour')}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {hourCollection.items.map((item) => (
-                  <SelectItem key={item.value} item={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </SelectRoot>
-          </Field>
-
-          <Field
-            label={t('pages.settings.fields.historicalWindow.label')}
-            helperText={t('pages.settings.fields.historicalWindow.helper')}
-            mt={4}
-          >
-            <SegmentedControl
-              items={histWindowSizeOptions}
-              value={histWindowSize.toString()}
-              onValueChange={(e) => setHistWindowSize(parseInt(e.value, 10))}
-              size="md"
-            />
-          </Field>
-        </Box>
-
-        {/* Notifications Section */}
-        <Box
-          p={6}
-          borderRadius="lg"
-          borderWidth="1px"
-          borderColor="border"
-          bg="bg.panel"
-        >
-          <Heading size="lg" mb={4}>
-            {t('pages.settings.sections.notifications')}
-          </Heading>
-
-          <VStack gap={6} align="stretch">
-            <Stack
-              gap={4}
-              align="flex-start"
-              direction={{ base: 'column', md: 'row' }}
-            >
-              <Field
-                label={t('pages.settings.fields.telegramBotToken.label')}
-                helperText={t('pages.settings.fields.telegramBotToken.helper')}
-                flex={1}
-              >
-                <HStack gap={2}>
-                  <InputGroup
-                    flex={1}
-                    endElement={
-                      <IconButton
-                        variant="ghost"
-                        size="sm"
-                        aria-label={
-                          isTelegramTokenVisible
-                            ? t('pages.settings.aria.hideTelegramBotToken')
-                            : t('pages.settings.aria.showTelegramBotToken')
-                        }
-                        onClick={() =>
-                          setIsTelegramTokenVisible((visible) => !visible)
-                        }
-                      >
-                        {isTelegramTokenVisible ? <LuEyeOff /> : <LuEye />}
-                      </IconButton>
-                    }
-                  >
-                    <Input
-                      value={telegramBotString}
-                      onChange={(e) => setTelegramBotString(e.target.value)}
-                      placeholder={t('common.placeholders.telegramBotToken')}
-                      type={isTelegramTokenVisible ? 'text' : 'password'}
-                    />
-                  </InputGroup>
-                  {telegramBotString && (
-                    <Button
-                      onClick={handleGetChatId}
-                      loading={isGettingChatId}
-                      disabled={isGettingChatId}
-                      size="md"
-                    >
-                      <LuDownload /> {t('common.actions.getChatId')}
-                    </Button>
-                  )}
-                </HStack>
-              </Field>
-
-              {telegramBotChatId && (
-                <Field
-                  label={t('pages.settings.fields.telegramChatId.label')}
-                  helperText={t('pages.settings.fields.telegramChatId.helper')}
-                  flex={1}
-                >
-                  <HStack gap={2}>
-                    <Input value={telegramBotChatId} disabled flex={1} />
-                    <Button
-                      onClick={handleSendTestMessage}
-                      loading={isSendingTestMessage}
-                      disabled={isSendingTestMessage}
-                      size="md"
-                    >
-                      <LuSend /> {t('common.actions.testBot')}
-                    </Button>
-                  </HStack>
-                </Field>
-              )}
-            </Stack>
-
-            {/* Price Drop Alerts */}
-            <Flex
-              align="center"
-              justify="space-between"
-              p={4}
-              borderRadius="md"
-              _hover={{ bg: 'bg.muted' }}
-              transition="all 0.2s"
-              opacity={!telegramBotString ? 0.5 : 1}
-            >
-              <Flex align="center" gap={4} flex={1}>
-                <Box p={2} borderRadius="md" bg="bg.muted" color="price.down">
-                  <LuTrendingDown size={20} />
-                </Box>
-                <Box>
-                  <Text fontWeight="medium" mb={1}>
-                    {t('pages.settings.alerts.priceDrop.title')}
-                  </Text>
-                  <Text fontSize="sm" color="fg.muted">
-                    {telegramBotString
-                      ? t('pages.settings.alerts.priceDrop.subtitleConfigured')
-                      : t('pages.settings.alerts.priceDrop.subtitleMissing')}
-                  </Text>
-                </Box>
-              </Flex>
-              <Switch
-                size="lg"
-                checked={isPriceDropAlert}
-                onCheckedChange={(e) => setIsPriceDropAlert(e.checked)}
-                disabled={!telegramBotString}
-              />
-            </Flex>
-
-            {/* Stock Change Alerts */}
-            <Flex
-              align="center"
-              justify="space-between"
-              p={4}
-              borderRadius="md"
-              _hover={{ bg: 'bg.muted' }}
-              transition="all 0.2s"
-              opacity={!telegramBotString ? 0.5 : 1}
-            >
-              <Flex align="center" gap={4} flex={1}>
-                <Box p={2} borderRadius="md" bg="bg.muted" color="stock.in">
-                  <LuPackage size={20} />
-                </Box>
-                <Box>
-                  <Text fontWeight="medium" mb={1}>
-                    {t('pages.settings.alerts.stockChange.title')}
-                  </Text>
-                  <Text fontSize="sm" color="fg.muted">
-                    {telegramBotString
-                      ? t(
-                          'pages.settings.alerts.stockChange.subtitleConfigured'
-                        )
-                      : t('pages.settings.alerts.stockChange.subtitleMissing')}
-                  </Text>
-                </Box>
-              </Flex>
-              <Switch
-                size="lg"
-                checked={isStockChangeAlert}
-                onCheckedChange={(e) => setIsStockChangeAlert(e.checked)}
-                disabled={!telegramBotString}
-              />
-            </Flex>
-          </VStack>
-        </Box>
-
-        {/* Save Button */}
-        <Flex justify="flex-end">
-          <Button
-            size="lg"
-            onClick={handleSave}
-            disabled={!hasChanges || isSaving}
-            loading={isSaving}
-          >
-            <LuSave /> {t('common.actions.save')}
-          </Button>
-        </Flex>
-      </VStack>
-
-      {/* Start Bot Modal */}
-      <DialogRoot
-        open={showStartBotModal}
-        onOpenChange={(e) => setShowStartBotModal(e.open)}
+      <Grid
+        templateColumns={{ base: '1fr', md: '200px 1fr' }}
+        gap={8}
+        // Extra bottom room so the sticky `SaveBar` never covers the last
+        // section's content once it slides in.
+        mb={isDirty ? { base: 28, md: 10 } : 0}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('pages.settings.startBotModal.title')}</DialogTitle>
-          </DialogHeader>
-          <DialogCloseTrigger />
-          <DialogBody>
-            <VStack gap={4} align="stretch">
-              <Text>{t('pages.settings.startBotModal.description')}</Text>
-              <Box p={4} borderRadius="md" bg="bg.muted">
-                <Text fontWeight="medium" mb={2}>
-                  {t('pages.settings.startBotModal.stepsTitle')}
-                </Text>
-                <VStack align="stretch" gap={2}>
-                  <Text>{t('pages.settings.startBotModal.steps.one')}</Text>
-                  <Text>
-                    <Trans
-                      i18nKey="pages.settings.startBotModal.steps.two"
-                      components={{ strong: <strong /> }}
-                    />
-                  </Text>
-                  <Text>{t('pages.settings.startBotModal.steps.three')}</Text>
-                </VStack>
-              </Box>
-            </VStack>
-          </DialogBody>
-          <DialogFooter>
-            <Button onClick={() => setShowStartBotModal(false)}>
-              {t('common.actions.gotIt')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
+        <SettingsNav />
+        <Box display="flex" flexDirection="column" gap={8} minW={0}>
+          <GeneralSection
+            language={draft.selected_language}
+            onLanguageChange={setField('selected_language')}
+            googleApiKey={draft.google_api_key}
+            onGoogleApiKeyChange={setField('google_api_key')}
+            savedGoogleApiKey={config.google_api_key || ''}
+          />
+          <AnalysisSection
+            analysisHour={draft.analysis_hour}
+            onAnalysisHourChange={setField('analysis_hour')}
+            histWindowSize={draft.hist_window_size}
+            onHistWindowSizeChange={setField('hist_window_size')}
+          />
+          <NotificationsSection
+            telegramBotToken={draft.telegram_bot_token}
+            onTelegramBotTokenChange={setField('telegram_bot_token')}
+            savedTelegramBotToken={config.telegram_bot_token || ''}
+            isTelegramBotTokenDirty={
+              draft.telegram_bot_token !== baseline.telegram_bot_token
+            }
+            isPriceDropAlert={draft.is_price_drop_alert}
+            onPriceDropAlertChange={setField('is_price_drop_alert')}
+            isStockChangeAlert={draft.is_stock_change_alert}
+            onStockChangeAlertChange={setField('is_stock_change_alert')}
+          />
+        </Box>
+      </Grid>
+
+      <SaveBar
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onSave={handleSave}
+        onDiscard={handleDiscard}
+      />
+
+      <ConfirmDialog
+        open={isConfirmOpen}
+        onClose={cancelNavigation}
+        onConfirm={confirmNavigation}
+        title={t('pages.settings.leaveConfirm.title')}
+        body={t('pages.settings.leaveConfirm.body')}
+        confirmLabel={t('pages.settings.leaveConfirm.confirm')}
+        destructive
+      />
     </PageContainer>
   );
 };

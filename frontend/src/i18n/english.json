@@ -21,7 +21,8 @@
       "retry": "Retry",
       "addCategory": "Add Category",
       "addNewProduct": "Add New Product",
-      "backToDashboard": "Back to Dashboard"
+      "backToDashboard": "Back to Dashboard",
+      "discard": "Discard"
     },
     "status": {
       "inStock": "In Stock",
@@ -289,13 +290,15 @@
       "alerts": {
         "priceDrop": {
           "title": "Price Drop Alerts",
-          "subtitleConfigured": "Receive notifications when product prices drop",
-          "subtitleMissing": "Configure a Telegram bot token first"
+          "description": "Receive a Telegram message when a tracked product's price drops"
         },
         "stockChange": {
           "title": "Stock Change Alerts",
-          "subtitleConfigured": "Receive notifications when product stock status changes",
-          "subtitleMissing": "Configure a Telegram bot token first"
+          "description": "Receive a Telegram message when a tracked product's stock status changes"
+        },
+        "reason": {
+          "notConfigured": "Add a Telegram bot token to enable alerts",
+          "tokenOnly": "Finish linking your Telegram chat to enable alerts"
         }
       },
       "startBotModal": {
@@ -311,8 +314,37 @@
       "loading": "Loading settings...",
       "histWindowOption": "{{days}} days",
       "aria": {
-        "showTelegramBotToken": "Show Telegram bot token",
-        "hideTelegramBotToken": "Hide Telegram bot token"
+        "showSecret": "Show {{label}}",
+        "hideSecret": "Hide {{label}}"
+      },
+      "badges": {
+        "configured": "Configured"
+      },
+      "nav": {
+        "ariaLabel": "Jump to a section"
+      },
+      "saveBar": {
+        "unsavedChanges": "You have unsaved changes"
+      },
+      "telegram": {
+        "steps": {
+          "token": "1. Bot token",
+          "chat": "2. Link chat",
+          "test": "3. Send test message"
+        },
+        "status": {
+          "notConfigured": "Not configured",
+          "tokenOnly": "Waiting for chat",
+          "connected": "Connected"
+        },
+        "chatIdLinkedLabel": "Linked chat ID",
+        "chatIdDisabledReason": "Save your bot token first to continue",
+        "testDisabledReason": "Finish linking your chat first"
+      },
+      "leaveConfirm": {
+        "title": "Discard unsaved changes?",
+        "body": "You have unsaved changes that will be lost if you leave this page.",
+        "confirm": "Leave without saving"
       }
     },
     "notFound": {

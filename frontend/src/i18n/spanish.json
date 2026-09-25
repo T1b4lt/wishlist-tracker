@@ -21,7 +21,8 @@
       "retry": "Reintentar",
       "addCategory": "Añadir categoría",
       "addNewProduct": "Añadir nuevo producto",
-      "backToDashboard": "Volver al panel"
+      "backToDashboard": "Volver al panel",
+      "discard": "Descartar"
     },
     "status": {
       "inStock": "En stock",
@@ -289,13 +290,15 @@
       "alerts": {
         "priceDrop": {
           "title": "Alertas de bajada de precio",
-          "subtitleConfigured": "Recibe notificaciones cuando bajen los precios de los productos",
-          "subtitleMissing": "Configura primero un token de bot de Telegram"
+          "description": "Recibe un mensaje de Telegram cuando baje el precio de un producto que sigues"
         },
         "stockChange": {
           "title": "Alertas de stock",
-          "subtitleConfigured": "Recibe notificaciones cuando cambie el stock de los productos",
-          "subtitleMissing": "Configura primero un token de bot de Telegram"
+          "description": "Recibe un mensaje de Telegram cuando cambie el estado de stock de un producto que sigues"
+        },
+        "reason": {
+          "notConfigured": "Agrega un token de bot de Telegram para activar las alertas",
+          "tokenOnly": "Termina de vincular tu chat de Telegram para activar las alertas"
         }
       },
       "startBotModal": {
@@ -311,8 +314,37 @@
       "loading": "Cargando ajustes...",
       "histWindowOption": "{{days}} días",
       "aria": {
-        "showTelegramBotToken": "Mostrar token del bot de Telegram",
-        "hideTelegramBotToken": "Ocultar token del bot de Telegram"
+        "showSecret": "Mostrar {{label}}",
+        "hideSecret": "Ocultar {{label}}"
+      },
+      "badges": {
+        "configured": "Configurado"
+      },
+      "nav": {
+        "ariaLabel": "Ir a una sección"
+      },
+      "saveBar": {
+        "unsavedChanges": "Tienes cambios sin guardar"
+      },
+      "telegram": {
+        "steps": {
+          "token": "1. Token del bot",
+          "chat": "2. Vincular chat",
+          "test": "3. Enviar mensaje de prueba"
+        },
+        "status": {
+          "notConfigured": "No configurado",
+          "tokenOnly": "Esperando el chat",
+          "connected": "Conectado"
+        },
+        "chatIdLinkedLabel": "ID de chat vinculado",
+        "chatIdDisabledReason": "Guarda primero el token del bot para continuar",
+        "testDisabledReason": "Termina de vincular tu chat primero"
+      },
+      "leaveConfirm": {
+        "title": "¿Descartar los cambios sin guardar?",
+        "body": "Tienes cambios sin guardar que se perderán si sales de esta página.",
+        "confirm": "Salir sin guardar"
       }
     },
     "notFound": {
