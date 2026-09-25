@@ -50,6 +50,7 @@ import { useProductsStore } from '@/stores/productsStore';
 import { useCategoriesStore } from '@/stores/categoriesStore';
 import { CURRENCY_CODES, getCurrencySymbol } from '@/lib/web_utils';
 import { DEFAULT_CATEGORY_COLOR } from '@/lib/categoryColors';
+import { PRIORITY_ICONS, PRIORITY_FONT_WEIGHTS } from '@/lib/priorityVisuals';
 
 /** Sentinel value for the category select's "New category" option. */
 const NEW_CATEGORY_VALUE = '__new_category__';
@@ -79,9 +80,10 @@ function isValidProductUrl(value) {
  *   once an extraction has been attempted (or the user tries to submit
  *   without one).
  * - `mode="edit"`: no extraction. If `product` already carries every field
- *   the form needs (e.g. a full detail record), it is used directly;
- *   otherwise the full product is loaded on open (`productsStore.fetchDetail`)
- *   and a skeleton is shown meanwhile.
+ *   the form needs (e.g. a full detail record) or one is already cached in
+ *   `productsStore`'s `details[id]`, it is used directly; otherwise the
+ *   full product is loaded on open (`productsStore.fetchDetail`) and a
+ *   skeleton is shown meanwhile.
  *
  * Owns its own submission: it calls the products store, shows the success
  * and error toasts, and closes itself. This keeps wiring it from a page
@@ -151,12 +153,29 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
   const hasFullProductData =
     mode === 'edit' && product && typeof product.description === 'string';
 
+  // An already-successful `details[id]` cache entry is treated the same as
+  // `hasFullProductData`: this dialog only edits metadata fields (name,
+  // url, description, category, priority, currency), none of which the
+  // price-tracking cron job ever touches, so a cached record can't be
+  // stale in a way that matters here. Skipping the refetch when one is
+  // already cached (rather than always refetching) avoids a form ->
+  // skeleton -> form flash, and the bug that came with it: `fetchDetail`
+  // blanks `details[id]` to `{status: 'loading', data: null}` while
+  // in flight, and the render-time sync below is keyed only by product id
+  // (`edit:<id>`), so a second, silent resync once the fresh data arrived
+  // never happened - the form kept showing the stale values it had synced
+  // from before the refetch even started.
+  const hasCachedDetail =
+    mode === 'edit' && !hasFullProductData && detailEntry?.status === 'success';
+
   // Load the full product when editing from a lighter record (e.g. the
-  // dashboard summary, which has no `description`).
+  // dashboard summary, which has no `description`) and nothing usable is
+  // already cached for it.
   useEffect(() => {
-    if (!open || mode !== 'edit' || !product || hasFullProductData) return;
+    if (!open || mode !== 'edit' || !product) return;
+    if (hasFullProductData || hasCachedDetail) return;
     fetchDetail(product.id);
-  }, [open, mode, product, hasFullProductData, fetchDetail]);
+  }, [open, mode, product, hasFullProductData, hasCachedDetail, fetchDetail]);
 
   const sourceProduct = hasFullProductData
     ? product
@@ -164,6 +183,7 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
   const isLoadingSource =
     mode === 'edit' &&
     !hasFullProductData &&
+    !hasCachedDetail &&
     (!detailEntry ||
       detailEntry.status === 'loading' ||
       detailEntry.status === 'idle');
@@ -182,6 +202,19 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
         ? `edit:${sourceProduct.id}`
         : null;
   const [syncedKey, setSyncedKey] = useState(null);
+
+  // Whatever extraction was in flight belonged to the form that is about
+  // to be reset for the new `syncKey` below (a close, a reopen, or a
+  // switch to a different product): abort it so its result can never land
+  // in the form that replaces it. A ref must not be read/written during
+  // render, so this is a plain effect kept in lockstep with the
+  // render-time sync via the same `syncKey` dependency, rather than being
+  // inlined into the `if` block below.
+  useEffect(() => {
+    extractionAbortRef.current?.abort();
+    extractionAbortRef.current = null;
+  }, [syncKey]);
+
   if (syncKey && syncKey !== syncedKey) {
     setSyncedKey(syncKey);
     setErrors({});
@@ -214,12 +247,27 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
     }
   }
 
+  // Same icon + font-weight visuals as `PriorityBadge`, reused (not
+  // duplicated) via its exported maps, per the brief's "SegmentedControl
+  // using PriorityBadge visuals".
   const priorityOptions = useMemo(
-    () => [
-      { label: t('common.priority.high'), value: 'High' },
-      { label: t('common.priority.medium'), value: 'Medium' },
-      { label: t('common.priority.low'), value: 'Low' }
-    ],
+    () =>
+      [
+        { key: 'high', value: 'High', text: t('common.priority.high') },
+        { key: 'medium', value: 'Medium', text: t('common.priority.medium') },
+        { key: 'low', value: 'Low', text: t('common.priority.low') }
+      ].map(({ key, value, text }) => {
+        const Icon = PRIORITY_ICONS[key];
+        return {
+          value,
+          label: (
+            <HStack gap={1}>
+              <Icon size={14} aria-hidden="true" />
+              <Text fontWeight={PRIORITY_FONT_WEIGHTS[key]}>{text}</Text>
+            </HStack>
+          )
+        };
+      }),
     [t]
   );
 
@@ -255,6 +303,12 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
 
   const runExtraction = useCallback(
     async (trimmedUrl) => {
+      // Abort any extraction already in flight before starting a new one
+      // (manual "Generate"/"Retry" click racing the debounce, or two
+      // debounce-triggered runs in a row), so only the latest run's result
+      // is ever applied.
+      extractionAbortRef.current?.abort();
+
       setHasAttemptedExtraction(true);
       setIsExtracting(true);
       setExtractionError(null);
@@ -377,10 +431,10 @@ export const ProductFormDialog = ({ open, onClose, mode, product }) => {
             : undefined
         });
       } else {
+        // `updateProduct` (the store's `update`) also refreshes this
+        // product's cached detail record itself, silently, so the product
+        // page (Task 12) does not keep showing stale data after this edit.
         const updated = await updateProduct(product.id, payload);
-        // The product page (Task 12) may already have this product cached;
-        // refresh it so it does not keep showing stale data after this edit.
-        await fetchDetail(product.id);
         toaster.create({
           title: t('toasts.products.updateSuccess.title'),
           description: t('toasts.products.updateSuccess.description', {

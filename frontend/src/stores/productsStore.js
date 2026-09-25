@@ -59,7 +59,11 @@ export const useProductsStore = create((set, get) => ({
   },
 
   /**
-   * Update a product, then refetch the dashboard summary.
+   * Update a product, then refetch the dashboard summary and silently
+   * refresh its cached detail record (see `_refreshDetailSilently`), so
+   * any page or dialog reading `details[id]` (e.g. the product page,
+   * Task 12) does not keep showing stale data after an edit made
+   * elsewhere (e.g. from the dashboard).
    * @param {number|string} id
    * @param {object} data
    * @returns {Promise<object>} The updated product.
@@ -67,6 +71,7 @@ export const useProductsStore = create((set, get) => ({
   async update(id, data) {
     const updated = await productsApi.update(id, data);
     await get().fetchSummary();
+    await get()._refreshDetailSilently(id);
     return updated;
   },
 
@@ -107,6 +112,33 @@ export const useProductsStore = create((set, get) => ({
           [id]: { status: 'error', error: toStoreError(err), data: null }
         }
       }));
+    }
+  },
+
+  /**
+   * Refresh a product's cached detail record after a successful `update`,
+   * without disturbing what is currently shown for it. Unlike
+   * `fetchDetail`, this never flips `details[id]` to `loading`/`data: null`
+   * while the request is in flight (so a mounted product page or edit
+   * dialog reading it never flashes to a skeleton mid-submit) and never
+   * marks it `error` on failure — the update itself already succeeded, so
+   * a failed background refresh is logged and otherwise left silent
+   * (the existing cached record, if any, is left exactly as it was)
+   * rather than contradicting the update's own success with an error
+   * state.
+   * @param {number|string} id
+   */
+  async _refreshDetailSilently(id) {
+    try {
+      const data = await productsApi.get(id);
+      set((state) => ({
+        details: {
+          ...state.details,
+          [id]: { status: 'success', error: null, data }
+        }
+      }));
+    } catch (err) {
+      console.error(`Error refreshing product ${id} detail after update:`, err);
     }
   }
 }));

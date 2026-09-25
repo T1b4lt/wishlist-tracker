@@ -1,6 +1,15 @@
-import { screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import { I18nextProvider } from 'react-i18next';
+import { Provider } from '@/components/ui/provider';
+import i18n from '@/i18n/index.js';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import {
@@ -13,6 +22,14 @@ import {
   initialCategoriesState
 } from '@/stores/categoriesStore';
 import { ProductFormDialog } from './ProductFormDialog';
+
+/** Same wrapping as `renderWithProviders`, for `rerender` calls (which
+ * replace the whole tree `render` was given, so it has to be reapplied). */
+const wrap = (ui) => (
+  <Provider>
+    <I18nextProvider i18n={i18n}>{ui}</I18nextProvider>
+  </Provider>
+);
 
 vi.mock('@/lib/api', () => ({
   products: {
@@ -286,5 +303,171 @@ describe('ProductFormDialog', () => {
       'A warm desk lamp'
     );
     expect(getUnexpectedErrors()).toEqual([]);
+  });
+
+  it('renders the priority control with PriorityBadge icon and weight visuals', () => {
+    renderWithProviders(
+      <ProductFormDialog open mode="create" onClose={vi.fn()} product={null} />
+    );
+
+    const highRadio = screen.getByRole('radio', { name: 'High' });
+    const highLabel = document.getElementById(
+      highRadio.getAttribute('aria-labelledby')
+    );
+    expect(highLabel.querySelector('svg')).toBeTruthy();
+    expect(
+      getComputedStyle(within(highLabel).getByText('High')).fontWeight
+    ).toBe('var(--chakra-font-weights-bold)');
+
+    const lowRadio = screen.getByRole('radio', { name: 'Low' });
+    const lowLabel = document.getElementById(
+      lowRadio.getAttribute('aria-labelledby')
+    );
+    expect(lowLabel.querySelector('svg')).toBeTruthy();
+    expect(getComputedStyle(within(lowLabel).getByText('Low')).fontWeight).toBe(
+      'var(--chakra-font-weights-normal)'
+    );
+  });
+
+  it('aborts an in-flight extraction on close, so a stale result cannot land in a reopened form', async () => {
+    vi.useFakeTimers();
+    try {
+      const getUnexpectedErrors = spyOnConsoleError();
+
+      let resolveExtract;
+      productsApi.extractInfo.mockReturnValue(
+        new Promise((resolve) => {
+          resolveExtract = resolve;
+        })
+      );
+
+      const { rerender } = renderWithProviders(
+        wrap(
+          <ProductFormDialog
+            open
+            mode="create"
+            onClose={vi.fn()}
+            product={null}
+          />
+        )
+      );
+
+      // `fireEvent` (a single synchronous native event), not `userEvent`
+      // (which schedules its own real-time-based delays internally and
+      // hangs forever once `vi.useFakeTimers()` is active).
+      fireEvent.change(screen.getByRole('textbox', { name: 'Product URL' }), {
+        target: { value: 'https://example.com/a' }
+      });
+      // Let the 500ms debounce fire the (still-pending) extraction.
+      await act(() => vi.advanceTimersByTimeAsync(500));
+      expect(productsApi.extractInfo).toHaveBeenCalledTimes(1);
+
+      // Close the dialog while that extraction is still in flight.
+      act(() => {
+        rerender(
+          wrap(
+            <ProductFormDialog
+              open={false}
+              mode="create"
+              onClose={vi.fn()}
+              product={null}
+            />
+          )
+        );
+      });
+
+      // The stale extraction now resolves - it must be ignored.
+      resolveExtract({
+        name: 'Stale Name',
+        description: 'Stale description',
+        category: '',
+        currency: ''
+      });
+      await act(() => vi.advanceTimersByTimeAsync(0));
+
+      // Reopen fresh.
+      act(() => {
+        rerender(
+          wrap(
+            <ProductFormDialog
+              open
+              mode="create"
+              onClose={vi.fn()}
+              product={null}
+            />
+          )
+        );
+      });
+
+      // Give the stale promise's `.then` one more chance to run (it
+      // shouldn't do anything, but if it did, this is when it would).
+      await act(() => vi.advanceTimersByTimeAsync(0));
+
+      // The reopened form is a clean slate (create mode always resets on
+      // reopen): the stale extraction's values are nowhere to be found,
+      // and the fields it would have populated are not even revealed yet
+      // (nothing was attempted in this fresh instance).
+      expect(screen.queryByDisplayValue('Stale Name')).not.toBeInTheDocument();
+      expect(
+        screen.queryByDisplayValue('Stale description')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Item name' })
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Product URL' })).toHaveValue(
+        ''
+      );
+      expect(getUnexpectedErrors()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reuses an already-cached, successful detail record without refetching or flashing a skeleton', () => {
+    const cachedLamp = {
+      id: 11,
+      name: 'Desk Lamp',
+      url: 'https://example.com/lamp',
+      description: 'A warm desk lamp',
+      category_id: 3,
+      category_name: 'Lighting',
+      category_color: '#EAB308',
+      priority: 'Low',
+      currency: 'USD'
+    };
+    useProductsStore.setState({
+      details: { 11: { status: 'success', error: null, data: cachedLamp } }
+    });
+
+    // A lighter prop (no `description`), same shape the dashboard summary
+    // passes - only `details[11]` (pre-seeded above) has the full record.
+    const summaryProduct = {
+      id: 11,
+      name: 'Desk Lamp',
+      url: 'https://example.com/lamp',
+      category_id: 3,
+      category_name: 'Lighting',
+      category_color: '#EAB308',
+      priority: 'Low',
+      currency: 'USD'
+    };
+
+    renderWithProviders(
+      <ProductFormDialog
+        open
+        mode="edit"
+        onClose={vi.fn()}
+        product={summaryProduct}
+      />
+    );
+
+    // Available immediately - no skeleton phase - and never refetched.
+    expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue(
+      'Desk Lamp'
+    );
+    expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue(
+      'A warm desk lamp'
+    );
+    expect(productsApi.get).not.toHaveBeenCalled();
   });
 });

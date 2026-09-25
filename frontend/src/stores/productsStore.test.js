@@ -113,11 +113,12 @@ describe('useProductsStore', () => {
   });
 
   describe('update', () => {
-    it('updates the product and refetches the summary', async () => {
+    it('updates the product, refetches the summary, and refreshes its cached detail', async () => {
       productsApi.update.mockResolvedValue({ id: 5, name: 'Renamed' });
       productsApi.dashboardSummary.mockResolvedValue([
         { id: 5, name: 'Renamed' }
       ]);
+      productsApi.get.mockResolvedValue({ id: 5, name: 'Renamed (full)' });
 
       const updated = await useProductsStore
         .getState()
@@ -126,6 +127,79 @@ describe('useProductsStore', () => {
       expect(productsApi.update).toHaveBeenCalledWith(5, { name: 'Renamed' });
       expect(productsApi.dashboardSummary).toHaveBeenCalledTimes(1);
       expect(updated).toEqual({ id: 5, name: 'Renamed' });
+      // The detail cache is refreshed too (even though nothing had it
+      // cached before this update), so a product page that opens right
+      // after already has fresh data instead of needing its own fetch.
+      expect(productsApi.get).toHaveBeenCalledWith(5);
+      expect(useProductsStore.getState().details[5]).toEqual({
+        status: 'success',
+        error: null,
+        data: { id: 5, name: 'Renamed (full)' }
+      });
+    });
+
+    it('keeps the previous detail entry visible while silently refreshing it, never flipping it to loading', async () => {
+      useProductsStore.setState({
+        details: {
+          5: { status: 'success', error: null, data: { id: 5, name: 'Old' } }
+        }
+      });
+      productsApi.update.mockResolvedValue({ id: 5, name: 'New' });
+      productsApi.dashboardSummary.mockResolvedValue([]);
+      let resolveGet;
+      productsApi.get.mockReturnValue(
+        new Promise((resolve) => {
+          resolveGet = resolve;
+        })
+      );
+
+      const updatePromise = useProductsStore
+        .getState()
+        .update(5, { name: 'New' });
+
+      // Flush every pending microtask (the `update`/`dashboardSummary`
+      // resolutions leading up to the `get(5)` call), without depending on
+      // exactly how many `await`s sit in between.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(productsApi.get).toHaveBeenCalledWith(5);
+      expect(useProductsStore.getState().details[5]).toEqual({
+        status: 'success',
+        error: null,
+        data: { id: 5, name: 'Old' }
+      });
+
+      resolveGet({ id: 5, name: 'New', description: 'fresh' });
+      await updatePromise;
+
+      expect(useProductsStore.getState().details[5]).toEqual({
+        status: 'success',
+        error: null,
+        data: { id: 5, name: 'New', description: 'fresh' }
+      });
+    });
+
+    it('leaves a cached detail entry untouched (not error) when the silent refresh fails', async () => {
+      useProductsStore.setState({
+        details: {
+          5: { status: 'success', error: null, data: { id: 5, name: 'Old' } }
+        }
+      });
+      productsApi.update.mockResolvedValue({ id: 5, name: 'New' });
+      productsApi.dashboardSummary.mockResolvedValue([]);
+      productsApi.get.mockRejectedValue(new Error('network down'));
+
+      const updated = await useProductsStore
+        .getState()
+        .update(5, { name: 'New' });
+
+      expect(updated).toEqual({ id: 5, name: 'New' });
+      expect(useProductsStore.getState().details[5]).toEqual({
+        status: 'success',
+        error: null,
+        data: { id: 5, name: 'Old' }
+      });
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
   });
 

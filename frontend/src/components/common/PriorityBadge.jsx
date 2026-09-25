@@ -1,21 +1,7 @@
 import { Badge } from '@chakra-ui/react';
-import { LuSignalHigh, LuSignalMedium, LuSignalLow } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import { getPriorityLabel } from '@/lib/web_utils';
-
-/** Icon per priority: a signal-strength glyph, not a traffic-light color. */
-const PRIORITY_ICONS = {
-  high: LuSignalHigh,
-  medium: LuSignalMedium,
-  low: LuSignalLow
-};
-
-/** Font weight per priority: the only other visual "weight" cue besides the icon. */
-const PRIORITY_FONT_WEIGHTS = {
-  high: 'bold',
-  medium: 'medium',
-  low: 'normal'
-};
+import { PRIORITY_ICONS, PRIORITY_FONT_WEIGHTS } from '@/lib/priorityVisuals';
 
 /**
  * A neutral pill badge for a product's priority: an icon whose shape carries
@@ -36,7 +22,7 @@ export const PriorityBadge = ({ priority, ...rest }) => {
   if (!priority) return null;
 
   const normalized = priority.toLowerCase();
-  const Icon = PRIORITY_ICONS[normalized] ?? LuSignalMedium;
+  const Icon = PRIORITY_ICONS[normalized] ?? PRIORITY_ICONS.medium;
   const fontWeight = PRIORITY_FONT_WEIGHTS[normalized] ?? 'medium';
 
   return (
