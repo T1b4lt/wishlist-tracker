@@ -32,6 +32,17 @@ describe('PageHeader', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
+  it('clamps the title to the given number of lines when titleLineClamp is set', () => {
+    renderWithProviders(
+      <PageHeader title="A very long product name" titleLineClamp={2} />
+    );
+
+    const heading = screen.getByRole('heading', {
+      name: 'A very long product name'
+    });
+    expect(heading).toHaveStyle({ WebkitLineClamp: '2' });
+  });
+
   it('renders a back link when provided', () => {
     renderWithProviders(
       <PageHeader

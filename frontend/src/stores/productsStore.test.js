@@ -249,6 +249,37 @@ describe('useProductsStore', () => {
       expect(state.details[7]).toBeUndefined();
     });
 
+    it('keeps the previous data while re-fetching an already-cached id, only clearing it on success', async () => {
+      useProductsStore.setState({
+        details: {
+          9: { status: 'success', error: null, data: { id: 9, name: 'Old' } }
+        }
+      });
+      let resolveRequest;
+      productsApi.get.mockReturnValue(
+        new Promise((resolve) => {
+          resolveRequest = resolve;
+        })
+      );
+
+      const promise = useProductsStore.getState().fetchDetail(9);
+
+      expect(useProductsStore.getState().details[9]).toEqual({
+        status: 'loading',
+        error: null,
+        data: { id: 9, name: 'Old' }
+      });
+
+      resolveRequest({ id: 9, name: 'Fresh' });
+      await promise;
+
+      expect(useProductsStore.getState().details[9]).toEqual({
+        status: 'success',
+        error: null,
+        data: { id: 9, name: 'Fresh' }
+      });
+    });
+
     it('stores the normalized error for that id on failure', async () => {
       productsApi.get.mockRejectedValue(new ApiErrorLike('not found', 404));
 

@@ -21,9 +21,7 @@
       "retry": "Retry",
       "addCategory": "Add Category",
       "addNewProduct": "Add New Product",
-      "viewOnline": "View Product Online",
-      "backToDashboard": "Back to Dashboard",
-      "backToWishlist": "Back to Wishlist"
+      "backToDashboard": "Back to Dashboard"
     },
     "status": {
       "inStock": "In Stock",
@@ -195,28 +193,46 @@
       }
     },
     "product": {
-      "error": {
-        "title": "Error"
+      "notFound": {
+        "title": "Product not found",
+        "message": "This product may have been deleted, or the link is incorrect."
       },
-      "errors": {
-        "notFound": "Product not found",
-        "fetchFailed": "Failed to fetch product details"
+      "loadError": {
+        "title": "We couldn't load this product",
+        "message": "Something went wrong while fetching this product. Please try again."
       },
-      "description": "Description",
-      "productLink": "Product Link",
-      "price": {
-        "current": "Current Price",
-        "min": "Min price in {{days}} days",
-        "minReached": "Reached on {{date}}",
-        "average": "Average Price"
+      "metadata": {
+        "lastChecked": "Last checked {{time}}",
+        "lastCheckedUnknown": "Not checked yet"
       },
-      "priceHistory": {
-        "title": "Price History",
-        "empty": "No price history available yet",
-        "legendPrice": "Price",
-        "tooltipPrice": "Price",
-        "avgReference": "Avg: {{value}} {{currency}}",
-        "minReference": "Min Price"
+      "actions": {
+        "openStorePage": "Open store page",
+        "moreActions": "More actions for {{name}}"
+      },
+      "stats": {
+        "currentPrice": "Current price",
+        "lowestInRange": "Lowest in range",
+        "lowestReachedOn": "Reached {{date}}",
+        "averageInRange": "Average in range",
+        "currentVsAverage": "Current vs average"
+      },
+      "chart": {
+        "title": "Price history",
+        "rangeOption": "{{days}} days",
+        "rangeAll": "All",
+        "average": "Average",
+        "lowest": "Lowest",
+        "tooltip": {
+          "price": "Price",
+          "change": "Change",
+          "stock": "Stock"
+        },
+        "empty": "Tracking started {{date}}. The chart fills in as prices are checked."
+      },
+      "description": {
+        "title": "Description",
+        "showMore": "Show more",
+        "showLess": "Show less"
       }
     },
     "settings": {

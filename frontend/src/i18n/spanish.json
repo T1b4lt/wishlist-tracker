@@ -21,9 +21,7 @@
       "retry": "Reintentar",
       "addCategory": "Añadir categoría",
       "addNewProduct": "Añadir nuevo producto",
-      "viewOnline": "Ver producto online",
-      "backToDashboard": "Volver al panel",
-      "backToWishlist": "Volver a la lista de deseos"
+      "backToDashboard": "Volver al panel"
     },
     "status": {
       "inStock": "En stock",
@@ -195,28 +193,46 @@
       }
     },
     "product": {
-      "error": {
-        "title": "Error"
+      "notFound": {
+        "title": "Producto no encontrado",
+        "message": "Es posible que este producto se haya eliminado, o que el enlace sea incorrecto."
       },
-      "errors": {
-        "notFound": "Producto no encontrado",
-        "fetchFailed": "No se pudieron obtener los detalles del producto"
+      "loadError": {
+        "title": "No pudimos cargar este producto",
+        "message": "Ocurrió un problema al obtener este producto. Inténtalo de nuevo."
       },
-      "description": "Descripción",
-      "productLink": "Enlace del producto",
-      "price": {
-        "current": "Precio actual",
-        "min": "Precio mínimo en {{days}} días",
-        "minReached": "Se alcanzó el {{date}}",
-        "average": "Precio promedio"
+      "metadata": {
+        "lastChecked": "Última comprobación {{time}}",
+        "lastCheckedUnknown": "Todavía no se ha comprobado"
       },
-      "priceHistory": {
+      "actions": {
+        "openStorePage": "Abrir página de la tienda",
+        "moreActions": "Más acciones para {{name}}"
+      },
+      "stats": {
+        "currentPrice": "Precio actual",
+        "lowestInRange": "Precio mínimo en el rango",
+        "lowestReachedOn": "Alcanzado el {{date}}",
+        "averageInRange": "Precio promedio en el rango",
+        "currentVsAverage": "Actual frente al promedio"
+      },
+      "chart": {
         "title": "Historial de precios",
-        "empty": "Todavía no hay historial de precios",
-        "legendPrice": "Precio",
-        "tooltipPrice": "Precio",
-        "avgReference": "Promedio: {{value}} {{currency}}",
-        "minReference": "Precio mínimo"
+        "rangeOption": "{{days}} días",
+        "rangeAll": "Todo",
+        "average": "Promedio",
+        "lowest": "Mínimo",
+        "tooltip": {
+          "price": "Precio",
+          "change": "Cambio",
+          "stock": "Existencias"
+        },
+        "empty": "El seguimiento comenzó el {{date}}. El gráfico se completa a medida que se comprueban los precios."
+      },
+      "description": {
+        "title": "Descripción",
+        "showMore": "Mostrar más",
+        "showLess": "Mostrar menos"
       }
     },
     "settings": {

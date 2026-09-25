@@ -1,47 +1,50 @@
-import { useEffect, useMemo } from 'react';
-import { useParams, Link } from 'wouter';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, Link, useLocation } from 'wouter';
 import {
   Box,
-  Heading,
-  Text,
-  VStack,
-  HStack,
+  Button,
   Card,
   Flex,
-  Button,
-  Stack
+  HStack,
+  IconButton,
+  Menu,
+  Portal,
+  Skeleton,
+  Text,
+  VisuallyHidden,
+  VStack
 } from '@chakra-ui/react';
+import { useTranslation, Trans } from 'react-i18next';
+import { LuEllipsis, LuExternalLink, LuPencil, LuTrash2 } from 'react-icons/lu';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { FadeIn } from '@/components/motion';
 import {
-  LuArrowLeft,
-  LuExternalLink,
-  LuTrendingUp,
-  LuTrendingDown,
-  LuMinus
-} from 'react-icons/lu';
-import { getCurrencySymbol } from '@/lib/web_utils';
-import { formatDate, formatPrice, getLocale, getTrend } from '@/lib/format';
-import {
-  ErrorState,
-  LoadingState,
-  PriorityBadge,
   CategoryTag,
+  ConfirmDialog,
+  ErrorState,
+  PriorityBadge,
   StockStatus
 } from '@/components/common';
+import { ProductFormDialog } from '@/components/products';
 import {
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  Legend,
-  AreaChart,
-  Area
-} from 'recharts';
-import { useTranslation } from 'react-i18next';
+  PriceHistoryChart,
+  ProductDescription,
+  ProductStatsRow
+} from '@/components/product';
+import { toaster } from '@/components/ui/toaster';
+import { formatRelative, getLocale } from '@/lib/format';
+import {
+  buildChartPoints,
+  computeOutOfStockBands,
+  computeRangeStats,
+  computeYDomain,
+  filterPriceHistoryByRange,
+  getTrackingStartTimestamp,
+  hasEnoughHistory as hasEnoughHistoryPoints,
+  resolveDefaultRange
+} from '@/lib/productHistory';
 import { useConfigStore } from '@/stores/configStore';
 import { useProductsStore } from '@/stores/productsStore';
 
@@ -49,6 +52,7 @@ const ProductPage = () => {
   const params = useParams();
   const productId = params.productId;
   const { t, i18n } = useTranslation();
+  const [, navigate] = useLocation();
   const locale = useMemo(() => getLocale(i18n.language), [i18n.language]);
 
   const config = useConfigStore((state) => state.config);
@@ -57,16 +61,35 @@ const ProductPage = () => {
 
   const detail = useProductsStore((state) => state.details[productId]);
   const fetchDetail = useProductsStore((state) => state.fetchDetail);
+  const removeProduct = useProductsStore((state) => state.remove);
 
   const status = detail?.status ?? 'idle';
   const product = detail?.data ?? null;
-  const isLoading = status === 'loading' || status === 'idle';
+  // `fetchDetail` keeps a previously-loaded record while re-fetching (see
+  // `productsStore`), so the skeleton is shown only when there is truly
+  // nothing to render yet, not on every background refresh.
+  const showSkeleton = !product && (status === 'loading' || status === 'idle');
+  const isNotFound = status === 'error' && detail?.error?.status === 404;
+  const isOtherError = status === 'error' && !isNotFound && !product;
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // The range selector defaults to the configured `hist_window_size`
+  // (rounded to the nearest offered option) until the user picks one
+  // themselves; that choice is reset whenever `productId` changes (a fresh
+  // page for a different product starts from the default again).
+  const [range, setRange] = useState(() => resolveDefaultRange(histWindowSize));
+  const userChangedRangeRef = useRef(false);
 
   useDocumentTitle(
     product?.name ??
-      (isLoading
+      (showSkeleton
         ? t('common.messages.loading')
-        : t('pages.product.error.title'))
+        : isNotFound
+          ? t('pages.product.notFound.title')
+          : t('pages.product.loadError.title'))
   );
 
   useEffect(() => {
@@ -77,106 +100,105 @@ const ProductPage = () => {
     fetchDetail(productId);
   }, [fetchDetail, productId]);
 
-  const calculatePriceChange = () => {
-    if (!product || !product.current_price || !product.min_price) return null;
-    const change =
-      ((product.current_price - product.min_price) / product.min_price) * 100;
-    return change;
-  };
+  useEffect(() => {
+    userChangedRangeRef.current = false;
+  }, [productId]);
 
-  // Prepare chart data from the last hist_window_size records
-  const getChartData = () => {
-    if (
-      !product ||
-      !product.price_history ||
-      product.price_history.length === 0
-    ) {
-      return [];
+  useEffect(() => {
+    if (!userChangedRangeRef.current) {
+      setRange(resolveDefaultRange(histWindowSize));
     }
+  }, [histWindowSize, productId]);
 
-    // Get the last hist_window_size records
-    const recentHistory = product.price_history.slice(-histWindowSize);
-
-    return recentHistory.map((record) => ({
-      date: formatDate(record.timestamp, locale),
-      timestamp: record.timestamp,
-      price: record.price
-    }));
+  const handleRangeChange = (value) => {
+    userChangedRangeRef.current = true;
+    setRange(value);
   };
 
-  // Calculate average price from chart data
-  const getAveragePrice = () => {
-    const chartData = getChartData();
-    if (chartData.length === 0) return null;
+  const rawHistory = useMemo(() => product?.price_history ?? [], [product]);
+  const filteredHistory = useMemo(
+    () => filterPriceHistoryByRange(rawHistory, range),
+    [rawHistory, range]
+  );
+  const chartPoints = useMemo(
+    () => buildChartPoints(filteredHistory),
+    [filteredHistory]
+  );
+  // Gated on the *filtered* points (what the chart would actually plot),
+  // not the product's total lifetime history: a narrow range with too few
+  // points in it gets the same "not enough data" message as a genuinely new
+  // product, instead of an empty/broken-looking chart.
+  const hasEnoughHistory = hasEnoughHistoryPoints(chartPoints);
+  const yDomain = useMemo(
+    () => computeYDomain(filteredHistory),
+    [filteredHistory]
+  );
+  const outOfStockBands = useMemo(
+    () => computeOutOfStockBands(filteredHistory),
+    [filteredHistory]
+  );
+  const { lowest, average, currentVsAverage } = useMemo(
+    () => computeRangeStats(filteredHistory, product?.current_price),
+    [filteredHistory, product]
+  );
+  const trackingStartDate = useMemo(
+    () => getTrackingStartTimestamp(rawHistory),
+    [rawHistory]
+  );
 
-    const sum = chartData.reduce((acc, record) => acc + record.price, 0);
-    return sum / chartData.length;
-  };
-
-  // Find the date when minimum price was reached
-  const getMinPriceDate = () => {
-    if (
-      !product ||
-      !product.price_history ||
-      product.price_history.length === 0
-    ) {
-      return null;
+  const handleDeleteConfirm = async () => {
+    if (!product) return;
+    setIsDeleting(true);
+    try {
+      await removeProduct(product.id);
+      toaster.create({
+        title: t('toasts.products.deleteSuccess.title'),
+        description: t('toasts.products.deleteSuccess.description', {
+          name: product.name
+        }),
+        type: 'success'
+      });
+      setDeleteDialogOpen(false);
+      navigate('/');
+    } catch {
+      toaster.create({
+        title: t('toasts.products.deleteError.title'),
+        description: t('toasts.products.deleteError.description'),
+        type: 'error'
+      });
+    } finally {
+      setIsDeleting(false);
     }
-
-    const recentHistory = product.price_history.slice(-histWindowSize);
-    const minPriceRecord = recentHistory.reduce(
-      (min, record) => (record.price < min.price ? record : min),
-      recentHistory[0]
-    );
-
-    return formatDate(minPriceRecord.timestamp, locale);
   };
 
-  const getMinPriceDateLong = () => {
-    if (
-      !product ||
-      !product.price_history ||
-      product.price_history.length === 0
-    ) {
-      return null;
-    }
-
-    const recentHistory = product.price_history.slice(-histWindowSize);
-    const minPriceRecord = recentHistory.reduce(
-      (min, record) => (record.price < min.price ? record : min),
-      recentHistory[0]
-    );
-
-    return formatDate(minPriceRecord.timestamp, locale, 'long');
-  };
-
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <PageContainer>
-        <LoadingState minH="400px" />
+        <Box role="status" aria-live="polite">
+          <VisuallyHidden>{t('common.messages.loading')}</VisuallyHidden>
+          <VStack align="stretch" gap={6} aria-hidden="true">
+            <Skeleton height="8" width="60%" borderRadius="md" />
+            <Skeleton height="6" width="40%" borderRadius="md" />
+            <Skeleton height="20" borderRadius="lg" />
+            <Skeleton height="360px" borderRadius="lg" />
+          </VStack>
+        </Box>
       </PageContainer>
     );
   }
 
-  if (status === 'error' || !product) {
-    const notFound = detail?.error?.status === 404;
+  if (isNotFound) {
     return (
       <PageContainer>
-        <Card.Root>
+        <Card.Root shadow="sm">
           <Card.Body>
             <ErrorState
-              title={t('pages.product.error.title')}
-              message={
-                notFound
-                  ? t('pages.product.errors.notFound')
-                  : t('pages.product.errors.fetchFailed')
-              }
-              onRetry={() => fetchDetail(productId)}
+              title={t('pages.product.notFound.title')}
+              message={t('pages.product.notFound.message')}
             />
             <Flex justify="center" mt={2}>
               <Link href="/">
                 <Button variant="outline">
-                  <LuArrowLeft />
                   {t('common.actions.backToDashboard')}
                 </Button>
               </Link>
@@ -187,301 +209,153 @@ const ProductPage = () => {
     );
   }
 
-  const priceChange = calculatePriceChange();
-
-  const calculateTrend = () => {
-    const direction = getTrend(priceChange);
-    if (direction === 'up') return { icon: LuTrendingUp, color: 'price.up' };
-    if (direction === 'down')
-      return { icon: LuTrendingDown, color: 'price.down' };
-    return { icon: LuMinus, color: 'price.flat' };
-  };
-
-  const TrendIcon = calculateTrend().icon;
-  const trendColor = calculateTrend().color;
-
-  const chartData = getChartData();
-  const averagePrice = getAveragePrice();
-  const minPriceDate = getMinPriceDate();
+  if (isOtherError || !product) {
+    return (
+      <PageContainer>
+        <Card.Root shadow="sm">
+          <Card.Body>
+            <ErrorState
+              title={t('pages.product.loadError.title')}
+              message={t('pages.product.loadError.message')}
+              onRetry={() => fetchDetail(productId)}
+            />
+            <Flex justify="center" mt={2}>
+              <Link href="/">
+                <Button variant="outline">
+                  {t('common.actions.backToDashboard')}
+                </Button>
+              </Link>
+            </Flex>
+          </Card.Body>
+        </Card.Root>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
       <PageHeader
         title={product.name}
-        backLink={{ href: '/', label: t('common.actions.backToWishlist') }}
+        titleLineClamp={2}
+        backLink={{ href: '/', label: t('common.actions.backToDashboard') }}
         actions={
-          <a href={product.url} target="_blank" rel="noopener noreferrer">
-            <Button variant="solid" size="lg">
-              <LuExternalLink />
-              {t('common.actions.viewOnline')}
+          <HStack gap={2} wrap="wrap" justify="flex-end">
+            <a href={product.url} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline">
+                <LuExternalLink size={16} aria-hidden="true" />
+                {t('pages.product.actions.openStorePage')}
+              </Button>
+            </a>
+            <Button onClick={() => setIsFormOpen(true)}>
+              <LuPencil size={16} aria-hidden="true" />
+              {t('common.actions.edit')}
             </Button>
-          </a>
+            <Menu.Root positioning={{ placement: 'bottom-end' }}>
+              <Menu.Trigger asChild>
+                <IconButton
+                  variant="ghost"
+                  aria-label={t('pages.product.actions.moreActions', {
+                    name: product.name
+                  })}
+                >
+                  <LuEllipsis />
+                </IconButton>
+              </Menu.Trigger>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.Item
+                      value="delete"
+                      onSelect={() => setDeleteDialogOpen(true)}
+                    >
+                      <HStack gap={2}>
+                        <LuTrash2 size={16} aria-hidden="true" />
+                        {t('common.actions.delete')}
+                      </HStack>
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>
+          </HStack>
         }
       />
-      <VStack gap="6" align="stretch">
-        <HStack gap="3" wrap="wrap">
-          <CategoryTag
-            name={product.category_name}
-            color={product.category_color}
-          />
-          <PriorityBadge priority={product.priority} />
-          <StockStatus inStock={product.is_in_stock} />
-        </HStack>
 
-        {/* Stats Section */}
-        <Card.Root variant="elevated">
-          <Card.Body>
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              gap={{ base: 8, md: 12 }}
-              divideX={{ base: '0', md: '1px' }}
-              divideY={{ base: '1px', md: '0' }}
-              borderColor="border"
-            >
-              <Box flex="1" pl={{ base: 0, md: 0 }} pt={{ base: 0, md: 0 }}>
-                <Text
-                  fontSize="sm"
-                  fontWeight="semibold"
-                  color="fg.muted"
-                  mb="2"
-                  textTransform="uppercase"
-                  letterSpacing="wider"
-                >
-                  {t('pages.product.price.current')}
-                </Text>
-                <Heading size="3xl" color="fg">
-                  {formatPrice(product.current_price, product.currency, locale)}
-                </Heading>
-              </Box>
-
-              <Box flex="1" pl={{ base: 0, md: 8 }} pt={{ base: 6, md: 0 }}>
-                <Text
-                  fontSize="sm"
-                  fontWeight="semibold"
-                  color="fg.muted"
-                  mb="2"
-                  textTransform="uppercase"
-                  letterSpacing="wider"
-                >
-                  {t('pages.product.price.min', { days: histWindowSize })}
-                </Text>
-                <Flex align="baseline" gap="3">
-                  <Heading size="xl">
-                    {formatPrice(product.min_price, product.currency, locale)}
-                  </Heading>
-                  {priceChange !== null && (
-                    <Flex
-                      align="center"
-                      gap={1}
-                      color={trendColor}
-                      fontWeight="bold"
-                      bg="bg.muted"
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                      fontSize="sm"
-                    >
-                      <TrendIcon size={14} />
-                      <Text>
-                        {new Intl.NumberFormat(locale, {
-                          style: 'percent',
-                          minimumFractionDigits: 1
-                        }).format(Math.abs(priceChange) / 100)}
-                      </Text>
-                    </Flex>
-                  )}
-                </Flex>
-                {getMinPriceDateLong() && (
-                  <Text fontSize="sm" color="fg.subtle" mt={1}>
-                    {t('pages.product.price.minReached', {
-                      date: getMinPriceDateLong()
-                    })}
-                  </Text>
-                )}
-              </Box>
-
-              <Box flex="1" pl={{ base: 0, md: 8 }} pt={{ base: 6, md: 0 }}>
-                <Text
-                  fontSize="sm"
-                  fontWeight="semibold"
-                  color="fg.muted"
-                  mb="2"
-                  textTransform="uppercase"
-                  letterSpacing="wider"
-                >
-                  {t('pages.product.price.average')}
-                </Text>
-                <Heading size="xl" color="fg.muted">
-                  {averagePrice
-                    ? formatPrice(averagePrice, product.currency, locale)
-                    : '-'}
-                </Heading>
-              </Box>
-            </Stack>
-          </Card.Body>
-        </Card.Root>
-
-        {/* Description */}
-        {product.description && (
-          <Box px={2}>
-            <Heading
-              size="sm"
-              mb="2"
-              color="fg.muted"
-              textTransform="uppercase"
-              letterSpacing="wider"
-            >
-              {t('pages.product.description')}
-            </Heading>
-            <Text color="fg" lineHeight="relaxed" fontSize="md">
-              {product.description}
+      <FadeIn>
+        <VStack align="stretch" gap={6} mb={6}>
+          <HStack gap={3} wrap="wrap">
+            <CategoryTag
+              name={product.category_name}
+              color={product.category_color}
+            />
+            <PriorityBadge priority={product.priority} />
+            <StockStatus inStock={product.is_in_stock} />
+            <Text textStyle="caption" color="fg.muted">
+              {product.last_checked_at
+                ? t('pages.product.metadata.lastChecked', {
+                    time: formatRelative(product.last_checked_at, locale)
+                  })
+                : t('pages.product.metadata.lastCheckedUnknown')}
             </Text>
-          </Box>
-        )}
+          </HStack>
 
-        {/* Price history chart */}
-        <Card.Root variant="elevated">
-          <Card.Body>
-            <Heading size="md" mb="4">
-              {t('pages.product.priceHistory.title')}
-            </Heading>
-            {chartData.length > 0 ? (
-              <Box height="300px" width="100%">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={chartData}
-                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="colorPrice"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="var(--chakra-colors-fg)"
-                          stopOpacity={0.3}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="var(--chakra-colors-fg)"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="var(--chakra-colors-border)"
-                    />
-                    <XAxis
-                      dataKey="date"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fill: 'var(--chakra-colors-fg-muted)',
-                        fontSize: 12
-                      }}
-                      dy={10}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fill: 'var(--chakra-colors-fg-muted)',
-                        fontSize: 12
-                      }}
-                      tickFormatter={(value) =>
-                        `${value.toFixed(0)} ${getCurrencySymbol(
-                          product.currency
-                        )}`
-                      }
-                      dx={-10}
-                    />
-                    <Tooltip
-                      formatter={(value) => [
-                        `${Number(value).toFixed(2)} ${getCurrencySymbol(
-                          product.currency
-                        )}`,
-                        t('pages.product.priceHistory.tooltipPrice')
-                      ]}
-                      contentStyle={{
-                        backgroundColor: 'var(--chakra-colors-bg-inverted)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'var(--chakra-colors-fg-inverted)',
-                        boxShadow: 'var(--chakra-shadows-md)'
-                      }}
-                    />
-                    <Legend
-                      verticalAlign="top"
-                      height={36}
-                      iconType="circle"
-                      formatter={() =>
-                        t('pages.product.priceHistory.legendPrice')
-                      }
-                    />
+          <ProductStatsRow
+            currentPrice={product.current_price}
+            currency={product.currency}
+            locale={locale}
+            lowest={lowest}
+            average={average}
+            currentVsAverage={currentVsAverage}
+          />
+        </VStack>
+      </FadeIn>
 
-                    {/* Average price line */}
-                    {averagePrice && (
-                      <ReferenceLine
-                        y={averagePrice}
-                        stroke="var(--chakra-colors-fg-muted)"
-                        strokeDasharray="5 5"
-                        strokeWidth={1.5}
-                        label={{
-                          value: t('pages.product.priceHistory.avgReference', {
-                            value: averagePrice.toFixed(2),
-                            currency: getCurrencySymbol(product.currency)
-                          }),
-                          position: 'insideTopRight',
-                          fill: 'var(--chakra-colors-fg-muted)',
-                          fontSize: 12,
-                          fontWeight: 500
-                        }}
-                      />
-                    )}
+      <VStack align="stretch" gap={6}>
+        <PriceHistoryChart
+          range={range}
+          onRangeChange={handleRangeChange}
+          chartPoints={chartPoints}
+          yDomain={yDomain}
+          outOfStockBands={outOfStockBands}
+          average={average}
+          lowest={lowest}
+          hasEnoughHistory={hasEnoughHistory}
+          trackingStartDate={trackingStartDate}
+          currency={product.currency}
+          locale={locale}
+        />
 
-                    {/* Min price date line */}
-                    {minPriceDate && (
-                      <ReferenceLine
-                        x={minPriceDate}
-                        stroke="var(--chakra-colors-fg)"
-                        strokeWidth={1.5}
-                        label={{
-                          value: t('pages.product.priceHistory.minReference'),
-                          position: 'insideTopLeft',
-                          fill: 'var(--chakra-colors-fg)',
-                          fontSize: 12,
-                          fontWeight: 500
-                        }}
-                      />
-                    )}
-
-                    <Area
-                      type="monotone"
-                      dataKey="price"
-                      stroke="var(--chakra-colors-fg)"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorPrice)"
-                      activeDot={{ r: 6, strokeWidth: 0 }}
-                      name={t('pages.product.priceHistory.legendPrice')}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Box>
-            ) : (
-              <Text color="fg.muted" textAlign="center" py="8">
-                {t('pages.product.priceHistory.empty')}
-              </Text>
-            )}
-          </Card.Body>
-        </Card.Root>
+        <ProductDescription description={product.description} />
       </VStack>
+
+      <ProductFormDialog
+        open={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        mode="edit"
+        product={product}
+      />
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title={t('components.deleteProductDialog.title')}
+        body={
+          <>
+            <Text>
+              <Trans
+                i18nKey="components.deleteProductDialog.description"
+                values={{ name: product.name }}
+                components={{ strong: <strong /> }}
+              />
+            </Text>
+            <Text mt={2}>{t('components.deleteProductDialog.warning')}</Text>
+          </>
+        }
+        confirmLabel={t('common.actions.delete')}
+        destructive
+        isLoading={isDeleting}
+      />
     </PageContainer>
   );
 };

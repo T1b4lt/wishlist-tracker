@@ -86,14 +86,23 @@ export const useProductsStore = create((set, get) => ({
 
   /**
    * Load a single product's detail (including its full price history) into
-   * `details[id]`.
+   * `details[id]`. Unlike a first load, revisiting an already-cached product
+   * keeps its previous `data` in place while `status` flips to `loading`
+   * (never blanks it to `null`), so a page reading `details[id]` (e.g. the
+   * product page, Task 12) can keep rendering the stale record instead of
+   * flashing back to a loading skeleton, and only needs to show one when
+   * there is no data yet.
    * @param {number|string} id
    */
   async fetchDetail(id) {
     set((state) => ({
       details: {
         ...state.details,
-        [id]: { status: 'loading', error: null, data: null }
+        [id]: {
+          status: 'loading',
+          error: null,
+          data: state.details[id]?.data ?? null
+        }
       }
     }));
     try {

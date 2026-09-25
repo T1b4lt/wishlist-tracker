@@ -25,6 +25,10 @@ stores under `src/stores/` (one file per store, tests beside them):
 - `productsStore.js`: dashboard summary `items` and per-product `details`
   (keyed by id), with `fetchSummary`, `create`, `update`, `remove` and
   `fetchDetail` actions. Mutations refetch the summary on success.
+  `fetchDetail` keeps a product's previously-loaded `data` in place while
+  re-fetching (only `status` flips to `'loading'`), so the product page
+  shows a loading skeleton only on the very first load, not on every
+  revisit.
 - `categoriesStore.js`: the categories `items` list, with `fetch`, `create`,
   `update` and `remove` actions.
 - `configStore.js`: the application `config`, with `fetch(force)` and

@@ -11,8 +11,17 @@ import { LuArrowLeft } from 'react-icons/lu';
  * @param {string} [props.description] - Optional supporting text below the title.
  * @param {import('react').ReactNode} [props.actions] - Optional trailing content (e.g. a button).
  * @param {{ href: string, label: string }} [props.backLink] - Optional link rendered above the title.
+ * @param {number} [props.titleLineClamp] - When set, clamps the title to
+ *   this many lines (e.g. `2` for a long product name) instead of letting it
+ *   wrap freely.
  */
-const PageHeader = ({ title, description, actions, backLink }) => {
+const PageHeader = ({
+  title,
+  description,
+  actions,
+  backLink,
+  titleLineClamp
+}) => {
   return (
     <Box mb={{ base: 6, md: 8 }}>
       {backLink && (
@@ -38,7 +47,11 @@ const PageHeader = ({ title, description, actions, backLink }) => {
         gap={4}
       >
         <Box>
-          <Heading as="h1" textStyle="heading.lg">
+          <Heading
+            as="h1"
+            textStyle="heading.lg"
+            {...(titleLineClamp ? { lineClamp: titleLineClamp } : {})}
+          >
             {title}
           </Heading>
           {description && (
