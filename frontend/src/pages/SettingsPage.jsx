@@ -56,15 +56,17 @@ const SettingsPage = () => {
   // background*: the initial fetch, or a forced refresh (e.g.
   // `NotificationsSection` -> `TelegramSetup` calling `fetch(true)` after
   // obtaining a Telegram chat id). A save is handled separately, directly
-  // in `handleSave` below (it resyncs the draft/baseline from the saved
-  // config unconditionally, rather than through `mergeUpstreamChanges`), so
-  // this branch only ever runs for the initial load or a background
-  // refresh. On the very first load the draft simply becomes the
-  // config-derived baseline; afterward, `mergeUpstreamChanges` keeps any
-  // field the user has since edited and only adopts the new value for
-  // fields still untouched, so a background refresh can never discard an
-  // in-progress, unrelated edit (see `src/lib/settingsDraft.js`). Done
-  // during render (instead of in an effect) to avoid an extra render pass:
+  // in `handleSave` below (it runs the same `mergeUpstreamChanges` merge,
+  // but against the draft *as sent* rather than the pre-save `baseline`, so
+  // it can tell a field the save has just settled apart from one the user
+  // kept editing during the request), so this branch only ever runs for the
+  // initial load or a background refresh. On the very first load the draft
+  // simply becomes the config-derived baseline; afterward,
+  // `mergeUpstreamChanges` keeps any field the user has since edited and
+  // only adopts the new value for fields still untouched, so a background
+  // refresh can never discard an in-progress, unrelated edit (see
+  // `src/lib/settingsDraft.js`). Done during render (instead of in an
+  // effect) to avoid an extra render pass:
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   if (config && syncedConfig !== config) {
     const nextBaseline = draftFromConfig(config);
@@ -87,21 +89,31 @@ const SettingsPage = () => {
   const handleDiscard = () => setDraft(baseline);
 
   const handleSave = async () => {
+    // A snapshot of the draft as it is actually sent. Inputs stay
+    // interactive while `isSaving` (only Save/Discard are disabled), so by
+    // the time this `await` resolves the user may have kept editing; `draft`
+    // itself (the component's current state) must not be read again after
+    // the `await` for that reason.
+    const sentDraft = draft;
     setIsSaving(true);
     try {
-      const saved = await saveConfig(buildConfigPatch(draft));
-      // Resync the draft and baseline directly from what was actually
-      // saved, rather than letting the render-time reconciliation above
-      // merge it in: every field in the patch was just saved, so the form
-      // must end clean regardless of `mergeUpstreamChanges`'s "keep it if
-      // it still differs from the previous baseline" rule (which otherwise
-      // never adopts the new value for a field the user just edited).
-      // `syncedConfig` is set to the same `saved` reference the store just
-      // stored as `config`, so the reconciliation branch above sees nothing
-      // new to process for this update.
-      const savedDraft = draftFromConfig(saved);
-      setDraft(savedDraft);
-      setBaseline(savedDraft);
+      const saved = await saveConfig(buildConfigPatch(sentDraft));
+      const nextBaseline = draftFromConfig(saved);
+      // Reconcile with `mergeUpstreamChanges`, exactly like a background
+      // refresh, but against `sentDraft` (what this save actually sent)
+      // rather than the pre-save `baseline`: for each field, if the
+      // *current* draft (read fresh via the updater, in case it changed
+      // during the request) still equals what was sent, the save settled it
+      // and it adopts the saved value (ending clean); otherwise the user
+      // edited it again mid-save and that in-progress edit is kept,
+      // leaving the form dirty for that field only. A cleared secret sent
+      // as `''` comes back as `null` from the backend, which
+      // `draftFromConfig` turns back into `''` in `nextBaseline`, so it
+      // still matches `sentDraft` and ends clean.
+      setDraft((currentDraft) =>
+        mergeUpstreamChanges(currentDraft, sentDraft, nextBaseline)
+      );
+      setBaseline(nextBaseline);
       setSyncedConfig(saved);
       toaster.create({
         title: t('toasts.settings.saveSuccess.title'),

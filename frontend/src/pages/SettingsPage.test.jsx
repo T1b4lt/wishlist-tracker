@@ -158,6 +158,100 @@ describe('SettingsPage', () => {
     );
   });
 
+  it('keeps an edit made to the same field during an in-flight save, leaving it dirty', async () => {
+    const user = userEvent.setup();
+    configApi.get.mockResolvedValue(CONFIG);
+    // A deferred promise: `configApi.update` is called (the save is "in
+    // flight") but does not resolve until `resolveUpdate` is called below,
+    // simulating the user continuing to edit while the request is pending.
+    let resolveUpdate;
+    configApi.update.mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      })
+    );
+    renderSettingsPage();
+
+    const apiKeyInput = await screen.findByPlaceholderText(
+      'Enter your Google AI Studio API key'
+    );
+    await user.type(apiKeyInput, 'first-value');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(configApi.update).toHaveBeenCalledWith(
+      expect.objectContaining({ google_api_key: 'first-value' })
+    );
+
+    // Inputs stay interactive while saving (only Save/Discard are
+    // disabled): keep editing the very field that was just sent.
+    await user.clear(apiKeyInput);
+    await user.type(apiKeyInput, 'second-value');
+
+    // The save resolves with what was actually sent ("first-value").
+    resolveUpdate({ ...CONFIG, google_api_key: 'first-value' });
+
+    await waitFor(() =>
+      expect(toaster.create).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'success' })
+      )
+    );
+
+    // The in-flight edit survives instead of being reverted to what the
+    // now-resolved save sent, and the form is correctly still dirty.
+    expect(apiKeyInput).toHaveValue('second-value');
+    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+  });
+
+  it('keeps an edit made to a different field during an in-flight save, leaving only that field dirty', async () => {
+    const user = userEvent.setup();
+    configApi.get.mockResolvedValue({
+      ...CONFIG,
+      telegram_bot_token: null,
+      telegram_status: 'not_configured'
+    });
+    let resolveUpdate;
+    configApi.update.mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      })
+    );
+    renderSettingsPage();
+
+    const apiKeyInput = await screen.findByPlaceholderText(
+      'Enter your Google AI Studio API key'
+    );
+    await user.type(apiKeyInput, 'new-key');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(configApi.update).toHaveBeenCalledWith(
+      expect.objectContaining({ google_api_key: 'new-key' })
+    );
+
+    // Edit an unrelated field while the save above is still in flight.
+    const tokenInput = screen.getByPlaceholderText(
+      'Enter your Telegram bot token'
+    );
+    await user.type(tokenInput, 'mid-edit-token');
+
+    resolveUpdate({
+      ...CONFIG,
+      google_api_key: 'new-key',
+      telegram_bot_token: null,
+      telegram_status: 'not_configured'
+    });
+
+    await waitFor(() =>
+      expect(toaster.create).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'success' })
+      )
+    );
+
+    // The field the save actually settled ends clean...
+    expect(apiKeyInput).toHaveValue('new-key');
+    // ...while the field edited mid-save keeps that in-progress edit,
+    // leaving the form dirty because of it alone.
+    expect(tokenInput).toHaveValue('mid-edit-token');
+    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+  });
+
   it('clears a previously saved secret by sending an empty string, and ends clean', async () => {
     const user = userEvent.setup();
     // No Telegram token here, so there is exactly one "Configured" badge
