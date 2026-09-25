@@ -227,25 +227,25 @@ describe('computeOutOfStockBands', () => {
     expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 5 }]);
   });
 
-  it('extends a run trailing off the end of the data past its last sample, by half the gap to its preceding neighbour', () => {
+  it('extends a single trailing sample backward, by half the gap to its preceding neighbour, instead of past the last point', () => {
     const history = [
       { timestamp: 1, price: 10, is_in_stock: true },
       { timestamp: 3, price: 10, is_in_stock: false }
     ];
-    // Gap to the preceding sample is 3 - 1 = 2, so the band extends 1 past
-    // timestamp 3, instead of collapsing to a zero-width {x1: 3, x2: 3}.
-    expect(computeOutOfStockBands(history)).toEqual([{ x1: 3, x2: 4 }]);
+    // Gap to the preceding sample is 3 - 1 = 2, so the band starts 1 before
+    // timestamp 3 and ends exactly at it (never past it: past `lastTimestamp`
+    // would fall outside the chart's `['dataMin', 'dataMax']` X domain and be
+    // clipped), instead of collapsing to a zero-width {x1: 3, x2: 3}.
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 3 }]);
   });
 
-  it('extends a multi-sample trailing run past its last sample too', () => {
+  it('ends a multi-sample trailing run at its last sample (already non-zero-width, entirely inside the domain)', () => {
     const history = [
       { timestamp: 1, price: 10, is_in_stock: true },
       { timestamp: 2, price: 10, is_in_stock: false },
       { timestamp: 3, price: 10, is_in_stock: false }
     ];
-    // Gap between the last two samples is 3 - 2 = 1, so the band extends
-    // 0.5 past timestamp 3.
-    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 3.5 }]);
+    expect(computeOutOfStockBands(history)).toEqual([{ x1: 2, x2: 3 }]);
   });
 
   it('finds a run that starts at the first record and closes when stock returns', () => {

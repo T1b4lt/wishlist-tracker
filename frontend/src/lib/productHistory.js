@@ -197,13 +197,17 @@ export function computeYDomain(filteredHistory, paddingRatio = 0.1) {
  *
  * A run still open at the end of `filteredHistory` (out of stock as of the
  * last check, with no later "back in stock" record to close it at) has no
- * such endpoint to use, so it is instead extended past its last sample by
- * half the gap to that sample's preceding neighbour (the typical interval
- * between checks near the end of the data), giving it a visible width
- * instead of collapsing to a zero-width band. With fewer than 2 records
- * total there is no neighbouring gap to measure, so a trailing run in that
- * case is left as a zero-width `{x1, x2}` pair (an unavoidable edge case;
- * the chart itself never renders with fewer than 2 points regardless).
+ * such endpoint to use, so it ends at the last record's own timestamp
+ * instead. That collapses to zero width for a *single*-sample trailing run
+ * (its start and end are the same record), so that one case starts the band
+ * half the gap *before* the last record instead (extending backward, toward
+ * the preceding sample) rather than past it - past the last point would
+ * fall outside the chart's X domain (`['dataMin', 'dataMax']`, computed only
+ * from the plotted points) and be clipped, invisible. With fewer than 2
+ * records total there is no neighbouring gap to measure, so a trailing
+ * single-sample run in that case is left as a zero-width `{x1, x2}` pair (an
+ * unavoidable edge case; the chart itself never renders with fewer than 2
+ * points regardless).
  *
  * @param {PriceHistoryRecord[]} filteredHistory - Ascending by timestamp.
  * @returns {Array<{x1: number, x2: number}>}
@@ -228,13 +232,25 @@ export function computeOutOfStockBands(filteredHistory) {
 
   if (runStart !== null) {
     const lastTimestamp = filteredHistory[filteredHistory.length - 1].timestamp;
-    const previousTimestamp =
-      filteredHistory.length > 1
-        ? filteredHistory[filteredHistory.length - 2].timestamp
-        : null;
-    const halfGap =
-      previousTimestamp !== null ? (lastTimestamp - previousTimestamp) / 2 : 0;
-    bands.push({ x1: runStart, x2: lastTimestamp + halfGap });
+    if (runStart === lastTimestamp) {
+      // A single trailing sample: extend backward (toward the preceding
+      // point, still inside the X domain) instead of past `lastTimestamp`
+      // (outside it, and clipped).
+      const previousTimestamp =
+        filteredHistory.length > 1
+          ? filteredHistory[filteredHistory.length - 2].timestamp
+          : null;
+      const halfGap =
+        previousTimestamp !== null
+          ? (lastTimestamp - previousTimestamp) / 2
+          : 0;
+      bands.push({ x1: lastTimestamp - halfGap, x2: lastTimestamp });
+    } else {
+      // A multi-sample trailing run already spans real width on its own
+      // (from when it started to the last checked record), entirely inside
+      // the domain.
+      bands.push({ x1: runStart, x2: lastTimestamp });
+    }
   }
 
   return bands;
