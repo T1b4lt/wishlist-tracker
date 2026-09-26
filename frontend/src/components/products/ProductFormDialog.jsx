@@ -44,7 +44,11 @@ import { Field } from '@/components/ui/field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toaster } from '@/components/ui/toaster';
 import { FadeIn } from '@/components/motion';
-import { ErrorState, CategoryColorPicker } from '@/components/common';
+import {
+  ErrorState,
+  CategoryColorPicker,
+  StoreBadge
+} from '@/components/common';
 import { LuSparkles, LuPlus } from 'react-icons/lu';
 import { products as productsApi } from '@/lib/api';
 import { useProductsStore } from '@/stores/productsStore';
@@ -79,7 +83,9 @@ function isValidProductUrl(value) {
  * - `mode="create"`: URL first, with automatic (debounced) and manual
  *   extraction via `products.extractInfo`; the rest of the fields fade in
  *   once an extraction has been attempted (or the user tries to submit
- *   without one).
+ *   without one). A successful extraction also fills a read-only "Store"
+ *   row (favicon + name), whose id is sent as `store_id`; editing the URL
+ *   clears it.
  * - `mode="edit"`: no extraction. If `product` already carries every field
  *   the form needs (e.g. a full detail record) or one is already cached in
  *   `productsStore`'s `details[id]`, it is used directly; otherwise the
@@ -130,6 +136,9 @@ export const ProductFormDialog = ({
   const [categoryId, setCategoryId] = useState('');
   const [priority, setPriority] = useState('Medium');
   const [currency, setCurrency] = useState('EUR');
+  // Store the product belongs to: read-only, set by extraction (create) or
+  // taken from the product (edit). `{ id, name, has_favicon }` or null.
+  const [store, setStore] = useState(null);
 
   // Validation / submission state.
   const [errors, setErrors] = useState({});
@@ -244,6 +253,7 @@ export const ProductFormDialog = ({
       setCategoryId('');
       setPriority('Medium');
       setCurrency('EUR');
+      setStore(null);
     } else if (sourceProduct) {
       setUrl(sourceProduct.url ?? '');
       setName(sourceProduct.name ?? '');
@@ -255,6 +265,15 @@ export const ProductFormDialog = ({
       );
       setPriority(sourceProduct.priority ?? 'Medium');
       setCurrency(sourceProduct.currency ?? 'EUR');
+      setStore(
+        sourceProduct.store_name
+          ? {
+              id: sourceProduct.store_id,
+              name: sourceProduct.store_name,
+              has_favicon: Boolean(sourceProduct.store_has_favicon)
+            }
+          : null
+      );
     }
   }
 
@@ -337,6 +356,7 @@ export const ProductFormDialog = ({
 
         setName(data.name ?? '');
         setDescription(data.description ?? '');
+        setStore(data.store ?? null);
 
         const extractedCategoryName = (data.category ?? '')
           .trim()
@@ -422,7 +442,8 @@ export const ProductFormDialog = ({
       priority,
       category_id: Number(categoryId),
       description: description.trim(),
-      currency: currency.trim().toUpperCase()
+      currency: currency.trim().toUpperCase(),
+      ...(mode === 'create' && store ? { store_id: store.id } : {})
     };
 
     try {
@@ -578,7 +599,11 @@ export const ProductFormDialog = ({
                 <Input
                   placeholder={t('common.placeholders.productUrl')}
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    // An extracted store belongs to the URL it came from.
+                    if (mode === 'create') setStore(null);
+                  }}
                   disabled={isSubmitting}
                   autoComplete="off"
                 />
@@ -588,6 +613,20 @@ export const ProductFormDialog = ({
                 <Text fontSize="sm" color="fg.error">
                   {extractionError}
                 </Text>
+              )}
+
+              {store && (
+                <HStack gap={2}>
+                  <Text textStyle="sm" color="fg.muted">
+                    {t('components.productFormDialog.fields.store')}
+                  </Text>
+                  <StoreBadge
+                    storeId={store.id}
+                    name={store.name}
+                    hasFavicon={store.has_favicon}
+                    size="md"
+                  />
+                </HStack>
               )}
 
               <Field

@@ -75,6 +75,97 @@ beforeEach(() => {
 });
 
 describe('ProductFormDialog', () => {
+  const AMAZON = {
+    id: 7,
+    name: 'Amazon',
+    domain: 'amazon.es',
+    has_favicon: true
+  };
+
+  it('shows the extracted store read-only and sends its id on create', async () => {
+    const user = userEvent.setup();
+    const getUnexpectedErrors = spyOnConsoleError();
+    productsApi.extractInfo.mockResolvedValue({
+      name: 'Standing Desk',
+      description: 'A nice desk',
+      category: 'Electronics',
+      currency: 'EUR',
+      store: AMAZON
+    });
+    productsApi.create.mockResolvedValue({ id: 1, name: 'Standing Desk' });
+
+    renderWithProviders(
+      <ProductFormDialog open mode="create" onClose={vi.fn()} product={null} />
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Product URL' }),
+      'https://www.amazon.es/desk'
+    );
+    await user.click(screen.getByRole('button', { name: 'Generate details' }));
+    await screen.findByDisplayValue('Standing Desk');
+
+    expect(screen.getByText('Store')).toBeInTheDocument();
+    expect(screen.getByText('Amazon')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /store/i })
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add product' }));
+
+    await waitFor(() => expect(productsApi.create).toHaveBeenCalled());
+    expect(productsApi.create.mock.calls[0][0]).toMatchObject({ store_id: 7 });
+    expect(getUnexpectedErrors()).toEqual([]);
+  });
+
+  it('clears the extracted store when the URL changes', async () => {
+    const user = userEvent.setup();
+    productsApi.extractInfo.mockResolvedValue({
+      name: 'Standing Desk',
+      description: '',
+      category: 'Electronics',
+      currency: 'EUR',
+      store: AMAZON
+    });
+
+    renderWithProviders(
+      <ProductFormDialog open mode="create" onClose={vi.fn()} product={null} />
+    );
+
+    const urlInput = screen.getByRole('textbox', { name: 'Product URL' });
+    await user.type(urlInput, 'https://www.amazon.es/desk');
+    await user.click(screen.getByRole('button', { name: 'Generate details' }));
+    await screen.findByText('Amazon');
+
+    await user.type(urlInput, 'x');
+
+    expect(screen.queryByText('Amazon')).not.toBeInTheDocument();
+  });
+
+  it('shows the product store read-only in edit mode', async () => {
+    renderWithProviders(
+      <ProductFormDialog
+        open
+        mode="edit"
+        onClose={vi.fn()}
+        product={{
+          id: 3,
+          name: 'Desk',
+          url: 'https://amazon.es/desk',
+          description: 'A desk',
+          category_id: 5,
+          priority: 'Medium',
+          currency: 'EUR',
+          store_id: 7,
+          store_name: 'Amazon',
+          store_has_favicon: true
+        }}
+      />
+    );
+
+    expect(await screen.findByText('Amazon')).toBeInTheDocument();
+  });
+
   it('shows inline validation errors when the form is submitted empty', async () => {
     const user = userEvent.setup();
     const getUnexpectedErrors = spyOnConsoleError();
