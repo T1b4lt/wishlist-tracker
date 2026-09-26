@@ -43,6 +43,7 @@ import {
   computeRangeStats,
   computeYDomain,
   filterPriceHistoryByRange,
+  getCurrentRecord,
   getTrackingStartTimestamp,
   hasEnoughHistory as hasEnoughHistoryPoints,
   resolveDefaultRange
@@ -147,9 +148,13 @@ const ProductPage = () => {
     () => computeOutOfStockBands(filteredHistory),
     [filteredHistory]
   );
+  const currentRecord = useMemo(
+    () => getCurrentRecord(rawHistory),
+    [rawHistory]
+  );
   const { lowest, average, currentVsAverage } = useMemo(
-    () => computeRangeStats(filteredHistory, product?.current_price),
-    [filteredHistory, product]
+    () => computeRangeStats(filteredHistory, currentRecord),
+    [filteredHistory, currentRecord]
   );
   const trackingStartDate = useMemo(
     () => getTrackingStartTimestamp(rawHistory),

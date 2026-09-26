@@ -60,7 +60,6 @@ const buildProduct = (overrides = {}) => {
     category_color: '#3B82F6',
     description: 'A nice keyboard.',
     current_price: 95,
-    min_price: 80,
     is_in_stock: true,
     price_history: [
       { timestamp: now - 10 * DAY, price: 100, is_in_stock: true },

@@ -9,7 +9,8 @@ import {
   computeYDomain,
   computeOutOfStockBands,
   hasEnoughHistory,
-  getTrackingStartTimestamp
+  getTrackingStartTimestamp,
+  getCurrentRecord
 } from './productHistory';
 
 const DAY = 60 * 60 * 24;
@@ -101,48 +102,68 @@ describe('buildChartPoints', () => {
   });
 });
 
+describe('getCurrentRecord', () => {
+  it('returns null for missing/empty history', () => {
+    expect(getCurrentRecord(null)).toBeNull();
+    expect(getCurrentRecord([])).toBeNull();
+  });
+
+  it('returns the newest record regardless of input order', () => {
+    const newest = { timestamp: 3, price: 30, is_in_stock: false };
+    expect(
+      getCurrentRecord([
+        { timestamp: 2, price: 20, is_in_stock: true },
+        newest,
+        { timestamp: 1, price: 10, is_in_stock: true }
+      ])
+    ).toBe(newest);
+  });
+});
+
+// The shared formulas are pinned by `productHistory.contract.test.js`; these
+// cases only cover JavaScript-specific inputs.
 describe('computeRangeStats', () => {
-  it('returns nulls for an empty range', () => {
-    expect(computeRangeStats([], 42)).toEqual({
-      lowest: null,
-      average: null,
-      currentVsAverage: null
-    });
+  const empty = {
+    lowest: null,
+    average: null,
+    currentVsAverage: null,
+    isAtLowest: false
+  };
+
+  it('returns empty stats for missing input', () => {
+    expect(computeRangeStats(null, null)).toEqual(empty);
+    expect(computeRangeStats(undefined, undefined)).toEqual(empty);
   });
 
-  it('finds the lowest price and its timestamp, and the average', () => {
-    const history = [
-      { timestamp: 1, price: 30, is_in_stock: true },
-      { timestamp: 2, price: 10, is_in_stock: true },
-      { timestamp: 3, price: 20, is_in_stock: true }
-    ];
-    const stats = computeRangeStats(history, 20);
-    expect(stats.lowest).toEqual({ price: 10, timestamp: 2 });
-    expect(stats.average).toBeCloseTo(20);
-  });
-
-  it('resolves a tied lowest price to the first occurrence', () => {
+  it('averages every in-stock record when there is no current record', () => {
     const history = [
       { timestamp: 1, price: 10, is_in_stock: true },
-      { timestamp: 2, price: 10, is_in_stock: true }
+      { timestamp: 2, price: 20, is_in_stock: true }
     ];
-    const stats = computeRangeStats(history, 10);
-    expect(stats.lowest).toEqual({ price: 10, timestamp: 1 });
+    const stats = computeRangeStats(history, null);
+    expect(stats.average).toBeCloseTo(15);
+    expect(stats.currentVsAverage).toBeNull();
+    expect(stats.isAtLowest).toBe(false);
   });
 
-  it('computes currentVsAverage as a signed percentage', () => {
+  it('ignores records with a non-finite price', () => {
+    const current = { timestamp: 3, price: 10, is_in_stock: true };
     const history = [
-      { timestamp: 1, price: 100, is_in_stock: true },
-      { timestamp: 2, price: 100, is_in_stock: true }
+      { timestamp: 1, price: NaN, is_in_stock: true },
+      { timestamp: 2, price: 20, is_in_stock: true },
+      current
     ];
-    expect(computeRangeStats(history, 110).currentVsAverage).toBeCloseTo(10);
-    expect(computeRangeStats(history, 90).currentVsAverage).toBeCloseTo(-10);
+    const stats = computeRangeStats(history, current);
+    expect(stats.average).toBeCloseTo(20);
+    expect(stats.lowest).toEqual({ price: 10, timestamp: 3 });
   });
 
-  it('returns null for currentVsAverage when the current price is missing', () => {
-    const history = [{ timestamp: 1, price: 100, is_in_stock: true }];
-    expect(computeRangeStats(history, null).currentVsAverage).toBeNull();
-    expect(computeRangeStats(history, undefined).currentVsAverage).toBeNull();
+  it('has no change for a current record with a non-finite price', () => {
+    const current = { timestamp: 2, price: NaN, is_in_stock: true };
+    const history = [{ timestamp: 1, price: 20, is_in_stock: true }, current];
+    const stats = computeRangeStats(history, current);
+    expect(stats.currentVsAverage).toBeNull();
+    expect(stats.isAtLowest).toBe(false);
   });
 });
 
@@ -171,11 +192,20 @@ describe('computeYDomain', () => {
     expect(max).toBeGreaterThan(50);
   });
 
-  it('pads a flat range of 0 with a fixed amount instead of 0', () => {
+  it('pads a flat range of 0 upward only (never below zero)', () => {
     const history = [{ timestamp: 1, price: 0, is_in_stock: true }];
     const [min, max] = computeYDomain(history);
-    expect(min).toBeLessThan(0);
+    expect(min).toBe(0);
     expect(max).toBeGreaterThan(0);
+  });
+
+  it('never extends the domain below zero', () => {
+    const history = [
+      { timestamp: 1, price: 5, is_in_stock: true },
+      { timestamp: 2, price: 100, is_in_stock: true }
+    ];
+    const [min] = computeYDomain(history, 0.1);
+    expect(min).toBe(0);
   });
 });
 

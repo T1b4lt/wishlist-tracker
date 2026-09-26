@@ -78,7 +78,8 @@ const ChartTooltip = ({ active, payload, currency, locale, t }) => {
  * @param {Array<{timestamp: number, price: number, isInStock: boolean, changePercent: number|null}>} props.chartPoints
  * @param {[number, number]|['auto','auto']} props.yDomain
  * @param {Array<{x1: number, x2: number}>} props.outOfStockBands
- * @param {number|null} props.average
+ * @param {number|null} props.average - Average of the range's in-stock
+ *   records other than the current one (see `computeRangeStats`).
  * @param {{price: number, timestamp: number}|null} props.lowest
  * @param {boolean} props.hasEnoughHistory - Whether the selected range has
  *   enough points to plot.
@@ -230,8 +231,9 @@ export const PriceHistoryChart = ({
                     }}
                   />
                 )}
+                {/* Prices change at discrete checks, so draw steps rather than a smoothed curve. */}
                 <Line
-                  type="monotone"
+                  type="stepAfter"
                   dataKey="price"
                   stroke="var(--chakra-colors-fg)"
                   strokeWidth={2}

@@ -1,6 +1,7 @@
 /**
  * Pure computations for the product detail page's price history chart and
- * stats row (spec Task 12). Kept separate from the React components so the
+ * stats row. `computeRangeStats` mirrors the backend's `price_stats.py`; both
+ * are pinned by `contracts/price-stats-cases.json`. Kept separate from the React components so the
  * range filtering, stats and domain/band math can be unit tested without
  * rendering anything.
  *
@@ -103,47 +104,85 @@ export function buildChartPoints(filteredHistory) {
 }
 
 /**
- * Compute the stats row's range-dependent numbers: the lowest price reached
- * within the filtered range (with its timestamp), the average price, and how
- * the current price compares to that average.
+ * The newest record of a product's full price history (the "current" one,
+ * which may fall outside the selected range). Ties on the timestamp resolve
+ * to the last one in input order, like the backend.
  *
- * @param {PriceHistoryRecord[]} filteredHistory
- * @param {number|null|undefined} currentPrice
+ * @param {PriceHistoryRecord[]|null|undefined} priceHistory
+ * @returns {PriceHistoryRecord|null}
+ */
+export function getCurrentRecord(priceHistory) {
+  if (!Array.isArray(priceHistory) || priceHistory.length === 0) return null;
+  return priceHistory.reduce((latest, record) =>
+    record.timestamp >= latest.timestamp ? record : latest
+  );
+}
+
+/**
+ * Compute the stats row's range-dependent numbers, mirroring the backend's
+ * `price_stats.compute_window_stats` (see `contracts/README.md`):
+ * - only in-stock records count;
+ * - `average` is the mean of the in-stock records other than `current`;
+ * - `currentVsAverage` compares `current` with that average, and is `null`
+ *   when `current` is missing or out of stock, or the average is not > 0;
+ * - `lowest` is the cheapest in-stock record (the most recent on ties);
+ * - `isAtLowest` is whether an in-stock `current` is not above `lowest`.
+ *
+ * @param {PriceHistoryRecord[]|null|undefined} filteredHistory - The
+ *   selected range, ascending by timestamp.
+ * @param {PriceHistoryRecord|null|undefined} current - The newest record of
+ *   the full history, see `getCurrentRecord`.
  * @returns {{
  *   lowest: {price: number, timestamp: number}|null,
  *   average: number|null,
- *   currentVsAverage: number|null
+ *   currentVsAverage: number|null,
+ *   isAtLowest: boolean
  * }}
  */
-export function computeRangeStats(filteredHistory, currentPrice) {
-  if (!Array.isArray(filteredHistory) || filteredHistory.length === 0) {
-    return { lowest: null, average: null, currentVsAverage: null };
-  }
-
-  let lowest = filteredHistory[0];
-  let sum = 0;
-  for (const record of filteredHistory) {
-    if (record.price < lowest.price) lowest = record;
-    sum += record.price;
-  }
-  const average = sum / filteredHistory.length;
-
-  const currentVsAverage =
-    isFiniteNumber(currentPrice) && average !== 0
-      ? ((currentPrice - average) / average) * 100
+export function computeRangeStats(filteredHistory, current) {
+  const window = Array.isArray(filteredHistory) ? filteredHistory : [];
+  const valid = window.filter(
+    (record) => record.is_in_stock === true && isFiniteNumber(record.price)
+  );
+  const baseline = current
+    ? valid.filter((record) => record.timestamp !== current.timestamp)
+    : valid;
+  const average =
+    baseline.length > 0
+      ? baseline.reduce((sum, record) => sum + record.price, 0) /
+        baseline.length
       : null;
 
+  const currentIsUsable =
+    Boolean(current) &&
+    current.is_in_stock === true &&
+    isFiniteNumber(current.price);
+  const currentVsAverage =
+    currentIsUsable && average !== null && average > 0
+      ? ((current.price - average) / average) * 100
+      : null;
+
+  let lowest = null;
+  // Ascending, so "<=" keeps the most recent record on ties.
+  for (const record of valid) {
+    if (lowest === null || record.price <= lowest.price) lowest = record;
+  }
+
   return {
-    lowest: { price: lowest.price, timestamp: lowest.timestamp },
+    lowest: lowest
+      ? { price: lowest.price, timestamp: lowest.timestamp }
+      : null,
     average,
-    currentVsAverage
+    currentVsAverage,
+    isAtLowest:
+      currentIsUsable && lowest !== null && current.price <= lowest.price
   };
 }
 
 /**
  * Compute a Y-axis domain padded around the filtered history's min and max
- * price, so the line never touches the chart's top/bottom edge and never
- * starts at a forced zero baseline.
+ * price, so the line never touches the chart's top/bottom edge, never starts
+ * at a forced zero baseline and never extends below zero.
  *
  * @param {PriceHistoryRecord[]} filteredHistory
  * @param {number} [paddingRatio] - Fraction of the price range added above
@@ -164,11 +203,11 @@ export function computeYDomain(filteredHistory, paddingRatio = 0.1) {
     // A perfectly flat line still needs headroom on both sides; fall back to
     // a fixed padding when the flat price is itself `0`.
     const padding = min === 0 ? 1 : Math.abs(min) * paddingRatio;
-    return [min - padding, max + padding];
+    return [Math.max(0, min - padding), max + padding];
   }
 
   const padding = (max - min) * paddingRatio;
-  return [min - padding, max + padding];
+  return [Math.max(0, min - padding), max + padding];
 }
 
 /**

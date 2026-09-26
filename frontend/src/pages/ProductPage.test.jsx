@@ -68,7 +68,6 @@ const buildProduct = (overrides = {}) => {
     category_color: '#3B82F6',
     description: 'A nice keyboard.',
     current_price: 95,
-    min_price: 80,
     is_in_stock: true,
     price_history: [
       { timestamp: now - 10 * DAY, price: 100, is_in_stock: true },
@@ -233,5 +232,28 @@ describe('ProductPage', () => {
       await screen.findByRole('heading', { name: 'Mechanical Keyboard' })
     ).toBeInTheDocument();
     expect(productsApi.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores out-of-stock records in the stats and shows N/A when the current one is out of stock', async () => {
+    const now = Date.now() / 1000;
+    productsApi.get.mockResolvedValue(
+      buildProduct({
+        current_price: 70,
+        is_in_stock: false,
+        price_history: [
+          { timestamp: now - 10 * DAY, price: 100, is_in_stock: true },
+          { timestamp: now - 2 * DAY, price: 80, is_in_stock: true },
+          { timestamp: now - DAY, price: 70, is_in_stock: false }
+        ]
+      })
+    );
+
+    renderProductPage();
+
+    const stat = async (label) =>
+      (await screen.findByText(label)).parentElement;
+    expect(await stat('Lowest in range')).toHaveTextContent('$80.00');
+    expect(await stat('Average in range')).toHaveTextContent('$90.00');
+    expect(await stat('Current vs average')).toHaveTextContent('N/A');
   });
 });
