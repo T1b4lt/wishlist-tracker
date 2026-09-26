@@ -26,7 +26,8 @@ import {
   ConfirmDialog,
   ErrorState,
   PriorityBadge,
-  StockStatus
+  StockStatus,
+  StoreBadge
 } from '@/components/common';
 import { ProductFormDialog } from '@/components/products';
 import {
@@ -251,7 +252,11 @@ const ProductPage = () => {
             <Button variant="outline" asChild>
               <a href={product.url} target="_blank" rel="noopener noreferrer">
                 <Icon as={LuExternalLink} />
-                {t('pages.product.actions.openStorePage')}
+                {product.store_name
+                  ? t('pages.product.actions.openInStore', {
+                      store: product.store_name
+                    })
+                  : t('pages.product.actions.openStorePage')}
               </a>
             </Button>
             <Button onClick={() => setIsFormOpen(true)}>
@@ -293,6 +298,12 @@ const ProductPage = () => {
       <FadeIn>
         <VStack align="stretch" gap={6} mb={6}>
           <HStack gap={3} wrap="wrap">
+            <StoreBadge
+              storeId={product.store_id}
+              name={product.store_name}
+              hasFavicon={product.store_has_favicon}
+              size="md"
+            />
             <CategoryTag
               name={product.category_name}
               color={product.category_color}

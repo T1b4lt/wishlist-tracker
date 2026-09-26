@@ -76,6 +76,10 @@ const buildProduct = (overrides = {}) => {
     ],
     currency: 'USD',
     last_checked_at: now - 3600,
+    store_id: null,
+    store_name: null,
+    store_domain: null,
+    store_has_favicon: false,
     ...overrides
   };
 };
@@ -103,6 +107,26 @@ beforeEach(() => {
 });
 
 describe('ProductPage', () => {
+  it('shows the store badge and names the store on the store link', async () => {
+    const getUnexpectedErrors = spyOnConsoleError();
+    productsApi.get.mockResolvedValue(
+      buildProduct({
+        store_id: 7,
+        store_name: 'Amazon',
+        store_domain: 'amazon.es',
+        store_has_favicon: true
+      })
+    );
+
+    renderProductPage();
+
+    expect(
+      await screen.findByRole('link', { name: 'Open in Amazon' })
+    ).toHaveAttribute('href', 'https://example.com/keyboard');
+    expect(screen.getByText('Amazon')).toBeInTheDocument();
+    expect(getUnexpectedErrors()).toEqual([]);
+  });
+
   it('loads and renders the product: header, metadata, stats and description', async () => {
     const getUnexpectedErrors = spyOnConsoleError();
     productsApi.get.mockResolvedValue(buildProduct());
