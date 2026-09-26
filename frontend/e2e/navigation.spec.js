@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 
 // The rest of the suite pins `reducedMotion: 'reduce'` (see
@@ -8,19 +7,18 @@ import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 // mode="wait" in `AppShell`) actually runs at least once under test.
 test.use({ reducedMotion: 'no-preference' });
 
-async function mockEmptyApp(page) {
-  const api = new ApiMock(page);
-  api.setConfig(CONFIG_NOT_CONFIGURED);
-  api.setCategories([]);
-  api.setProducts([]);
-  await api.install();
+function mockEmptyApp(apiMock) {
+  apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+  apiMock.setCategories([]);
+  apiMock.setProducts([]);
 }
 
 test.describe('Navigation', () => {
   test('marks the active nav link and animates between routes', async ({
-    page
+    page,
+    apiMock
   }) => {
-    await mockEmptyApp(page);
+    mockEmptyApp(apiMock);
     const isDesktop = (page.viewportSize()?.width ?? 0) >= 768;
 
     await page.goto('/');
@@ -75,9 +73,10 @@ test.describe('Navigation', () => {
   });
 
   test('the 404 page is reachable and links back to the dashboard', async ({
-    page
+    page,
+    apiMock
   }) => {
-    await mockEmptyApp(page);
+    mockEmptyApp(apiMock);
 
     await page.goto('/this-page-does-not-exist');
     await expect(

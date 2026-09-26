@@ -1,22 +1,22 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
 import { buildDashboardProduct, buildProductDetail } from './fixtures/products';
 
 test.describe('Add / edit product', () => {
-  test('adds a product via a mocked URL extraction', async ({ page }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
-    api.setProducts([]);
-    api.setExtraction({
+  test('adds a product via a mocked URL extraction', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts([]);
+    apiMock.setExtraction({
       name: 'Mechanical Keyboard',
       category: 'Electronics',
       description: 'A tactile mechanical keyboard.',
       currency: 'usd'
     });
-    await api.install();
 
     await page.goto('/');
     await page.getByRole('button', { name: 'Add product' }).first().click();
@@ -53,13 +53,12 @@ test.describe('Add / edit product', () => {
   });
 
   test('shows validation errors and lets the user fill the form manually', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
-    api.setProducts([]);
-    await api.install();
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts([]);
 
     await page.goto('/');
     await page.getByRole('button', { name: 'Add product' }).first().click();
@@ -72,20 +71,18 @@ test.describe('Add / edit product', () => {
     await expect(dialog.getByText('Select a category.')).toBeVisible();
   });
 
-  test('edits an existing product', async ({ page }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
+  test('edits an existing product', async ({ page, apiMock }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
     const product = buildDashboardProduct({
       id: 1,
       name: 'Wireless Headphones'
     });
-    api.setProducts([product]);
-    api.setDetail(
+    apiMock.setProducts([product]);
+    apiMock.setDetail(
       1,
       buildProductDetail({ id: 1, name: 'Wireless Headphones' })
     );
-    await api.install();
 
     await page.goto('/');
     await page

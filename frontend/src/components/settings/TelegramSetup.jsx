@@ -44,7 +44,7 @@ export const TelegramSetup = ({
   savedToken,
   isTokenDirty
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const config = useConfigStore((state) => state.config);
   const fetchConfig = useConfigStore((state) => state.fetch);
 
@@ -67,18 +67,23 @@ export const TelegramSetup = ({
       // failure. `force: true` re-fetches even though the store already
       // considers the config loaded.
       await fetchConfig(true);
+      // `i18n.t` (not `t`) below: `fetchConfig`'s refresh can apply a
+      // (possibly different) `selected_language` via `configStore.js`'s
+      // `applyLanguage`, and `t` from `useTranslation()` is a fixed
+      // snapshot bound to whichever language was active at this
+      // component's last render, so it would not pick that change up.
       if (useConfigStore.getState().status === 'error') {
         toaster.create({
-          title: t('toasts.settings.chatIdError.title'),
-          description: t('toasts.settings.chatIdError.description'),
+          title: i18n.t('toasts.settings.chatIdError.title'),
+          description: i18n.t('toasts.settings.chatIdError.description'),
           type: 'error'
         });
         return;
       }
 
       toaster.create({
-        title: t('toasts.settings.chatIdSaved.title'),
-        description: t('toasts.settings.chatIdSaved.description'),
+        title: i18n.t('toasts.settings.chatIdSaved.title'),
+        description: i18n.t('toasts.settings.chatIdSaved.description'),
         type: 'success'
       });
     } catch (error) {

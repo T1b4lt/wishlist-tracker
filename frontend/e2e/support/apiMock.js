@@ -11,25 +11,6 @@ const DEFAULT_EXTRACTION = {
   currency: 'usd'
 };
 
-/**
- * Fails a route loudly: logs the unmatched request to the test runner's own
- * stdout/stderr (this callback runs in the Node/test process, not the
- * browser) and responds with a `500` carrying the same message, so a
- * missing fixture surfaces immediately instead of the UI just quietly
- * showing an unrelated empty/error state.
- * @param {import('@playwright/test').Route} route
- */
-function unmockedResponse(route) {
-  const req = route.request();
-  const message = `Unmocked API request: ${req.method()} ${req.url()}`;
-  console.error(`[e2e] ${message}`);
-  return route.fulfill({
-    status: 500,
-    contentType: 'application/json',
-    body: JSON.stringify({ detail: message })
-  });
-}
-
 /** Smallest id greater than every id already in `items` (starts at 1). */
 function nextId(items) {
   return items.reduce((max, item) => Math.max(max, item.id), 0) + 1;
@@ -45,12 +26,17 @@ function matchesApiPath(url, pathname) {
  * in-memory, mutable fixture set, so specs can exercise full create/edit/
  * delete flows without a real backend. Every route not explicitly handled
  * here (or overridden by a test with its own `page.route` call registered
- * afterward) fails loudly via `unmockedResponse` rather than silently
- * falling through to the real network.
+ * afterward) is recorded in `unmatchedRequests` and fails loudly (a `500`,
+ * plus a `console.error` on the test runner's own stdout) rather than
+ * silently falling through to the real network or to an unrelated-looking
+ * UI error state. `support/fixtures.js`'s `apiMock` fixture (used by every
+ * spec instead of constructing this class directly) checks
+ * `unmatchedRequests` after each test and fails it if it is non-empty, so a
+ * missing fixture cannot slip through unnoticed.
  *
- * Usage: `const api = new ApiMock(page); api.setConfig(...); ...; await
- * api.install();` (set the initial fixtures before installing, or call the
- * setters afterward to mutate live state).
+ * Usage (via the fixture): `async ({ page, apiMock }) => { apiMock.setConfig(...);
+ * ...; await page.goto(...); }` - the fixture already calls `install()`, so
+ * a test only ever needs the setters.
  */
 export class ApiMock {
   /** @param {import('@playwright/test').Page} page */
@@ -61,6 +47,17 @@ export class ApiMock {
     this.products = [];
     this.details = {};
     this.extraction = null;
+    /** The chat id `GET /telegram-chat-id` "finds" once a bot token is
+     * configured; `null` reproduces the real endpoint's 404 ("no chat
+     * found yet"). @type {string|null} */
+    this.telegramChatId = null;
+    /**
+     * Every request that reached the catch-all or an endpoint's own
+     * "unhandled method" fallback, i.e. one no fixture covered: `{method,
+     * url}` entries, in the order they were received.
+     * @type {Array<{method: string, url: string}>}
+     */
+    this.unmatchedRequests = [];
   }
 
   /** @param {object} config A full `ConfigResponse`-shaped object. */
@@ -91,15 +88,43 @@ export class ApiMock {
     this.extraction = extraction;
   }
 
-  /** Installs every route handler. Call once per test, after the fixtures
-   * that matter for it are set. */
+  /** @param {string|null} chatId See the constructor's `telegramChatId`. */
+  setTelegramChatId(chatId) {
+    this.telegramChatId = chatId;
+  }
+
+  /**
+   * Records and fails a route loudly: logs the unmatched request to the
+   * test runner's own stdout/stderr (this callback runs in the Node/test
+   * process, not the browser) and responds with a `500` carrying the same
+   * message, so a missing fixture surfaces immediately instead of the UI
+   * just quietly showing an unrelated empty/error state. Also pushed onto
+   * `unmatchedRequests`, which `support/fixtures.js` checks after the test.
+   * @param {import('@playwright/test').Route} route
+   */
+  _recordUnmatched(route) {
+    const req = route.request();
+    const entry = { method: req.method(), url: req.url() };
+    this.unmatchedRequests.push(entry);
+    console.error(`[e2e] Unmocked API request: ${entry.method} ${entry.url}`);
+    return route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        detail: `Unmocked API request: ${entry.method} ${entry.url}`
+      })
+    });
+  }
+
+  /** Installs every route handler. Normally called once by
+   * `support/fixtures.js`'s `apiMock` fixture, not by a test directly. */
   async install() {
     const { page } = this;
 
     // Registered first, so every route added below (and any a test adds
     // afterward) takes priority: Playwright tries the most-recently-added
     // matching handler first.
-    await page.route(`${API_URL}/**`, (route) => unmockedResponse(route));
+    await page.route(`${API_URL}/**`, (route) => this._recordUnmatched(route));
 
     await page.route(`${API_URL}/config/`, async (route) => {
       const req = route.request();
@@ -110,7 +135,7 @@ export class ApiMock {
         this.config = { ...this.config, ...req.postDataJSON() };
         return route.fulfill({ json: this.config });
       }
-      return unmockedResponse(route);
+      return this._recordUnmatched(route);
     });
 
     await page.route(`${API_URL}/categories/`, async (route) => {
@@ -131,7 +156,7 @@ export class ApiMock {
         ];
         return route.fulfill({ json: created });
       }
-      return unmockedResponse(route);
+      return this._recordUnmatched(route);
     });
 
     await page.route(
@@ -164,7 +189,7 @@ export class ApiMock {
           );
           return route.fulfill({ json: { ok: true } });
         }
-        return unmockedResponse(route);
+        return this._recordUnmatched(route);
       }
     );
 
@@ -174,6 +199,23 @@ export class ApiMock {
 
     await page.route(`${API_URL}/products/`, async (route) => {
       const req = route.request();
+      if (req.method() === 'GET') {
+        // The plain `Product` list (`backend/src/models/database_models.py`'s
+        // `Product`), distinct from `/products/dashboard-summary`. Unused
+        // by the current UI (only the summary and detail endpoints are),
+        // mocked anyway so it never falls through to the catch-all.
+        return route.fulfill({
+          json: this.products.map((product) => ({
+            id: product.id,
+            name: product.name,
+            url: product.url,
+            priority: product.priority,
+            category_id: product.category_id,
+            description: this.details[product.id]?.description ?? '',
+            currency: product.currency
+          }))
+        });
+      }
       if (req.method() === 'POST') {
         const body = req.postDataJSON();
         const id = Math.max(
@@ -218,7 +260,7 @@ export class ApiMock {
         };
         return route.fulfill({ json: { id, ...body } });
       }
-      return unmockedResponse(route);
+      return this._recordUnmatched(route);
     });
 
     await page.route(
@@ -249,12 +291,62 @@ export class ApiMock {
           delete this.details[id];
           return route.fulfill({ json: { ok: true } });
         }
-        return unmockedResponse(route);
+        return this._recordUnmatched(route);
       }
     );
 
     await page.route(`${API_URL}/extract-product-info/`, (route) =>
       route.fulfill({ json: this.extraction ?? DEFAULT_EXTRACTION })
     );
+
+    // Telegram endpoints: unused by the current specs (nothing clicks "Get
+    // chat ID"/"Test bot" yet), mocked anyway so they never fall through to
+    // the catch-all if a future spec does, and so they behave like the real
+    // backend (`backend/src/services/telegram_service.py`) given whatever
+    // `this.config` currently holds.
+    await page.route(`${API_URL}/telegram-chat-id`, (route) => {
+      if (route.request().method() !== 'GET')
+        return this._recordUnmatched(route);
+      if (!this.config?.telegram_bot_token) {
+        return route.fulfill({
+          status: 400,
+          json: { detail: 'Telegram bot token not configured' }
+        });
+      }
+      if (!this.telegramChatId) {
+        return route.fulfill({
+          status: 404,
+          json: {
+            detail: 'No chat ID found. Please send a message to the bot first.'
+          }
+        });
+      }
+      this.config = {
+        ...this.config,
+        telegram_bot_chat_id: this.telegramChatId,
+        telegram_status: 'connected'
+      };
+      return route.fulfill({ json: { message: 'Chat ID saved successfully' } });
+    });
+
+    await page.route(`${API_URL}/telegram-test-message`, (route) => {
+      if (route.request().method() !== 'POST')
+        return this._recordUnmatched(route);
+      if (!this.config?.telegram_bot_token) {
+        return route.fulfill({
+          status: 400,
+          json: { detail: 'Telegram bot token not configured' }
+        });
+      }
+      if (!this.config?.telegram_bot_chat_id) {
+        return route.fulfill({
+          status: 400,
+          json: { detail: 'Telegram chat ID not configured.' }
+        });
+      }
+      return route.fulfill({
+        json: { message: 'Test message sent successfully' }
+      });
+    });
   }
 }

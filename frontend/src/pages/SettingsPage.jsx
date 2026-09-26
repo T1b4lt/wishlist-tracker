@@ -35,7 +35,7 @@ const DEFAULT_DRAFT = {
 };
 
 const SettingsPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useDocumentTitle(t('pages.settings.title'));
 
   const configStatus = useConfigStore((state) => state.status);
@@ -115,16 +115,27 @@ const SettingsPage = () => {
       );
       setBaseline(nextBaseline);
       setSyncedConfig(saved);
+      // `i18n.t` (not the `t` from `useTranslation()` above) on purpose:
+      // that `t` is a fixed snapshot bound to whichever language was active
+      // at this component's *last render*, so if this save just changed the
+      // language, calling it here would still produce the previous
+      // language's strings. `i18n.t` always reads the live current
+      // language, which `saveConfig` has by now already applied
+      // (`configStore.js`'s `applyLanguage` runs before `save()` resolves).
       toaster.create({
-        title: t('toasts.settings.saveSuccess.title'),
-        description: t('toasts.settings.saveSuccess.description'),
+        title: i18n.t('toasts.settings.saveSuccess.title'),
+        description: i18n.t('toasts.settings.saveSuccess.description'),
         type: 'success'
       });
     } catch (error) {
       console.error('Error saving configuration:', error);
+      // A failed `saveConfig` never reaches `applyLanguage` (see
+      // `configStore.js`'s `save`), so the language cannot have changed
+      // here; `i18n.t` is used anyway, for the same reason as above and so
+      // both branches of this `try` follow the same rule.
       toaster.create({
-        title: t('toasts.settings.saveError.title'),
-        description: t('toasts.settings.saveError.description'),
+        title: i18n.t('toasts.settings.saveError.title'),
+        description: i18n.t('toasts.settings.saveError.description'),
         type: 'error'
       });
     } finally {

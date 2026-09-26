@@ -1,16 +1,13 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { buildCategory } from './fixtures/categories';
 
 test.describe('Categories', () => {
-  test('creates a new category', async ({ page }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories([
+  test('creates a new category', async ({ page, apiMock }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([
       buildCategory({ id: 1, name: 'Electronics', product_count: 0 })
     ]);
-    await api.install();
 
     await page.goto('/categories');
     await expect(
@@ -33,11 +30,12 @@ test.describe('Categories', () => {
     await expect(page.getByText('0 products').last()).toBeVisible();
   });
 
-  test('requires a name before creating a category', async ({ page }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories([]);
-    await api.install();
+  test('requires a name before creating a category', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([]);
 
     await page.goto('/categories');
     await page.getByRole('button', { name: 'Add category' }).first().click();
@@ -51,15 +49,14 @@ test.describe('Categories', () => {
   });
 
   test('disables delete (with an explanatory tooltip) while a category is in use', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories([
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([
       buildCategory({ id: 1, name: 'Electronics', product_count: 3 }),
       buildCategory({ id: 2, name: 'Books', product_count: 0 })
     ]);
-    await api.install();
 
     await page.goto('/categories');
 
@@ -82,14 +79,12 @@ test.describe('Categories', () => {
     await expect(enabledDelete).toBeEnabled();
   });
 
-  test('deletes a category that is not in use', async ({ page }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories([
+  test('deletes a category that is not in use', async ({ page, apiMock }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([
       buildCategory({ id: 1, name: 'Electronics', product_count: 3 }),
       buildCategory({ id: 2, name: 'Books', product_count: 0 })
     ]);
-    await api.install();
 
     await page.goto('/categories');
     await page.getByRole('button', { name: 'Delete category Books' }).click();

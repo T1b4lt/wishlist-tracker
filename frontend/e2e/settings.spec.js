@@ -1,16 +1,14 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 
 test.describe('Settings', () => {
   test('the save bar appears only while the form is dirty, and discard resets it', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories([]);
-    api.setProducts([]);
-    await api.install();
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([]);
+    apiMock.setProducts([]);
 
     await page.goto('/settings');
     await expect(
@@ -34,29 +32,39 @@ test.describe('Settings', () => {
   });
 
   test('applies the selected language immediately after saving', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories([]);
-    api.setProducts([]);
-    await api.install();
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([]);
+    apiMock.setProducts([]);
 
     await page.goto('/settings');
+    await expect(
+      page.getByRole('heading', { name: 'Settings', level: 1 })
+    ).toBeVisible();
 
     await page.getByRole('combobox', { name: 'Language' }).click();
     await page.getByRole('option', { name: 'Spanish' }).click();
 
+    // Selecting a new language only updates the draft: the UI (and this
+    // dirty state) must still be in English until the save actually
+    // succeeds (`configStore.js`'s `applyLanguage` only runs after `PATCH
+    // /config/` resolves).
     await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Settings', level: 1 })
+    ).toBeVisible();
+
     await page.getByRole('button', { name: 'Save' }).click();
 
-    // The rest of the UI (including the save bar disappearing, confirming
-    // the save itself completed) switches to Spanish immediately. The
-    // save-success toast's own text is a known, pre-existing exception (see
-    // the task report): react-i18next's `t` is a `getFixedT` snapshot bound
-    // to whichever language was active at the last render, so the toast
-    // created right after this save can still read the previous language.
-    // Intentionally not asserted on here.
+    // The whole UI, including the save-success toast's own text, switches
+    // to Spanish immediately: the toast is built from `i18n.t` (which
+    // always reads the live language), not the render-scoped `t` (a fixed
+    // snapshot of whichever language was active before this save), so it
+    // never lags behind a language-changing save (see
+    // `SettingsPage.jsx`'s `handleSave`).
+    await expect(page.getByText('Ajustes guardados')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save' })).toBeHidden();
     await expect(
       page.getByRole('heading', { name: 'Ajustes', level: 1 })

@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
 import { buildDashboardProduct } from './fixtures/products';
@@ -23,13 +22,12 @@ function luminance({ r, g, b }) {
 
 test.describe('Dark mode', () => {
   test('toggling to dark mode keeps headings visible with light-on-dark contrast', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
-    api.setProducts([buildDashboardProduct({ id: 1 })]);
-    await api.install();
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts([buildDashboardProduct({ id: 1 })]);
 
     await page.goto('/');
     const heading = page.getByRole('heading', {

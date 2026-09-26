@@ -1,16 +1,13 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
 import { buildManyProducts } from './fixtures/products';
 
 test.describe('Dashboard', () => {
-  test('shows the empty state with no products', async ({ page }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories([]);
-    api.setProducts([]);
-    await api.install();
+  test('shows the empty state with no products', async ({ page, apiMock }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([]);
+    apiMock.setProducts([]);
 
     await page.goto('/');
 
@@ -26,12 +23,13 @@ test.describe('Dashboard', () => {
     ).toBeVisible();
   });
 
-  test('renders the summary strip and the product list', async ({ page }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
-    api.setProducts(buildManyProducts(25));
-    await api.install();
+  test('renders the summary strip and the product list', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts(buildManyProducts(25));
 
     await page.goto('/');
 

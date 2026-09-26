@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { API_URL } from './e2e/support/constants.js';
 
 /** Port the Vite dev server binds to for the e2e run. Distinct from the
  * regular dev port (5173) so `just test-e2e` never collides with `just dev`
@@ -13,13 +14,20 @@ export default defineConfig({
   reporter: 'list',
 
   // Every API call is mocked per-test via `e2e/support/apiMock.js`
-  // (`page.route` against `http://localhost:8000`, the app's default
-  // `VITE_API_URL`): no real backend is ever started for these tests.
+  // (`page.route` against `API_URL`). `VITE_API_URL` is pinned to that same
+  // mocked origin here, in the dev server's own environment, so the app
+  // always targets it regardless of any `VITE_API_URL` already exported in
+  // the outer shell (which would otherwise point requests at a real backend
+  // - e.g. one already running via `just dev-backend` - bypassing the
+  // mocks). No real backend is ever started for these tests.
   webServer: {
     command: `npm run dev -- --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
-    timeout: 30_000
+    timeout: 30_000,
+    env: {
+      VITE_API_URL: API_URL
+    }
   },
 
   use: {

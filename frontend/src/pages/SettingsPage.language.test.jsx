@@ -6,6 +6,7 @@ import { memoryLocation } from 'wouter/memory-location';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { config as configApi } from '@/lib/api';
 import i18n from '@/i18n/index.js';
+import { toaster } from '@/components/ui/toaster';
 import { useConfigStore, initialConfigState } from '@/stores/configStore';
 import SettingsPage from './SettingsPage';
 
@@ -88,5 +89,36 @@ describe('SettingsPage language', () => {
       expect.objectContaining({ selected_language: 'spanish' })
     );
     await waitFor(() => expect(i18n.language).toBe('spanish'));
+  });
+
+  it('shows the save-success toast in the language just saved, not the previous one', async () => {
+    // Regression test: `handleSave` used to build this toast with the `t`
+    // from `useTranslation()`, a fixed snapshot bound to whichever language
+    // was active at the last render (before this save started). Since a
+    // save that changes the language applies it *before* resolving (see
+    // `configStore.js`'s `save`), by the time this toast is created the
+    // language has already moved on, and it must reflect that, not the
+    // stale render-time snapshot.
+    const user = userEvent.setup();
+    configApi.get.mockResolvedValue(CONFIG);
+    configApi.update.mockResolvedValue({
+      ...CONFIG,
+      selected_language: 'spanish'
+    });
+    renderSettingsPage();
+
+    await screen.findByRole('heading', { name: 'General' });
+    await user.click(screen.getByRole('combobox', { name: 'Language' }));
+    await user.click(await screen.findByRole('option', { name: 'Spanish' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(toaster.create).toHaveBeenCalledTimes(1));
+    expect(toaster.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Ajustes guardados',
+        description: 'Tus ajustes se han guardado correctamente.',
+        type: 'success'
+      })
+    );
   });
 });

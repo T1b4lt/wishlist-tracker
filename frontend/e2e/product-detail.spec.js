@@ -1,14 +1,22 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
 import {
   buildDashboardProduct,
   buildHistoryPoint,
+  buildLongHistoryDetail,
   buildProductDetail,
   buildSinglePointDetail
 } from './fixtures/products';
 import { DAY_SECONDS, formatShortDateUTC, nowSeconds } from './fixtures/time';
+
+/** Formats a price the same way `src/lib/format.js`'s `formatPrice` does for
+ * USD/`'en-US'`, so a value computed directly from a fixture's raw numbers
+ * can be compared against the page's own rendered (rounded) text. */
+const formatUSD = (value) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+    value
+  );
 
 /**
  * Six points spread from 140 days ago to 1 day ago, with strictly
@@ -31,18 +39,17 @@ function buildRangeHistory() {
 
 test.describe('Product detail', () => {
   test('the range selector recomputes the range-dependent stats', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED); // hist_window_size: 60
-    api.setCategories(CATEGORIES_BASIC);
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED); // hist_window_size: 60
+    apiMock.setCategories(CATEGORIES_BASIC);
     const product = buildDashboardProduct({ id: 1 });
-    api.setProducts([product]);
-    api.setDetail(
+    apiMock.setProducts([product]);
+    apiMock.setDetail(
       1,
       buildProductDetail({ id: 1, price_history: buildRangeHistory() })
     );
-    await api.install();
 
     await page.goto('/product/1');
     await expect(
@@ -78,18 +85,63 @@ test.describe('Product detail', () => {
     );
   });
 
-  test('shows the "just started tracking" state for a single history point', async ({
-    page
+  test('exercises the 180-day and All ranges on a long (180-point) history', async ({
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
+    // The brief's "25 products with 180-point histories" fixture, exercised
+    // here specifically on its two longest ranges (see `buildLongHistoryDetail`).
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    const detail = buildLongHistoryDetail(3, 180);
+    apiMock.setProducts([
+      buildDashboardProduct({
+        id: 3,
+        name: detail.name,
+        current_price: detail.current_price
+      })
+    ]);
+    apiMock.setDetail(3, detail);
+
+    const prices = detail.price_history.map((point) => point.price);
+    const expectedAverage =
+      prices.reduce((sum, price) => sum + price, 0) / prices.length;
+    const expectedLowest = Math.min(...prices);
+
+    await page.goto('/product/3');
+    await expect(
+      page.getByRole('heading', { name: 'Price history' })
+    ).toBeVisible();
+
+    const averageStat = page.getByText('Average in range').locator('..');
+    const lowestStat = page.getByText('Lowest in range').locator('..');
+
+    // The fixture spans exactly 180 daily points (179 days old to today),
+    // so both the "180 days" and "All" ranges include every one of them:
+    // they must agree with each other, and with a plain average/min
+    // computed directly over the whole fixture in this test.
+    await page.getByRole('radio', { name: '180 days' }).click({ force: true });
+    await expect(page.getByRole('radio', { name: '180 days' })).toBeChecked();
+    await expect(averageStat).toContainText(formatUSD(expectedAverage));
+    await expect(lowestStat).toContainText(formatUSD(expectedLowest));
+
+    await page.getByRole('radio', { name: 'All' }).click({ force: true });
+    await expect(page.getByRole('radio', { name: 'All' })).toBeChecked();
+    await expect(averageStat).toContainText(formatUSD(expectedAverage));
+    await expect(lowestStat).toContainText(formatUSD(expectedLowest));
+  });
+
+  test('shows the "just started tracking" state for a single history point', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
     const detail = buildSinglePointDetail({ id: 2, name: 'Just Added Gadget' });
-    api.setProducts([
+    apiMock.setProducts([
       buildDashboardProduct({ id: 2, name: 'Just Added Gadget' })
     ]);
-    api.setDetail(2, detail);
-    await api.install();
+    apiMock.setDetail(2, detail);
 
     await page.goto('/product/2');
     await expect(

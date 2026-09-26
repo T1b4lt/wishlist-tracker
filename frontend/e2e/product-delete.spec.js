@@ -1,17 +1,16 @@
-import { test, expect } from '@playwright/test';
-import { ApiMock } from './support/apiMock';
+import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
 import { buildDashboardProduct, buildProductDetail } from './fixtures/products';
 
 test.describe('Delete product', () => {
   test('deletes a product from the dashboard after confirming', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
-    api.setProducts([
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts([
       buildDashboardProduct({ id: 1, name: 'Wireless Headphones' }),
       buildDashboardProduct({
         id: 2,
@@ -20,7 +19,6 @@ test.describe('Delete product', () => {
         category_name: 'Books'
       })
     ]);
-    await api.install();
 
     await page.goto('/');
 
@@ -59,21 +57,20 @@ test.describe('Delete product', () => {
   });
 
   test('deletes a product from its detail page and returns to the dashboard', async ({
-    page
+    page,
+    apiMock
   }) => {
-    const api = new ApiMock(page);
-    api.setConfig(CONFIG_NOT_CONFIGURED);
-    api.setCategories(CATEGORIES_BASIC);
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
     const product = buildDashboardProduct({
       id: 1,
       name: 'Wireless Headphones'
     });
-    api.setProducts([product]);
-    api.setDetail(
+    apiMock.setProducts([product]);
+    apiMock.setDetail(
       1,
       buildProductDetail({ id: 1, name: 'Wireless Headphones' })
     );
-    await api.install();
 
     await page.goto('/product/1');
     await expect(

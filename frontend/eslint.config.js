@@ -44,7 +44,11 @@ export default defineConfig([
       globals: { ...globals.node, ...globals.browser }
     },
     rules: {
-      'react-refresh/only-export-components': 'off'
+      'react-refresh/only-export-components': 'off',
+      // Playwright fixtures (`support/fixtures.js`) take a `use` callback
+      // parameter, a Playwright API convention unrelated to React's `use()`
+      // hook; this rule otherwise mistakes it for one because of the name.
+      'react-hooks/rules-of-hooks': 'off'
     }
   }
 ]);
