@@ -57,17 +57,21 @@ Key highlights:
 
 ### Frontend
 
-| Technology                                                | Purpose                                   |
-| --------------------------------------------------------- | ----------------------------------------- |
-| [Vite](https://vite.dev/)                                 | Build tool and dev server                 |
-| [React 19](https://react.dev/)                            | UI library (functional components, hooks) |
-| [Chakra UI v3](https://www.chakra-ui.com/)                | Component library and design system       |
-| [Wouter](https://github.com/molefrog/wouter)              | Lightweight client-side routing           |
-| [Recharts](https://recharts.org/)                         | Interactive charting for price history    |
-| [react-icons](https://react-icons.github.io/react-icons/) | Icon library                              |
-| [react-i18next](https://react.i18next.com/)               | Internationalization framework            |
-| [next-themes](https://github.com/pacocoursey/next-themes) | Theme management (dark/light mode)        |
-| [Fontsource](https://fontsource.org/)                     | Self-hosted Geist and Geist Mono fonts    |
+| Technology                                                                                  | Purpose                                                   |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [Vite](https://vite.dev/)                                                                   | Build tool and dev server                                 |
+| [React 19](https://react.dev/)                                                              | UI library (functional components, hooks)                 |
+| [Chakra UI v3](https://www.chakra-ui.com/)                                                  | Component library and design system (theme, tokens)       |
+| [Wouter](https://github.com/molefrog/wouter)                                                | Lightweight client-side routing                           |
+| [Zustand](https://zustand.docs.pmnd.rs/)                                                    | State management (products, categories and config stores) |
+| [Motion](https://motion.dev/)                                                               | Animations (page transitions, list and state changes)     |
+| [Recharts](https://recharts.org/)                                                           | Interactive charting for price history                    |
+| [Lucide](https://lucide.dev/) via [react-icons](https://react-icons.github.io/react-icons/) | Icons (`react-icons/lu`)                                  |
+| [react-i18next](https://react.i18next.com/)                                                 | Internationalization framework                            |
+| [next-themes](https://github.com/pacocoursey/next-themes)                                   | Theme management (dark/light mode)                        |
+| [Fontsource](https://fontsource.org/)                                                       | Self-hosted Geist and Geist Mono variable fonts           |
+| [Vitest](https://vitest.dev/) + [Testing Library](https://testing-library.com/)             | Unit and component tests                                  |
+| [Playwright](https://playwright.dev/)                                                       | End-to-end smoke tests and visual snapshots (mocked API)  |
 
 ### Backend
 
@@ -101,6 +105,7 @@ wishlist-tracker/
 │   ├── uv.lock                       # Locked dependency versions (uv)
 │   ├── db/
 │   │   └── database.db               # SQLite database (auto-generated)
+│   ├── tests/                        # pytest suite (in-memory SQLite, never db/database.db)
 │   └── src/
 │       ├── api.py                    # FastAPI app factory (routers + middleware)
 │       ├── core/                     # Shared infrastructure
@@ -129,46 +134,50 @@ wishlist-tracker/
 │
 └── frontend/                         # React frontend (Vite)
     ├── index.html                    # HTML entry point
-    ├── package.json                  # Node.js dependencies
-    ├── vite.config.js                # Vite configuration (aliases)
+    ├── package.json                  # Node.js dependencies and scripts
+    ├── vite.config.js                # Vite + Vitest configuration (aliases, TZ pinned to UTC for tests)
+    ├── playwright.config.js          # Playwright e2e configuration (desktop + mobile projects)
     ├── eslint.config.js              # ESLint configuration
     ├── .prettierrc                   # Prettier formatting rules
     ├── public/
-    │   └── vite.svg                  # Favicon
+    │   └── favicon.svg               # Favicon
+    ├── e2e/                          # Playwright specs (mocked API, no backend needed)
+    │   ├── *.spec.js                 # Smoke tests per page/flow + visual.spec.js (snapshots)
+    │   ├── visual.spec.js-snapshots/ # Visual snapshot baselines (platform-specific)
+    │   ├── fixtures/                 # API response fixtures (config, categories, products, time)
+    │   └── support/                  # apiMock fixture (fails on unmocked requests), constants
     └── src/
-        ├── main.jsx                  # React entry point (Provider, Toaster, i18n)
+        ├── main.jsx                  # React entry point (MotionConfig, Provider, Toaster, i18n)
         ├── App.jsx                   # Root component with routing
-        ├── assets/                   # Static assets
+        ├── theme/                    # Chakra system: tokens, semantic tokens, text styles, recipes, motion
+        ├── stores/                   # Zustand stores (products, categories, config)
+        ├── hooks/                    # useDocumentTitle, useUnsavedChangesGuard
         ├── i18n/
         │   ├── index.js              # i18next configuration
         │   ├── english.json          # English translations
         │   └── spanish.json          # Spanish translations
         ├── lib/
-        │   └── web_utils.js          # Shared utility functions
+        │   ├── api/                  # Typed-by-JSDoc API client (config, categories, products, telegram)
+        │   ├── format.js             # Locale-aware price, percent and date formatting
+        │   ├── productHistory.js     # Chart ranges, stats and out-of-stock bands
+        │   └── ...                   # Dashboard summary, settings draft, priority visuals, utils
         ├── components/
-        │   ├── HeaderComponent.jsx   # App header with navigation
-        │   ├── FooterComponent.jsx   # App footer
-        │   ├── NewProductModal.jsx   # Modal for adding products (AI-assisted)
-        │   ├── CategoryModal.jsx     # Modal for managing categories
-        │   ├── DeleteProductDialog.jsx # Confirmation dialog for deletion
-        │   └── ui/                   # Chakra UI primitive wrappers
-        │       ├── provider.jsx
-        │       ├── color-mode.jsx
-        │       ├── dialog.jsx
-        │       ├── drawer.jsx
-        │       ├── field.jsx
-        │       ├── select.jsx
-        │       ├── switch.jsx
-        │       ├── tag.jsx
-        │       ├── toaster.jsx
-        │       ├── close-button.jsx
-        │       └── segmented-control.jsx
-        └── pages/
-            ├── DashboardPage.jsx     # Main dashboard with product grid
-            ├── ProductPage.jsx       # Product detail with price chart
-            ├── CategoriesPage.jsx    # Category management page
-            ├── SettingsPage.jsx      # App settings & Telegram setup
-            └── NotFoundPage.jsx      # 404 page
+        │   ├── layout/               # AppShell, AppHeader, AppFooter, PageContainer, PageHeader
+        │   ├── motion/               # Motion presets (FadeIn, Stagger, AnimatedList, PageTransition)
+        │   ├── common/               # Shared UI (Empty/Error/Loading states, ConfirmDialog, badges, ...)
+        │   ├── dashboard/            # Summary strip, product table, mobile cards, sparkline
+        │   ├── product/              # Product detail: stats row, price history chart, description
+        │   ├── products/             # ProductFormDialog (add and edit, AI-assisted)
+        │   ├── categories/           # Category list and form dialog
+        │   ├── settings/             # Settings sections, secret inputs, Telegram setup, save bar
+        │   └── ui/                   # Chakra UI snippet wrappers (provider, dialog, drawer, select, ...)
+        ├── pages/
+        │   ├── DashboardPage.jsx     # Wishlist overview (summary strip + product list)
+        │   ├── ProductPage.jsx       # Product detail with price chart
+        │   ├── CategoriesPage.jsx    # Category management page
+        │   ├── SettingsPage.jsx      # App settings & Telegram setup
+        │   └── NotFoundPage.jsx      # 404 page
+        └── test/                     # Vitest setup and test helpers
 ```
 
 ---
@@ -221,31 +230,31 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 
 ### Configuration
 
-| Method  | Endpoint   | Description                    |
-| ------- | ---------- | ------------------------------ |
-| `GET`   | `/config/` | Get all configuration values   |
-| `PATCH` | `/config/` | Partially update configuration |
+| Method  | Endpoint   | Description                                                                                                    |
+| ------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| `GET`   | `/config/` | Get all configuration values, plus a derived `telegram_status` (`not_configured`, `token_only` or `connected`) |
+| `PATCH` | `/config/` | Partially update configuration                                                                                 |
 
 ### Categories
 
-| Method   | Endpoint           | Description                                 |
-| -------- | ------------------ | ------------------------------------------- |
-| `POST`   | `/categories/`     | Create a new category                       |
-| `GET`    | `/categories/`     | List all categories                         |
-| `GET`    | `/categories/{id}` | Get a specific category                     |
-| `PATCH`  | `/categories/{id}` | Update a category                           |
-| `DELETE` | `/categories/{id}` | Delete a category (fails if products exist) |
+| Method   | Endpoint           | Description                                        |
+| -------- | ------------------ | -------------------------------------------------- |
+| `POST`   | `/categories/`     | Create a new category                              |
+| `GET`    | `/categories/`     | List all categories, each with its `product_count` |
+| `GET`    | `/categories/{id}` | Get a specific category, with its `product_count`  |
+| `PATCH`  | `/categories/{id}` | Update a category                                  |
+| `DELETE` | `/categories/{id}` | Delete a category (fails if products exist)        |
 
 ### Products
 
-| Method   | Endpoint                      | Description                                  |
-| -------- | ----------------------------- | -------------------------------------------- |
-| `POST`   | `/products/`                  | Create a new product                         |
-| `GET`    | `/products/`                  | List all products                            |
-| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view |
-| `GET`    | `/products/{id}`              | Get full product detail with price history   |
-| `PATCH`  | `/products/{id}`              | Update a product                             |
-| `DELETE` | `/products/{id}`              | Delete a product (cascades to price history) |
+| Method   | Endpoint                      | Description                                                                                                                              |
+| -------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/products/`                  | Create a new product                                                                                                                     |
+| `GET`    | `/products/`                  | List all products                                                                                                                        |
+| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view (`url`, current price, change, stock, `recent_prices` for the sparkline, `last_checked_at`) |
+| `GET`    | `/products/{id}`              | Get full product detail with price history and `last_checked_at`                                                                         |
+| `PATCH`  | `/products/{id}`              | Update a product (name, URL, priority, category, description, currency)                                                                  |
+| `DELETE` | `/products/{id}`              | Delete a product (cascades to price history)                                                                                             |
 
 ### AI Extraction
 
@@ -387,7 +396,7 @@ just docker-build   # Build the Docker image (then: just docker-run)
 | ------- | ---------------------------------------------------------------------------- |
 | setup   | `setup`, `install`, `install-backend`, `install-frontend`, `hooks`, `update` |
 | quality | `format`, `lint`, `check`, `pre-commit`                                      |
-| test    | `test`, `test-backend`, `test-frontend`, `test-e2e`                         |
+| test    | `test`, `test-backend`, `test-frontend`, `test-e2e`                          |
 | dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
 | db      | `db-init`, `db-seed`, `db-clean`, `db-reset`                                 |
 | docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`                   |
@@ -413,9 +422,11 @@ cd backend && uv sync && cd ..
 # Frontend hooks use the local Prettier/ESLint installs
 cd frontend && npm install && cd ..
 
-# Install the pre-commit and commit-msg hooks
+# Install the pre-commit, commit-msg and pre-push hooks
 backend/.venv/bin/pre-commit install
 ```
+
+> The pre-push hooks were added after the others. If you installed the hooks before, re-run `backend/.venv/bin/pre-commit install` (or `just hooks`) once to activate them: it installs every hook type listed in `default_install_hook_types`.
 
 Run all hooks manually against the entire repository with:
 
@@ -425,17 +436,21 @@ backend/.venv/bin/pre-commit run --all-files
 
 ### Hooks
 
-| Scope      | Hook                                       | Purpose                                                                       |
-| ---------- | ------------------------------------------ | ----------------------------------------------------------------------------- |
-| All files  | `trailing-whitespace`, `end-of-file-fixer` | Remove trailing whitespace and ensure a final newline                         |
-| All files  | `mixed-line-ending`                        | Enforce LF line endings (also set in `.gitattributes`)                        |
-| All files  | `check-json`, `check-yaml`, `check-toml`   | Validate syntax of config/data files                                          |
-| All files  | `detect-private-key`, `gitleaks`           | Block commits containing private keys or secrets                              |
-| Backend    | `ruff-check`, `ruff-format`                | Lint (with autofix) and format Python code                                    |
-| Backend    | `uv-lock`                                  | Keep `backend/uv.lock` in sync with `pyproject.toml`                          |
-| Frontend   | `prettier`                                 | Format frontend files using `frontend/.prettierrc`                            |
-| Frontend   | `eslint`                                   | Lint (with autofix) JS/JSX using `frontend/eslint.config.js`                  |
-| Commit msg | `conventional-pre-commit`                  | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages |
+| Scope      | Hook                                       | Purpose                                                                        |
+| ---------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| All files  | `trailing-whitespace`, `end-of-file-fixer` | Remove trailing whitespace and ensure a final newline                          |
+| All files  | `mixed-line-ending`                        | Enforce LF line endings (also set in `.gitattributes`)                         |
+| All files  | `check-json`, `check-yaml`, `check-toml`   | Validate syntax of config/data files                                           |
+| All files  | `detect-private-key`, `gitleaks`           | Block commits containing private keys or secrets                               |
+| Backend    | `ruff-check`, `ruff-format`                | Lint (with autofix) and format Python code                                     |
+| Backend    | `uv-lock`                                  | Keep `backend/uv.lock` in sync with `pyproject.toml`                           |
+| Frontend   | `prettier`                                 | Format frontend files using `frontend/.prettierrc`                             |
+| Frontend   | `eslint`                                   | Lint (with autofix) JS/JSX using `frontend/eslint.config.js`                   |
+| Commit msg | `conventional-pre-commit`                  | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages  |
+| Pre-push   | `frontend-unit-tests`                      | Run the frontend unit tests (`npm test`) when pushed commits touch `frontend/` |
+| Pre-push   | `backend-tests`                            | Run the backend tests (`uv run pytest`) when pushed commits touch `backend/`   |
+
+The Playwright e2e suite is not part of any hook (it needs a browser and its own dev server); run it with `just test-e2e`. Run the pre-push hooks on demand with `backend/.venv/bin/pre-commit run --hook-stage pre-push --all-files`.
 
 Ruff settings are in `backend/pyproject.toml` (`[tool.ruff]`). Frontend formatting can also be run with `npm run format` / `npm run format:check`.
 
