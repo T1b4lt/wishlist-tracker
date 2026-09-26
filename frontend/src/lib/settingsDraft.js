@@ -10,6 +10,7 @@
  * be unit tested directly, without rendering anything.
  */
 
+import { resolveDailyCheckReport } from './dailyCheckReport';
 import { resolveHistWindow } from './histWindow';
 
 /** The config fields the Settings form can edit and save. Deliberately
@@ -23,7 +24,8 @@ export const EDITABLE_FIELDS = [
   'google_api_key',
   'telegram_bot_token',
   'is_price_drop_alert',
-  'is_stock_change_alert'
+  'is_stock_change_alert',
+  'daily_check_report'
 ];
 
 /**
@@ -43,7 +45,8 @@ export function draftFromConfig(config) {
     google_api_key: config.google_api_key || '',
     telegram_bot_token: config.telegram_bot_token || '',
     is_price_drop_alert: config.is_price_drop_alert,
-    is_stock_change_alert: config.is_stock_change_alert
+    is_stock_change_alert: config.is_stock_change_alert,
+    daily_check_report: resolveDailyCheckReport(config.daily_check_report)
   };
 }
 
@@ -105,6 +108,7 @@ export function buildConfigPatch(draft) {
     google_api_key: draft.google_api_key,
     telegram_bot_token: draft.telegram_bot_token,
     is_price_drop_alert: draft.is_price_drop_alert,
-    is_stock_change_alert: draft.is_stock_change_alert
+    is_stock_change_alert: draft.is_stock_change_alert,
+    daily_check_report: draft.daily_check_report
   };
 }

@@ -349,6 +349,15 @@
         "reason": {
           "notConfigured": "Agrega un token de bot de Telegram para activar las alertas",
           "tokenOnly": "Termina de vincular tu chat de Telegram para activar las alertas"
+        },
+        "dailyReport": {
+          "title": "Informe de la revisión diaria",
+          "description": "Mensaje de Telegram cuando se completa la revisión de precios del día, o a las 23:50 con los productos que el límite de Gemini dejó sin revisar",
+          "options": {
+            "off": "Desactivado",
+            "limit_days": "Solo los días en que se alcanza el límite",
+            "every_day": "Todos los días"
+          }
         }
       },
       "startBotModal": {

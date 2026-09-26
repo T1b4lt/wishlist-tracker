@@ -3,7 +3,8 @@ import {
   draftFromConfig,
   isDraftDirty,
   mergeUpstreamChanges,
-  buildConfigPatch
+  buildConfigPatch,
+  EDITABLE_FIELDS
 } from './settingsDraft';
 
 const CONFIG = {
@@ -15,6 +16,7 @@ const CONFIG = {
   telegram_bot_chat_id: '999',
   is_price_drop_alert: true,
   is_stock_change_alert: false,
+  daily_check_report: 'limit_days',
   telegram_status: 'connected'
 };
 
@@ -33,8 +35,20 @@ describe('draftFromConfig', () => {
       google_api_key: '',
       telegram_bot_token: '',
       is_price_drop_alert: true,
-      is_stock_change_alert: false
+      is_stock_change_alert: false,
+      daily_check_report: 'limit_days'
     });
+  });
+
+  it('drafts the daily check report, falling back to the default for unknown values', () => {
+    expect(
+      draftFromConfig({ ...CONFIG, daily_check_report: 'every_day' })
+        .daily_check_report
+    ).toBe('every_day');
+    expect(
+      draftFromConfig({ ...CONFIG, daily_check_report: 'weekly' })
+        .daily_check_report
+    ).toBe('limit_days');
   });
 
   it('never includes telegram_bot_chat_id or telegram_status', () => {
@@ -135,8 +149,14 @@ describe('buildConfigPatch', () => {
       google_api_key: 'AIza-key',
       telegram_bot_token: 'bot-token',
       is_price_drop_alert: true,
-      is_stock_change_alert: false
+      is_stock_change_alert: false,
+      daily_check_report: 'limit_days'
     });
+  });
+
+  it('sends every editable field', () => {
+    const patch = buildConfigPatch(draftFromConfig(CONFIG));
+    expect(Object.keys(patch).sort()).toEqual([...EDITABLE_FIELDS].sort());
   });
 
   it('replaces a stored off-list window with the default so saving never sends an invalid option', () => {

@@ -1,7 +1,24 @@
-import { Box, Flex, Icon, Text, VStack } from '@chakra-ui/react';
+import { useMemo } from 'react';
+import {
+  Box,
+  createListCollection,
+  Flex,
+  Icon,
+  Text,
+  VStack
+} from '@chakra-ui/react';
 import { LuPackage, LuTrendingDown } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
+import { Field } from '@/components/ui/field';
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { DAILY_CHECK_REPORT_OPTIONS } from '@/lib/dailyCheckReport';
 import { useConfigStore } from '@/stores/configStore';
 import { SettingsSection } from './SettingsSection';
 import { TelegramSetup } from './TelegramSetup';
@@ -52,8 +69,8 @@ const AlertRow = ({
 );
 
 /**
- * The "Notifications" settings section: the Telegram integration checklist
- * and the two alert toggles it gates.
+ * The "Notifications" settings section: the Telegram integration checklist,
+ * the two alert toggles and the daily check report select it gates.
  *
  * @param {object} props
  * @param {string} props.telegramBotToken
@@ -64,6 +81,8 @@ const AlertRow = ({
  * @param {(value: boolean) => void} props.onPriceDropAlertChange
  * @param {boolean} props.isStockChangeAlert
  * @param {(value: boolean) => void} props.onStockChangeAlertChange
+ * @param {string} props.dailyCheckReport - One of `DAILY_CHECK_REPORT_OPTIONS`.
+ * @param {(value: string) => void} props.onDailyCheckReportChange
  */
 export const NotificationsSection = ({
   telegramBotToken,
@@ -73,13 +92,25 @@ export const NotificationsSection = ({
   isPriceDropAlert,
   onPriceDropAlertChange,
   isStockChangeAlert,
-  onStockChangeAlertChange
+  onStockChangeAlertChange,
+  dailyCheckReport,
+  onDailyCheckReportChange
 }) => {
   const { t } = useTranslation();
   const telegramStatus = useConfigStore(
     (state) => state.config?.telegram_status ?? 'not_configured'
   );
   const isConnected = telegramStatus === 'connected';
+  const dailyReportCollection = useMemo(
+    () =>
+      createListCollection({
+        items: DAILY_CHECK_REPORT_OPTIONS.map((value) => ({
+          value,
+          label: t(`pages.settings.alerts.dailyReport.options.${value}`)
+        }))
+      }),
+    [t]
+  );
   const reason = isConnected
     ? null
     : t(
@@ -119,6 +150,35 @@ export const NotificationsSection = ({
           onCheckedChange={(e) => onStockChangeAlertChange(e.checked)}
           disabled={!isConnected}
         />
+        <Field
+          label={t('pages.settings.alerts.dailyReport.title')}
+          helperText={
+            reason ?? t('pages.settings.alerts.dailyReport.description')
+          }
+          disabled={!isConnected}
+        >
+          <SelectRoot
+            collection={dailyReportCollection}
+            value={[dailyCheckReport]}
+            onValueChange={(details) => {
+              const next = details.value[0];
+              if (next) onDailyCheckReportChange(next);
+            }}
+            disabled={!isConnected}
+            size="md"
+          >
+            <SelectTrigger>
+              <SelectValueText />
+            </SelectTrigger>
+            <SelectContent>
+              {dailyReportCollection.items.map((item) => (
+                <SelectItem key={item.value} item={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
+        </Field>
       </VStack>
     </SettingsSection>
   );

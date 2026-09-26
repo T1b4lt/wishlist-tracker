@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { useConfigStore, initialConfigState } from '@/stores/configStore';
@@ -27,7 +28,9 @@ const baseProps = {
   isPriceDropAlert: false,
   onPriceDropAlertChange: vi.fn(),
   isStockChangeAlert: false,
-  onStockChangeAlertChange: vi.fn()
+  onStockChangeAlertChange: vi.fn(),
+  dailyCheckReport: 'limit_days',
+  onDailyCheckReportChange: vi.fn()
 };
 
 const setStatus = (telegram_status) => {
@@ -43,6 +46,7 @@ const setStatus = (telegram_status) => {
       telegram_bot_chat_id: telegram_status === 'connected' ? '42' : null,
       is_price_drop_alert: false,
       is_stock_change_alert: false,
+      daily_check_report: 'limit_days',
       telegram_status
     }
   });
@@ -54,7 +58,7 @@ beforeEach(() => {
 });
 
 describe('NotificationsSection', () => {
-  it('disables both alert switches and shows a reason when not connected', () => {
+  it('disables every Telegram control and shows a reason when not connected', () => {
     setStatus('not_configured');
     renderWithProviders(<NotificationsSection {...baseProps} />);
 
@@ -63,7 +67,7 @@ describe('NotificationsSection', () => {
     switches.forEach((s) => expect(s).toBeDisabled());
     expect(
       screen.getAllByText('Add a Telegram bot token to enable alerts')
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it('shows the "waiting for chat" reason when a token is saved but not linked', () => {
@@ -72,7 +76,7 @@ describe('NotificationsSection', () => {
 
     expect(
       screen.getAllByText('Finish linking your Telegram chat to enable alerts')
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it('enables both alert switches once connected, with no reason shown', () => {
@@ -87,5 +91,33 @@ describe('NotificationsSection', () => {
     expect(
       screen.queryByText('Finish linking your Telegram chat to enable alerts')
     ).not.toBeInTheDocument();
+  });
+
+  it('disables the daily report select when not connected', () => {
+    setStatus('not_configured');
+    renderWithProviders(<NotificationsSection {...baseProps} />);
+
+    expect(
+      screen.getByRole('combobox', { name: 'Daily check report' })
+    ).toBeDisabled();
+  });
+
+  it('reports the selected daily report mode', async () => {
+    setStatus('connected');
+    const onDailyCheckReportChange = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <NotificationsSection
+        {...baseProps}
+        onDailyCheckReportChange={onDailyCheckReportChange}
+      />
+    );
+
+    await user.click(
+      screen.getByRole('combobox', { name: 'Daily check report' })
+    );
+    await user.click(screen.getByRole('option', { name: 'Every day' }));
+
+    expect(onDailyCheckReportChange).toHaveBeenCalledWith('every_day');
   });
 });

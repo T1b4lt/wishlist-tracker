@@ -31,7 +31,8 @@ const DEFAULT_DRAFT = {
   google_api_key: '',
   telegram_bot_token: '',
   is_price_drop_alert: false,
-  is_stock_change_alert: false
+  is_stock_change_alert: false,
+  daily_check_report: 'limit_days'
 };
 
 const SettingsPage = () => {
@@ -203,6 +204,8 @@ const SettingsPage = () => {
             onPriceDropAlertChange={setField('is_price_drop_alert')}
             isStockChangeAlert={draft.is_stock_change_alert}
             onStockChangeAlertChange={setField('is_stock_change_alert')}
+            dailyCheckReport={draft.daily_check_report}
+            onDailyCheckReportChange={setField('daily_check_report')}
           />
         </Box>
       </Grid>

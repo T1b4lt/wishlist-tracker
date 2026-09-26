@@ -3,6 +3,10 @@ import { readContract } from '@/test/contracts';
 import { DEFAULT_HIST_WINDOW, HIST_WINDOW_OPTIONS } from './histWindow';
 import { RANGE_OPTIONS } from './productHistory';
 import {
+  DAILY_CHECK_REPORT_OPTIONS,
+  DEFAULT_DAILY_CHECK_REPORT
+} from './dailyCheckReport';
+import {
   buildDashboardProduct,
   buildHistoryPoint,
   buildProductDetail
@@ -25,6 +29,18 @@ describe('hist-window contract', () => {
 
   it('offers exactly the window options as chart ranges', () => {
     expect(RANGE_OPTIONS.map(Number)).toEqual(HIST_WINDOW.options);
+  });
+});
+
+const DAILY_CHECK_REPORT = readContract('daily-check-report.json');
+
+describe('daily-check-report contract', () => {
+  it('pins the report options', () => {
+    expect(DAILY_CHECK_REPORT_OPTIONS).toEqual(DAILY_CHECK_REPORT.options);
+  });
+
+  it('pins the default report', () => {
+    expect(DEFAULT_DAILY_CHECK_REPORT).toBe(DAILY_CHECK_REPORT.default);
   });
 });
 

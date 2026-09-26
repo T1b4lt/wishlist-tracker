@@ -349,6 +349,15 @@
         "reason": {
           "notConfigured": "Add a Telegram bot token to enable alerts",
           "tokenOnly": "Finish linking your Telegram chat to enable alerts"
+        },
+        "dailyReport": {
+          "title": "Daily check report",
+          "description": "Telegram message when the day's price check is complete, or at 23:50 with the products the Gemini limit left unchecked",
+          "options": {
+            "off": "Off",
+            "limit_days": "Only on days the limit is reached",
+            "every_day": "Every day"
+          }
         }
       },
       "startBotModal": {

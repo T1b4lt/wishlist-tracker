@@ -1,7 +1,22 @@
 import { test, expect } from './support/fixtures';
-import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
+import { CONFIG_CONNECTED, CONFIG_NOT_CONFIGURED } from './fixtures/config';
 
 test.describe('Settings', () => {
+  test('saves the daily check report mode', async ({ page, apiMock }) => {
+    apiMock.setConfig(CONFIG_CONNECTED);
+    apiMock.setCategories([]);
+    apiMock.setProducts([]);
+    await page.goto('/settings');
+
+    await page.getByRole('combobox', { name: 'Daily check report' }).click();
+    await page.getByRole('option', { name: 'Every day' }).click();
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await expect
+      .poll(() => apiMock.config.daily_check_report)
+      .toBe('every_day');
+  });
+
   test('the save bar appears only while the form is dirty, and discard resets it', async ({
     page,
     apiMock

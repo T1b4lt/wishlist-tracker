@@ -13,6 +13,7 @@ export function buildConfig(overrides = {}) {
     hist_window_size: 60,
     is_price_drop_alert: false,
     is_stock_change_alert: false,
+    daily_check_report: 'limit_days',
     telegram_bot_token: null,
     telegram_bot_chat_id: null,
     selected_language: 'english',

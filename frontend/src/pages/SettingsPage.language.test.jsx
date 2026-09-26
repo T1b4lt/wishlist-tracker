@@ -38,6 +38,7 @@ const CONFIG = {
   telegram_bot_chat_id: null,
   is_price_drop_alert: false,
   is_stock_change_alert: false,
+  daily_check_report: 'limit_days',
   telegram_status: 'not_configured'
 };
 
