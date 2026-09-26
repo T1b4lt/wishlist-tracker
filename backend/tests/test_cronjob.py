@@ -10,11 +10,12 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from sqlmodel import select
+from sqlmodel import delete, select
 from src import product_status_cronjob as cronjob
 from src.models.database_models import (
     Category,
     Config,
+    DailyCheckRun,
     PendingStatusRetry,
     Product,
     ProductHist,
@@ -361,12 +362,13 @@ def test_deleting_a_product_deletes_its_pending_retry(session, cron):
     assert _pending(session) == set()
 
 
-@pytest.mark.parametrize(
-    ("hour", "expected"), [(12, "full"), (13, "retry"), (11, "retry")]
-)
-def test_main_runs_the_full_check_at_the_analysis_hour_and_retries_otherwise(
-    session, cron, monkeypatch, hour, expected
-):
+def _daily_run(session):
+    session.expire_all()
+    return session.get(DailyCheckRun, _day_start(NOW))
+
+
+@pytest.fixture
+def main_calls(monkeypatch):
     calls = []
 
     async def fake_full(now=None):
@@ -377,10 +379,103 @@ def test_main_runs_the_full_check_at_the_analysis_hour_and_retries_otherwise(
 
     monkeypatch.setattr(cronjob, "fetch_and_store_product_status", fake_full)
     monkeypatch.setattr(cronjob, "retry_rate_limited_products", fake_retry)
+    return calls
 
+
+@pytest.mark.parametrize(
+    ("hour", "expected"), [(11, "retry"), (12, "full"), (18, "full")]
+)
+def test_main_starts_the_daily_run_on_the_first_tick_after_the_analysis_hour(
+    session, cron, main_calls, hour, expected
+):
     asyncio.run(cronjob.main(now=NOW.replace(hour=hour)))
 
-    assert calls == [expected]
+    assert main_calls == [expected]
+
+
+def test_main_starts_the_daily_run_only_once_per_day(session, cron, main_calls):
+    session.add(
+        DailyCheckRun(day_start=_day_start(NOW), started_at=_ts(NOW), total_products=1)
+    )
+    session.commit()
+
+    asyncio.run(cronjob.main(now=NOW.replace(minute=10)))
+
+    assert main_calls == ["retry"]
+
+
+def test_main_ignores_the_daily_run_of_another_day(session, cron, main_calls):
+    yesterday = NOW - timedelta(days=1)
+    session.add(
+        DailyCheckRun(
+            day_start=_day_start(yesterday), started_at=_ts(yesterday), total_products=1
+        )
+    )
+    session.commit()
+
+    asyncio.run(cronjob.main(now=NOW))
+
+    assert main_calls == ["full"]
+
+
+def test_full_run_creates_the_daily_run_without_a_limit(session, cron):
+    _run()
+
+    run = _daily_run(session)
+    assert (run.started_at, run.total_products) == (_ts(NOW), 1)
+    assert (run.limit_reached_at, run.pending_at_limit) == (None, None)
+    assert run.report_sent is False
+
+
+def test_full_run_records_the_first_quota_error(session, cron, monkeypatch):
+    second = _add_product(session, cron, "Gadget")
+    _add_product(session, cron, "Gizmo")
+    cron.errors[second.url] = _quota_error()
+    monkeypatch.setattr(cronjob, "_current_timestamp", lambda: _ts(NOW) + 180)
+
+    _run()
+
+    run = _daily_run(session)
+    assert run.total_products == 3
+    assert (run.limit_reached_at, run.pending_at_limit) == (_ts(NOW) + 180, 2)
+
+
+def test_retry_quota_error_keeps_the_first_snapshot(session, cron, monkeypatch):
+    session.add(
+        DailyCheckRun(
+            day_start=_day_start(NOW),
+            started_at=_ts(NOW),
+            total_products=1,
+            limit_reached_at=_ts(NOW) + 60,
+            pending_at_limit=1,
+        )
+    )
+    session.commit()
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+    cron.errors[cron.product_url] = _quota_error()
+    monkeypatch.setattr(cronjob, "_current_timestamp", lambda: _ts(NOW) + 3600)
+
+    _retry()
+
+    assert _daily_run(session).limit_reached_at == _ts(NOW) + 60
+
+
+def test_full_run_without_api_key_does_not_create_the_daily_run(session, cron):
+    session.exec(delete(Config).where(Config.key == "google_api_key"))
+    session.commit()
+
+    _run()
+
+    assert _daily_run(session) is None
+
+
+def test_full_run_without_products_does_not_create_the_daily_run(session, cron):
+    session.delete(session.get(Product, cron.product_id))
+    session.commit()
+
+    _run()
+
+    assert _daily_run(session) is None
 
 
 def test_full_run_checks_the_least_recently_checked_products_first(session, cron):

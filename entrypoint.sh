@@ -15,11 +15,13 @@ echo "Setting up cronjob for product status checks..."
 # to a file that the job sources before running.
 declare -px > /app/cron.env
 chmod 0600 /app/cron.env
-# Run every hour as root; the job itself checks the configured analysis hour.
+# Run every 10 minutes as root; the job decides between today's full check
+# (first run at or after the configured analysis hour) and retrying products
+# left by a Gemini quota error.
 # Output goes to PID 1's stdout/stderr so it shows up in `docker logs`.
 cat > /etc/cron.d/wishlist-cron <<'EOF'
 SHELL=/bin/bash
-0 * * * * root source /app/cron.env && cd /app/backend && python -m src.product_status_cronjob > /proc/1/fd/1 2> /proc/1/fd/2
+*/10 * * * * root source /app/cron.env && cd /app/backend && python -m src.product_status_cronjob > /proc/1/fd/1 2> /proc/1/fd/2
 EOF
 chmod 0644 /etc/cron.d/wishlist-cron
 

@@ -1,13 +1,14 @@
 """
 Daily price tracking cronjob script.
 
-This script should be run every hour via cron. It will:
-1. At the configured analysis hour, fetch prices for every product not yet
-   checked today and store them in the database (invalid prices are discarded)
+This script should be run every 10 minutes via cron. It will:
+1. On the first run at or after the configured analysis hour each day (no
+   ``DailyCheckRun`` row yet), fetch prices for every product not yet checked
+   today and store them in the database (invalid prices are discarded)
 2. If the Gemini quota (requests per minute or per day) runs out during that
    run, stop and mark the products left as pending retries
-3. At every other hour, retry today's pending products, stopping again at
-   the next quota error, until each one gets its record for the day
+3. On every later run that day, retry today's pending products, stopping
+   again at the next quota error, until each one gets its record for the day
 4. Send Telegram alerts if price drops or stock changes are detected (if configured)
 
 "Today" and the analysis hour use the process local time, set with the
@@ -18,6 +19,7 @@ import asyncio
 import logging
 import math
 import sys
+import time
 from datetime import datetime
 from enum import Enum
 
@@ -25,7 +27,13 @@ from sqlmodel import Session, delete, func, select
 from src.core.config import get_config_value
 from src.core.database import engine
 from src.core.local_day import local_day_bounds
-from src.models.database_models import PendingStatusRetry, Product, ProductHist
+from src.models.database_models import (
+    DailyCheckRun,
+    PendingStatusRetry,
+    Product,
+    ProductHist,
+)
+from src.services import daily_check_service
 from src.stagehand_utils import get_product_status, is_rate_limit_error
 from src.telegram_utils import send_price_drop_alert, send_stock_alert
 
@@ -193,6 +201,11 @@ def _last_record(session: Session, product_id: int, in_stock_only: bool = False)
     ).first()
 
 
+def _current_timestamp() -> int:
+    """Return the current Unix time; a seam so tests can pin quota-error times."""
+    return int(time.time())
+
+
 class _CheckOutcome(Enum):
     """Result of checking one product."""
 
@@ -294,7 +307,7 @@ async def _check_products(
     products: list[Product],
     google_api_key: str,
     now: datetime,
-) -> list[int]:
+) -> tuple[list[int], int | None]:
     """Check products in order, stopping at the first Gemini quota error.
 
     Once the quota runs out every later call would fail too, so the rest of
@@ -307,9 +320,11 @@ async def _check_products(
         now (datetime): Naive local time of the run.
 
     Returns:
-        list[int]: IDs of the products still without a record today because
-            of the quota: the one that hit it and every product after it
-            (products already checked today are left out).
+        tuple[list[int], int | None]: IDs of the products still without a
+            record today because of the quota (the one that hit it and every
+            product after it; products already checked today are left out),
+            and the Unix time of the quota error, or None if the quota never
+            ran out.
     """
     tg = _load_telegram_settings(session)
     if tg["enabled"]:
@@ -323,10 +338,12 @@ async def _check_products(
 
     counts = {outcome: 0 for outcome in _CheckOutcome}
     pending_ids: list[int] = []
+    limit_reached_at: int | None = None
     for index, product in enumerate(products):
         outcome = await _check_product(session, product, google_api_key, tg, now)
         counts[outcome] += 1
         if outcome is _CheckOutcome.RATE_LIMITED:
+            limit_reached_at = _current_timestamp()
             day_start, day_end = local_day_bounds(now)
             pending_ids = [product.id] + [
                 p.id
@@ -344,7 +361,7 @@ async def _check_products(
         f"Errors: {counts[_CheckOutcome.FAILED]}, "
         f"Pending retry: {len(pending_ids)}"
     )
-    return pending_ids
+    return pending_ids, limit_reached_at
 
 
 def _products_least_recently_checked_first(session: Session) -> list[Product]:
@@ -385,6 +402,10 @@ async def fetch_and_store_product_status(now: datetime | None = None):
     stops and the products left are saved as pending retries for today,
     replacing any previous pending retries.
 
+    Creates today's ``DailyCheckRun`` (only once an API key and at least one
+    product exist, so a run that cannot start is attempted again on the next
+    tick) and records the first quota error in it.
+
     Args:
         now (datetime | None): Naive local time of the run; defaults to
             ``datetime.now()``.
@@ -408,11 +429,25 @@ async def fetch_and_store_product_status(now: datetime | None = None):
             return
 
         logger.info(f"Found {len(products)} products to process")
-        pending_ids = await _check_products(session, products, google_api_key, now)
-
         day_start, _ = local_day_bounds(now)
+        daily_run = DailyCheckRun(
+            day_start=day_start,
+            started_at=int(now.timestamp()),
+            total_products=len(products),
+        )
+        session.add(daily_run)
+        session.commit()
+
+        pending_ids, limit_reached_at = await _check_products(
+            session, products, google_api_key, now
+        )
+
         for product_id in pending_ids:
             session.add(PendingStatusRetry(product_id=product_id, day_start=day_start))
+        if limit_reached_at is not None:
+            daily_run.limit_reached_at = limit_reached_at
+            daily_run.pending_at_limit = len(pending_ids)
+            session.add(daily_run)
         session.commit()
 
 
@@ -454,7 +489,8 @@ async def retry_rate_limited_products(now: datetime | None = None):
             return
 
         logger.info(f"Retrying {len(products)} rate-limited product(s)")
-        still_pending = await _check_products(session, products, google_api_key, now)
+        # The day's snapshot of the first quota error is never overwritten.
+        still_pending, _ = await _check_products(session, products, google_api_key, now)
 
         session.exec(
             delete(PendingStatusRetry).where(
@@ -464,30 +500,32 @@ async def retry_rate_limited_products(now: datetime | None = None):
         session.commit()
 
 
-def should_run_analysis(now: datetime | None = None) -> bool:
-    """Check if the current hour matches the configured analysis hour.
+def _should_start_daily_run(now: datetime) -> bool:
+    """Whether this run must start today's full check.
+
+    True on the first run at or after the configured analysis hour of a day
+    with no ``DailyCheckRun`` yet, so the full check happens once per day
+    even if the scheduled tick was missed (container stopped or restarted).
 
     Args:
-        now (datetime | None): Naive local time of the run; defaults to
-            ``datetime.now()``.
+        now (datetime): Naive local time of the run.
 
     Returns:
-        bool: True if analysis should run, False otherwise.
+        bool: True to run the full check, False to run the retry pass.
     """
-    current_hour = (now or datetime.now()).hour
-
     with Session(engine) as session:
         configured_hour = int(get_config_value(session, "analysis_hour", "12"))
+        already_started = daily_check_service.get_today_run(session, now) is not None
 
-        logger.info(
-            f"Current hour: {current_hour}, Configured analysis hour: {configured_hour}"
-        )
-
-        return current_hour == configured_hour
+    logger.info(
+        f"Current time: {now:%H:%M}, configured analysis hour: {configured_hour}, "
+        f"today's check started: {already_started}"
+    )
+    return not already_started and now.hour >= configured_hour
 
 
 async def main(now: datetime | None = None):
-    """Main entry point for the cronjob.
+    """Main entry point for the cronjob (runs every 10 minutes).
 
     Args:
         now (datetime | None): Naive local time of the run; defaults to
@@ -496,16 +534,11 @@ async def main(now: datetime | None = None):
     now = now or datetime.now()
     logger.info("=== Product Status Tracking Cronjob Started ===")
 
-    if should_run_analysis(now):
-        logger.info(
-            "Current hour matches configured analysis hour. Starting product status fetch..."
-        )
+    if _should_start_daily_run(now):
+        logger.info("Starting today's product status check...")
         await fetch_and_store_product_status(now=now)
     else:
-        logger.info(
-            "Current hour does not match configured analysis hour. "
-            "Checking pending rate-limit retries..."
-        )
+        logger.info("Checking pending rate-limit retries...")
         await retry_rate_limited_products(now=now)
 
     logger.info("=== Product Status Tracking Cronjob Completed ===")

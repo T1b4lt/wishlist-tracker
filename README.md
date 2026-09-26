@@ -29,7 +29,7 @@
 Key highlights:
 
 - **Any product from any website** — the AI agent can navigate and extract data from virtually any e-commerce page.
-- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out are retried every hour until they are checked.
+- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out are retried every 10 minutes until they are checked.
 - **Instant Telegram alerts** — get notified the moment a price drops or an item is back in stock.
 - **Complete price history** — visualize how prices evolve over time with interactive charts.
 - **Multi-language support** — the UI is fully translated in English and Spanish (i18n).
@@ -192,7 +192,7 @@ wishlist-tracker/
 
 ## 🗄 Database Schema
 
-The application uses **SQLite** with **SQLModel** as ORM. There are 6 tables:
+The application uses **SQLite** with **SQLModel** as ORM. There are 7 tables:
 
 ```
 ┌──────────────┐       ┌──────────────┐
@@ -233,9 +233,20 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 6 tables:
 │ product_id (PK)    │ (FK → Product, CASCADE DELETE)
 │ day_start          │ (Unix seconds, start of the local day)
 └────────────────────┘
+
+┌────────────────────┐
+│   DailyCheckRun    │
+├────────────────────┤
+│ day_start (PK)     │ (Unix seconds, start of the local day)
+│ started_at         │
+│ total_products     │
+│ limit_reached_at   │ (nullable, first Gemini quota error)
+│ pending_at_limit   │ (nullable)
+│ report_sent        │
+└────────────────────┘
 ```
 
-`PendingStatusRetry` holds the products whose daily check hit the Gemini quota; the cronjob retries them every hour for the rest of that local day (see [What the Cronjob Does](#what-the-cronjob-does)).
+`PendingStatusRetry` holds the products whose daily check hit the Gemini quota; the cronjob retries them every 10 minutes for the rest of that local day. `DailyCheckRun` keeps one summary row per local day: when the daily check started, how many products it covered, and the first Gemini quota error (time and products left), shown on the dashboard (see [What the Cronjob Does](#what-the-cronjob-does)).
 
 **Config keys** stored in the `Config` table:
 
@@ -409,7 +420,7 @@ Inside the container:
 
 - **Nginx** listens on port `7755`, serves the compiled frontend and proxies `/api/*` to the FastAPI backend (the `/api` prefix is stripped).
 - **Uvicorn** runs the API on `127.0.0.1:8000` (not exposed outside the container).
-- **Cron** runs the price tracking job every hour; its output appears in `docker logs wishlist-tracker-app`.
+- **Cron** runs the price tracking job every 10 minutes; its output appears in `docker logs wishlist-tracker-app`.
 - The **SQLite database** lives in `/app/backend/db`. It is created on first start and reused afterwards, so mount a volume there (as above) to keep your data across container upgrades.
 - If the API or Nginx process dies, the container exits so Docker can restart it.
 - **`TZ`** (default `UTC`) sets the local time used for the analysis hour and for "one check per product per day"; set it to your own time zone. `just docker-run` forwards your shell's `TZ`.
@@ -568,7 +579,7 @@ All application settings can be managed through the **Settings** page (`/setting
 
 ## ⏰ Cronjob Setup
 
-The price tracking runs via the script `backend/src/product_status_cronjob.py`. It is designed to be **executed every hour** — it checks internally whether the current hour matches the configured `analysis_hour` before running.
+The price tracking runs via the script `backend/src/product_status_cronjob.py`. It is designed to be **executed every 10 minutes** — it decides internally whether to start the day's check (first run at or after the configured `analysis_hour`) or to retry the products left by a Gemini quota error.
 
 ### Linux (crontab)
 
@@ -576,14 +587,14 @@ The price tracking runs via the script `backend/src/product_status_cronjob.py`. 
 # Edit your crontab
 crontab -e
 
-# Add this line to run every hour (adjust the path as needed)
-0 * * * * cd /path/to/wishlist-tracker/backend && /path/to/.venv/bin/python -m src.product_status_cronjob
+# Add this line to run every 10 minutes (adjust the path as needed)
+*/10 * * * * cd /path/to/wishlist-tracker/backend && /path/to/.venv/bin/python -m src.product_status_cronjob
 ```
 
 ### What the Cronjob Does
 
-1. Checks if the current hour matches the configured **analysis hour**.
-2. If it matches, iterates over all products not yet checked today — least recently checked first (never-checked products at the front), so if the daily quota cannot cover every product, the ones left out one day go first the next — and:
+1. The first run at or after the configured **analysis hour** each day starts the daily check (once per day, even if the container was stopped at that hour) and records it in `DailyCheckRun`.
+2. It iterates over all products not yet checked today — least recently checked first (never-checked products at the front), so if the daily quota cannot cover every product, the ones left out one day go first the next — and:
    - Opens each product URL via the AI agent (Stagehand + Gemini).
    - Extracts the current price and stock status.
    - Stores a new `ProductHist` record in the database.
@@ -591,11 +602,11 @@ crontab -e
    - If the price dropped → sends a **price drop alert** via Telegram (if enabled).
    - If the item is back in stock → sends a **stock alert** via Telegram (if enabled).
 4. If the **Gemini quota** runs out (requests per minute or per day), the run stops right away — every later call would fail too — and the products left are saved in `PendingStatusRetry`.
-5. At every other hour, it retries only today's pending products (same steps 2–3), stopping again at the next quota error, until all of them have their record:
+5. At every later run that day (every 10 minutes), it retries only today's pending products (same steps 2–3), stopping again at the next quota error, until all of them have their record:
    - A product leaves the list once it is stored, or if it fails for another reason (e.g. an invalid price or a page that does not load), so it does not keep spending quota.
    - Pending products are dropped when the local day ends; the next analysis-hour run checks everything again.
 
-Example: with 10 products and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next hour retries those 5, and so on until none are left.
+Example: with 10 products and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next run retries those 5, and so on until none are left.
 
 A quota error is recognized from the message Stagehand raises (`You exceeded your current quota … Quota exceeded for metric …`, i.e. Gemini's HTTP 429 `RESOURCE_EXHAUSTED`). Stagehand already retries each model call a few times before raising.
 
