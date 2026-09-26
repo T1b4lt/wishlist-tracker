@@ -105,4 +105,67 @@ test.describe('Add / edit product', () => {
       page.getByRole('link', { name: 'Wireless Headphones Pro' })
     ).toBeVisible();
   });
+
+  test.describe('dialog sizing', () => {
+    /** Opens the dialog in `mode` and returns its box plus the viewport. */
+    async function openDialogBox(page, apiMock, mode) {
+      apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+      apiMock.setCategories(CATEGORIES_BASIC);
+      const product = buildDashboardProduct({
+        id: 1,
+        name: 'Wireless Headphones'
+      });
+      apiMock.setProducts(mode === 'edit' ? [product] : []);
+      apiMock.setDetail(
+        1,
+        buildProductDetail({ id: 1, name: 'Wireless Headphones' })
+      );
+
+      await page.goto('/');
+      let dialog;
+      if (mode === 'edit') {
+        await page
+          .getByRole('button', { name: 'Actions for Wireless Headphones' })
+          .click();
+        await page.getByRole('menuitem', { name: 'Edit' }).click();
+        dialog = page.getByRole('dialog', { name: 'Edit product' });
+        await expect(dialog.getByLabel('Item name')).toHaveValue(
+          'Wireless Headphones'
+        );
+      } else {
+        await page.getByRole('button', { name: 'Add product' }).first().click();
+        dialog = page.getByRole('dialog', { name: 'Add product' });
+        await expect(dialog).toBeVisible();
+      }
+      // Wait for the open animation to settle before measuring.
+      await expect(dialog).not.toHaveAttribute('data-state', 'closed');
+      await page.waitForTimeout(400);
+      return { box: await dialog.boundingBox(), viewport: page.viewportSize() };
+    }
+
+    for (const mode of ['create', 'edit']) {
+      test(`${mode} dialog fits its content and is centered on desktop`, async ({
+        page,
+        apiMock
+      }) => {
+        await page.setViewportSize({ width: 1280, height: 1000 });
+        const { box, viewport } = await openDialogBox(page, apiMock, mode);
+
+        expect(box.height).toBeLessThan(viewport.height - 64);
+        const topGap = box.y;
+        const bottomGap = viewport.height - (box.y + box.height);
+        expect(Math.abs(topGap - bottomGap)).toBeLessThan(4);
+      });
+    }
+
+    test('create dialog fills the viewport on mobile', async ({
+      page,
+      apiMock
+    }) => {
+      await page.setViewportSize({ width: 375, height: 800 });
+      const { box, viewport } = await openDialogBox(page, apiMock, 'create');
+
+      expect(box.height).toBeGreaterThanOrEqual(viewport.height - 1);
+    });
+  });
 });

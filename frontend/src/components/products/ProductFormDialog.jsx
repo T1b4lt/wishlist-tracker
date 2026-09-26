@@ -570,7 +570,16 @@ export const ProductFormDialog = ({
       finalFocusEl={finalFocusEl}
     >
       <DialogBackdrop />
-      <DialogContent>
+      {/* The `full` size variant sets `minH: 100dvh`, `borderRadius: 0` and
+          `--dialog-margin: 0`, and the `lg` variant only overrides `maxW`, so
+          those styles would leak to wider screens and stretch the dialog to
+          the full viewport height. Reset them from `sm` up so the dialog
+          sizes to its content and stays centered. */}
+      <DialogContent
+        minH={{ sm: 'auto' }}
+        borderRadius={{ sm: 'l3' }}
+        my={{ sm: 'var(--dialog-base-margin)' }}
+      >
         <DialogHeader>
           <DialogTitle>
             {mode === 'create'
