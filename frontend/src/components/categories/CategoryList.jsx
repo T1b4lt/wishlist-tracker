@@ -3,6 +3,7 @@ import {
   Card,
   Flex,
   HStack,
+  Icon,
   IconButton,
   Skeleton,
   Text,
@@ -47,7 +48,7 @@ const CategoryCard = ({ category, index, onEdit, onDelete }) => {
         if (canDelete) onDelete(category);
       }}
     >
-      <LuTrash2 aria-hidden="true" />
+      <Icon as={LuTrash2} />
     </IconButton>
   );
 
@@ -70,7 +71,7 @@ const CategoryCard = ({ category, index, onEdit, onDelete }) => {
               size="sm"
               onClick={() => onEdit(category)}
             >
-              <LuPencil aria-hidden="true" />
+              <Icon as={LuPencil} />
             </IconButton>
             {canDelete ? (
               deleteButton

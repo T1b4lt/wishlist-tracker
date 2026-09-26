@@ -1,4 +1,4 @@
-import { Badge } from '@chakra-ui/react';
+import { Badge, Icon } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
 import { getPriorityLabel } from '@/lib/web_utils';
 import { PRIORITY_ICONS, PRIORITY_FONT_WEIGHTS } from '@/lib/priorityVisuals';
@@ -22,7 +22,7 @@ export const PriorityBadge = ({ priority, ...rest }) => {
   if (!priority) return null;
 
   const normalized = priority.toLowerCase();
-  const Icon = PRIORITY_ICONS[normalized] ?? PRIORITY_ICONS.medium;
+  const PriorityIcon = PRIORITY_ICONS[normalized] ?? PRIORITY_ICONS.medium;
   const fontWeight = PRIORITY_FONT_WEIGHTS[normalized] ?? 'medium';
 
   return (
@@ -35,7 +35,7 @@ export const PriorityBadge = ({ priority, ...rest }) => {
       fontWeight={fontWeight}
       {...rest}
     >
-      <Icon size={12} aria-hidden="true" />
+      <Icon as={PriorityIcon} size="xs" />
       {getPriorityLabel(priority, t)}
     </Badge>
   );

@@ -64,8 +64,45 @@ export const textareaRecipe = defineRecipe({
   base: { _disabled: disabledFieldStyle }
 });
 
+/**
+ * Global Lucide stroke width. Lucide's own default, set once here so every
+ * icon rendered through Chakra's `Icon` shares it (CSS `stroke-width` on the
+ * `<svg>` overrides the attribute `react-icons` writes).
+ */
+export const ICON_STROKE_WIDTH = 2;
+
+/**
+ * Icon: the app's single icon size scale and stroke width. Every Lucide icon
+ * is rendered as `<Icon as={LuSomething} size="md" />` (see "Icons" in
+ * `frontend/README.md`) instead of passing a pixel `size` per call:
+ *
+ * | size | px | typical use                                  |
+ * | ---- | -- | -------------------------------------------- |
+ * | xs   | 12 | inside small badges (priority, status)        |
+ * | sm   | 14 | inline with body text (price change, stock)   |
+ * | md   | 16 | inline with labels, menu items               |
+ * | lg   | 20 | standalone header and section icons           |
+ * | xl   | 24 | empty and error state illustrations           |
+ *
+ * Inside a `Button`/`IconButton`, omit `size`: the default `inherit` adds no
+ * box size, so the button recipe sizes the icon to match the button.
+ */
+export const iconRecipe = defineRecipe({
+  base: { strokeWidth: ICON_STROKE_WIDTH },
+  variants: {
+    size: {
+      xs: { boxSize: '3' },
+      sm: { boxSize: '3.5' },
+      md: { boxSize: '4' },
+      lg: { boxSize: '5' },
+      xl: { boxSize: '6' }
+    }
+  }
+});
+
 export const recipes = {
   button: buttonRecipe,
+  icon: iconRecipe,
   badge: badgeRecipe,
   input: inputRecipe,
   textarea: textareaRecipe

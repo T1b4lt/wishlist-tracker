@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Box, Button, HStack, Input, Text, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  HStack,
+  Icon,
+  Input,
+  Text,
+  VStack
+} from '@chakra-ui/react';
 import { LuDownload, LuSend } from 'react-icons/lu';
 import { useTranslation, Trans } from 'react-i18next';
 import {
@@ -168,7 +176,7 @@ export const TelegramSetup = ({
             disabled={!canLinkChat || isGettingChatId}
             size="md"
           >
-            <LuDownload size={16} aria-hidden="true" />
+            <Icon as={LuDownload} />
             {t('common.actions.getChatId')}
           </Button>
           {chatId && (
@@ -203,7 +211,7 @@ export const TelegramSetup = ({
           disabled={!canSendTest || isSendingTestMessage}
           size="md"
         >
-          <LuSend size={16} aria-hidden="true" />
+          <Icon as={LuSend} />
           {t('common.actions.testBot')}
         </Button>
         {!canSendTest && (

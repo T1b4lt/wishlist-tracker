@@ -1,4 +1,4 @@
-import { Box, Flex, Text, VStack } from '@chakra-ui/react';
+import { Box, Flex, Icon, Text, VStack } from '@chakra-ui/react';
 import { LuPackage, LuTrendingDown } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
@@ -13,7 +13,7 @@ import { TelegramSetup } from './TelegramSetup';
  * disabled state is never conveyed by opacity/color alone.
  */
 const AlertRow = ({
-  icon: Icon,
+  icon: RowIcon,
   iconColor,
   title,
   description,
@@ -31,7 +31,7 @@ const AlertRow = ({
   >
     <Flex align="center" gap={4} flex={1}>
       <Box p={2} borderRadius="md" bg="bg.muted" color={iconColor}>
-        <Icon size={20} aria-hidden="true" />
+        <Icon as={RowIcon} size="lg" />
       </Box>
       <Box>
         <Text fontWeight="medium" mb={1}>

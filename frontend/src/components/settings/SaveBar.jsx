@@ -1,4 +1,4 @@
-import { Button, Flex, Text, VisuallyHidden } from '@chakra-ui/react';
+import { Button, Flex, Icon, Text, VisuallyHidden } from '@chakra-ui/react';
 import { AnimatePresence, useReducedMotion } from 'motion/react';
 import { LuSave, LuX } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
@@ -85,11 +85,11 @@ export const SaveBar = ({ isDirty, isSaving = false, onSave, onDiscard }) => {
                   onClick={onDiscard}
                   disabled={isSaving}
                 >
-                  <LuX size={16} aria-hidden="true" />
+                  <Icon as={LuX} />
                   {t('common.actions.discard')}
                 </Button>
                 <Button onClick={onSave} loading={isSaving}>
-                  <LuSave size={16} aria-hidden="true" />
+                  <Icon as={LuSave} />
                   {t('common.actions.save')}
                 </Button>
               </Flex>

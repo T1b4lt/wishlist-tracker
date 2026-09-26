@@ -3,6 +3,7 @@ import {
   Button,
   Flex,
   HStack,
+  Icon,
   Input,
   Popover,
   Skeleton,
@@ -267,12 +268,12 @@ export const ProductFormDialog = ({
         { key: 'medium', value: 'Medium', text: t('common.priority.medium') },
         { key: 'low', value: 'Low', text: t('common.priority.low') }
       ].map(({ key, value, text }) => {
-        const Icon = PRIORITY_ICONS[key];
+        const PriorityIcon = PRIORITY_ICONS[key];
         return {
           value,
           label: (
             <HStack gap={1}>
-              <Icon size={14} aria-hidden="true" />
+              <Icon as={PriorityIcon} size="sm" />
               <Text fontWeight={PRIORITY_FONT_WEIGHTS[key]}>{text}</Text>
             </HStack>
           )
@@ -616,7 +617,7 @@ export const ProductFormDialog = ({
                     </Flex>
                   ) : (
                     <Flex align="center" gap={2}>
-                      <LuSparkles size={16} aria-hidden="true" />
+                      <Icon as={LuSparkles} />
                       <Text>
                         {/* "Retry" only after a failed attempt: a
                             successful extraction clears `extractionError`,
@@ -705,10 +706,7 @@ export const ProductFormDialog = ({
                                     <SelectItem key={item.value} item={item}>
                                       {item.value === NEW_CATEGORY_VALUE ? (
                                         <HStack gap={2}>
-                                          <LuPlus
-                                            size={14}
-                                            aria-hidden="true"
-                                          />
+                                          <Icon as={LuPlus} size="sm" />
                                           <Text>{item.label}</Text>
                                         </HStack>
                                       ) : (

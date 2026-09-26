@@ -1,4 +1,4 @@
-import { Button, Circle, Heading, Text, VStack } from '@chakra-ui/react';
+import { Button, Circle, Heading, Icon, Text, VStack } from '@chakra-ui/react';
 import { LuRefreshCw, LuTriangleAlert } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import { FadeIn } from '@/components/motion';
@@ -21,7 +21,7 @@ export const ErrorState = ({ title, message, onRetry, ...rest }) => {
     <FadeIn>
       <VStack gap={4} py={12} px={4} textAlign="center" {...rest}>
         <Circle size="48px" bg="bg.muted" color="fg.muted">
-          <LuTriangleAlert size={24} aria-hidden="true" />
+          <Icon as={LuTriangleAlert} size="xl" />
         </Circle>
         <VStack gap={1}>
           <Heading textStyle="heading.sm" color="fg">
@@ -35,7 +35,7 @@ export const ErrorState = ({ title, message, onRetry, ...rest }) => {
         </VStack>
         {onRetry && (
           <Button variant="outline" onClick={onRetry}>
-            <LuRefreshCw size={16} aria-hidden="true" />
+            <Icon as={LuRefreshCw} />
             {t('common.actions.retry')}
           </Button>
         )}

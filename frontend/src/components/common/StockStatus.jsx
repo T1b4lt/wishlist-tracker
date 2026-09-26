@@ -1,4 +1,4 @@
-import { HStack, Text } from '@chakra-ui/react';
+import { HStack, Icon, Text } from '@chakra-ui/react';
 import { LuPackageCheck, LuPackageX } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 
@@ -25,7 +25,7 @@ export const StockStatus = ({ inStock, ...rest }) => {
     );
   }
 
-  const Icon = inStock ? LuPackageCheck : LuPackageX;
+  const StockIcon = inStock ? LuPackageCheck : LuPackageX;
   const color = inStock ? 'stock.in' : 'stock.out';
   const label = inStock
     ? t('common.status.inStock')
@@ -33,7 +33,7 @@ export const StockStatus = ({ inStock, ...rest }) => {
 
   return (
     <HStack gap={1.5} color={color} {...rest}>
-      <Icon size={14} aria-hidden="true" />
+      <Icon as={StockIcon} size="sm" />
       <Text textStyle="body">{label}</Text>
     </HStack>
   );

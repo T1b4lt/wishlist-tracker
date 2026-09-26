@@ -1,4 +1,4 @@
-import { HStack, Text } from '@chakra-ui/react';
+import { HStack, Icon, Text } from '@chakra-ui/react';
 import { LuTrendingUp, LuTrendingDown, LuMinus } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import { formatPercent, getTrend } from '@/lib/format';
@@ -46,7 +46,7 @@ export const PriceChange = ({
     );
   }
 
-  const Icon = TREND_ICONS[trend];
+  const TrendIcon = TREND_ICONS[trend];
   const color = TREND_COLOR_TOKENS[trend];
 
   return (
@@ -57,7 +57,7 @@ export const PriceChange = ({
       textStyle="numeric"
       {...rest}
     >
-      <Icon size={14} aria-hidden="true" />
+      <Icon as={TrendIcon} size="sm" />
       <Text>{formatPercent(value, locale, { signDisplay })}</Text>
     </HStack>
   );

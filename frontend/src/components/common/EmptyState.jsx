@@ -1,4 +1,4 @@
-import { Box, Circle, Heading, Text, VStack } from '@chakra-ui/react';
+import { Box, Circle, Heading, Icon, Text, VStack } from '@chakra-ui/react';
 import { FadeIn } from '@/components/motion';
 
 /**
@@ -6,7 +6,7 @@ import { FadeIn } from '@/components/motion';
  * optional description and an optional action (e.g. a "create" button).
  *
  * @param {object} props
- * @param {import('react').ComponentType<{size?: number}>} [props.icon] - A
+ * @param {import('react').ComponentType} [props.icon] - A
  *   `react-icons/lu` icon component. Purely decorative (hidden from screen
  *   readers), since `title` already conveys the state.
  * @param {string} props.title
@@ -16,7 +16,7 @@ import { FadeIn } from '@/components/motion';
  * @param {object} [rest] - Forwarded to the outer `VStack`.
  */
 export const EmptyState = ({
-  icon: Icon,
+  icon: StateIcon,
   title,
   description,
   action,
@@ -24,9 +24,9 @@ export const EmptyState = ({
 }) => (
   <FadeIn>
     <VStack gap={4} py={12} px={4} textAlign="center" {...rest}>
-      {Icon && (
+      {StateIcon && (
         <Circle size="48px" bg="bg.muted" color="fg.muted">
-          <Icon size={24} aria-hidden="true" />
+          <Icon as={StateIcon} size="xl" />
         </Circle>
       )}
       <VStack gap={1}>

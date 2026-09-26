@@ -1,4 +1,4 @@
-import { Box, Flex, Heading, Text } from '@chakra-ui/react';
+import { Box, Flex, Heading, Icon, Text } from '@chakra-ui/react';
 import { Link } from 'wouter';
 import { LuArrowLeft } from 'react-icons/lu';
 
@@ -35,7 +35,7 @@ const PageHeader = ({
             fontWeight="medium"
             _hover={{ color: 'fg' }}
           >
-            <LuArrowLeft size={14} />
+            <Icon as={LuArrowLeft} size="sm" />
             <Text>{backLink.label}</Text>
           </Flex>
         </Link>

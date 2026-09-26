@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Box, HStack, IconButton, Menu, Portal } from '@chakra-ui/react';
+import { Box, HStack, Icon, IconButton, Menu, Portal } from '@chakra-ui/react';
 import {
   LuEllipsis,
   LuArrowUpRight,
@@ -44,7 +44,7 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
               name: product.name
             })}
           >
-            <LuEllipsis />
+            <Icon as={LuEllipsis} />
           </IconButton>
         </Menu.Trigger>
         <Portal>
@@ -55,7 +55,7 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
                 onSelect={() => navigate(`/product/${product.id}`)}
               >
                 <HStack gap={2}>
-                  <LuArrowUpRight size={16} aria-hidden="true" />
+                  <Icon as={LuArrowUpRight} size="md" />
                   {t('pages.dashboard.menu.open')}
                 </HStack>
               </Menu.Item>
@@ -64,7 +64,7 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
                 onSelect={() => onEdit(product, triggerRef.current)}
               >
                 <HStack gap={2}>
-                  <LuPencil size={16} aria-hidden="true" />
+                  <Icon as={LuPencil} size="md" />
                   {t('common.actions.edit')}
                 </HStack>
               </Menu.Item>
@@ -75,7 +75,7 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
                 }
               >
                 <HStack gap={2}>
-                  <LuExternalLink size={16} aria-hidden="true" />
+                  <Icon as={LuExternalLink} size="md" />
                   {t('pages.dashboard.menu.storePage')}
                 </HStack>
               </Menu.Item>
@@ -85,7 +85,7 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
                 onSelect={() => onDelete(product, triggerRef.current)}
               >
                 <HStack gap={2}>
-                  <LuTrash2 size={16} aria-hidden="true" />
+                  <Icon as={LuTrash2} size="md" />
                   {t('common.actions.delete')}
                 </HStack>
               </Menu.Item>

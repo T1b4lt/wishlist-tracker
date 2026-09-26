@@ -1,4 +1,4 @@
-import { Badge } from '@chakra-ui/react';
+import { Badge, Icon } from '@chakra-ui/react';
 import { AnimatePresence, useReducedMotion } from 'motion/react';
 import { LuCircleAlert, LuCircleCheck, LuClock } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
@@ -32,7 +32,7 @@ export const TelegramStatusBadge = ({ status, ...rest }) => {
   const { t } = useTranslation();
   const shouldReduceMotion = useReducedMotion();
   const {
-    icon: Icon,
+    icon: StatusIcon,
     variant,
     i18nKey
   } = STATUS_VISUALS[status] ?? STATUS_VISUALS.not_configured;
@@ -61,7 +61,7 @@ export const TelegramStatusBadge = ({ status, ...rest }) => {
           gap={1}
           {...rest}
         >
-          <Icon size={12} aria-hidden="true" />
+          <Icon as={StatusIcon} size="xs" />
           {t(`pages.settings.telegram.status.${i18nKey}`)}
         </Badge>
       </MotionBox>
