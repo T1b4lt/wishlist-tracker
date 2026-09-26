@@ -129,7 +129,8 @@
         "nameRequired": "Introduce un nombre.",
         "categoryRequired": "Selecciona una categoría.",
         "currencyInvalid": "Introduce un código de moneda de 3 letras válido.",
-        "extraction": "No pudimos extraer los detalles de esa URL. Puedes rellenarlos manualmente o volver a intentarlo."
+        "extraction": "No pudimos extraer los detalles de esa URL. Puedes rellenarlos manualmente o volver a intentarlo.",
+        "extractionNoCategories": "Necesitas al menos una categoría para poder extraer los detalles. Añade una desde el campo Categoría de abajo y vuelve a intentarlo."
       },
       "newCategory": {
         "nameLabel": "Nombre",

@@ -375,7 +375,19 @@ export const ProductFormDialog = ({
       } catch (err) {
         if (controller.signal.aborted) return;
         console.error('Error extracting product info:', err);
-        setExtractionError(t('components.productFormDialog.errors.extraction'));
+        // The backend rejects extraction with a 400 when there are no
+        // categories to classify the product into: tell the user how to fix
+        // it instead of showing the generic failure message.
+        const noCategories =
+          err?.status === 400 &&
+          useCategoriesStore.getState().items.length === 0;
+        setExtractionError(
+          t(
+            noCategories
+              ? 'components.productFormDialog.errors.extractionNoCategories'
+              : 'components.productFormDialog.errors.extraction'
+          )
+        );
       } finally {
         if (!controller.signal.aborted) setIsExtracting(false);
       }

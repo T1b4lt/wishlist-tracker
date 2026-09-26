@@ -22,6 +22,7 @@ import {
   initialCategoriesState
 } from '@/stores/categoriesStore';
 import { toaster } from '@/components/ui/toaster';
+import { ApiError } from '@/lib/api/client';
 import { ProductFormDialog } from './ProductFormDialog';
 
 /** Same wrapping as `renderWithProviders`, for `rerender` calls (which
@@ -340,6 +341,42 @@ describe('ProductFormDialog', () => {
     expect(
       await screen.findByRole('button', { name: 'Generate details' })
     ).toBeInTheDocument();
+  });
+
+  it('asks the user to add a category when extraction fails because none exist', async () => {
+    const user = userEvent.setup();
+    // Extraction logs its own failure: silence it (see the Retry test).
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    categoryList = [];
+    productsApi.extractInfo.mockRejectedValue(
+      new ApiError(
+        'No categories found in database. Please create categories first.',
+        { status: 400 }
+      )
+    );
+
+    renderWithProviders(
+      <ProductFormDialog open mode="create" onClose={vi.fn()} product={null} />
+    );
+    await waitFor(() => expect(categoriesApi.list).toHaveBeenCalled());
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Product URL' }),
+      'https://example.com/desk'
+    );
+    await user.click(screen.getByRole('button', { name: 'Generate details' }));
+
+    expect(
+      await screen.findByText(
+        'You need at least one category before details can be extracted. Add one with the Category field below, then try again.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        'We could not extract details from that URL. You can fill them in manually or try again.'
+      )
+    ).not.toBeInTheDocument();
   });
 
   it('prefills from a full product in edit mode and submits an update', async () => {

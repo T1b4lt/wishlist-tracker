@@ -129,7 +129,8 @@
         "nameRequired": "Enter a name.",
         "categoryRequired": "Select a category.",
         "currencyInvalid": "Enter a valid 3 letter currency code.",
-        "extraction": "We could not extract details from that URL. You can fill them in manually or try again."
+        "extraction": "We could not extract details from that URL. You can fill them in manually or try again.",
+        "extractionNoCategories": "You need at least one category before details can be extracted. Add one with the Category field below, then try again."
       },
       "newCategory": {
         "nameLabel": "Name",
