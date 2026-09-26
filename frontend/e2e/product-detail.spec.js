@@ -20,12 +20,13 @@ const formatUSD = (value) =>
 
 /**
  * Six points spread from 140 days ago to 1 day ago, with strictly
- * decreasing-then-flat prices chosen so each range option's average is
- * distinct and easy to assert on (see the range selector test below):
- * - within the last 30 days: 100, 50 -> average 75
+ * decreasing prices chosen so each range option's average is distinct and
+ * easy to assert on (see the range selector test below). The newest point
+ * (50, 1 day ago) is the current price, which the average excludes:
+ * - within the last 30 days: 100, [50] -> average 100
  * - within the last 60 days (the fixture's `hist_window_size`, so this is
- *   also the page's default range): 150, 100, 50 -> average 100
- * - all 6 points ("All"): 300, 250, 200, 150, 100, 50 -> average 175
+ *   also the page's default range): 150, 100, [50] -> average 125
+ * - all 6 points ("All"): 300, 250, 200, 150, 100, [50] -> average 200
  */
 function buildRangeHistory() {
   const now = nowSeconds();
@@ -56,11 +57,11 @@ test.describe('Product detail', () => {
       page.getByRole('heading', { name: 'Price history' })
     ).toBeVisible();
 
-    // Default range: the option closest to `hist_window_size` (60).
+    // Default range: the configured `hist_window_size` (60).
     await expect(page.getByRole('radio', { name: '60 days' })).toBeChecked();
     await expect(
       page.getByText('Average in range').locator('..')
-    ).toContainText('$100.00');
+    ).toContainText('$125.00');
 
     // The radio input itself is visually hidden (a sibling label carries
     // the visible text and the sliding indicator overlay can momentarily
@@ -70,13 +71,13 @@ test.describe('Product detail', () => {
     await expect(page.getByRole('radio', { name: '30 days' })).toBeChecked();
     await expect(
       page.getByText('Average in range').locator('..')
-    ).toContainText('$75.00');
+    ).toContainText('$100.00');
 
     await page.getByRole('radio', { name: 'All' }).click({ force: true });
     await expect(page.getByRole('radio', { name: 'All' })).toBeChecked();
     await expect(
       page.getByText('Average in range').locator('..')
-    ).toContainText('$175.00');
+    ).toContainText('$200.00');
 
     // The lowest price in the full history never changes across ranges that
     // all include it.
@@ -103,10 +104,18 @@ test.describe('Product detail', () => {
     ]);
     apiMock.setDetail(3, detail);
 
-    const prices = detail.price_history.map((point) => point.price);
+    // Computed directly from the fixture with the spec's rules (in-stock
+    // records only; the average excludes the current, newest record), not
+    // with the app's own helpers.
+    const history = detail.price_history;
+    const current = history[history.length - 1];
+    const inStock = history.filter((point) => point.is_in_stock);
+    const baseline = inStock.filter(
+      (point) => point.timestamp !== current.timestamp
+    );
     const expectedAverage =
-      prices.reduce((sum, price) => sum + price, 0) / prices.length;
-    const expectedLowest = Math.min(...prices);
+      baseline.reduce((sum, point) => sum + point.price, 0) / baseline.length;
+    const expectedLowest = Math.min(...inStock.map((point) => point.price));
 
     await page.goto('/product/3');
     await expect(
@@ -118,8 +127,8 @@ test.describe('Product detail', () => {
 
     // The fixture spans exactly 180 daily points (179 days old to today),
     // so both the "180 days" and "All" ranges include every one of them:
-    // they must agree with each other, and with a plain average/min
-    // computed directly over the whole fixture in this test.
+    // they must agree with each other, and with the average/min computed
+    // directly from the fixture above.
     await page.getByRole('radio', { name: '180 days' }).click({ force: true });
     await expect(page.getByRole('radio', { name: '180 days' })).toBeChecked();
     await expect(averageStat).toContainText(formatUSD(expectedAverage));
