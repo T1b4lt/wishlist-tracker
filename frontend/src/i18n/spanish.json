@@ -229,6 +229,13 @@
           "subtitle": "Prueba con otra búsqueda o limpia los filtros.",
           "action": "Limpiar filtros"
         }
+      },
+      "dailyCheck": {
+        "limitReached_one": "Límite de Gemini alcanzado a las {{time}} con {{count}} producto pendiente de revisar hoy.",
+        "limitReached_other": "Límite de Gemini alcanzado a las {{time}} con {{count}} productos pendientes de revisar hoy.",
+        "stillPending_one": "Queda {{count}} pendiente, se reintenta cada 10 minutos.",
+        "stillPending_other": "Quedan {{count}} pendientes, se reintenta cada 10 minutos.",
+        "allChecked": "Límite de Gemini alcanzado a las {{time}}; todos los productos se revisaron con reintentos."
       }
     },
     "categories": {

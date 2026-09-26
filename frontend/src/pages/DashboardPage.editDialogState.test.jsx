@@ -26,6 +26,9 @@ vi.mock('@/lib/api', () => ({
   },
   config: {
     get: vi.fn()
+  },
+  dailyCheck: {
+    get: vi.fn(() => Promise.resolve({ pending_now: 0 }))
   }
 }));
 
@@ -47,6 +50,7 @@ vi.mock('@/components/products', () => ({
 // the ambiguity of two identical actions menus and lets this test call
 // `onEdit` directly, without going through a Chakra `Menu`.
 vi.mock('@/components/dashboard', () => ({
+  DailyCheckNotice: () => null,
   DashboardSummary: () => null,
   ProductFilterBar: () => null,
   ProductTable: ({ products, onEdit }) => (

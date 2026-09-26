@@ -7,6 +7,7 @@ import {
   buildHistoryPoint,
   buildProductDetail
 } from '../../e2e/fixtures/products';
+import { buildDailyCheck } from '../../e2e/fixtures/dailyCheck';
 
 // Frontend side of the shared contracts (see `contracts/README.md`); the
 // backend side lives in `backend/tests/test_contracts.py`.
@@ -49,6 +50,12 @@ describe('api-fields contract', () => {
   it('matches the price history record fields', () => {
     expect(sortedKeys(buildHistoryPoint())).toEqual(
       [...API_FIELDS.ProductHistResponse].sort()
+    );
+  });
+
+  it('matches the daily check status fields', () => {
+    expect(sortedKeys(buildDailyCheck())).toEqual(
+      [...API_FIELDS.DailyCheckStatusResponse].sort()
     );
   });
 });

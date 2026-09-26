@@ -5,6 +5,7 @@ import PageHeader from '@/components/layout/PageHeader';
 import { ProductFormDialog } from '@/components/products';
 import { EmptyState, ErrorState, ConfirmDialog } from '@/components/common';
 import {
+  DailyCheckNotice,
   DashboardSummary,
   ProductFilterBar,
   ProductTable,
@@ -147,6 +148,7 @@ const DashboardPage = () => {
           </Button>
         }
       />
+      <DailyCheckNotice locale={locale} />
       {status === 'error' ? (
         <ErrorState
           title={t('pages.dashboard.error.title')}

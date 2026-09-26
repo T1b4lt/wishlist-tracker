@@ -16,6 +16,9 @@ vi.mock('@/lib/api', () => ({
   },
   config: {
     get: vi.fn()
+  },
+  dailyCheck: {
+    get: vi.fn(() => Promise.resolve({ pending_now: 0 }))
   }
 }));
 

@@ -4,6 +4,7 @@ import {
   formatPercent,
   formatPrice,
   formatRelative,
+  formatTime,
   getLocale,
   getTrend
 } from './format';
@@ -138,5 +139,16 @@ describe('getTrend', () => {
     expect(getTrend(null)).toBeNull();
     expect(getTrend(undefined)).toBeNull();
     expect(getTrend(NaN)).toBeNull();
+  });
+});
+
+describe('formatTime', () => {
+  it('formats hours and minutes in the given locale', () => {
+    const ts = Date.UTC(2026, 8, 26, 9, 5) / 1000;
+    expect(formatTime(ts, 'en-GB', 'UTC')).toBe('09:05');
+  });
+
+  it('returns a dash for a missing timestamp', () => {
+    expect(formatTime(null, 'en-GB')).toBe('-');
   });
 });

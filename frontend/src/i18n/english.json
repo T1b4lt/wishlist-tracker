@@ -229,6 +229,13 @@
           "subtitle": "Try a different search or clear the filters.",
           "action": "Clear filters"
         }
+      },
+      "dailyCheck": {
+        "limitReached_one": "Gemini limit reached at {{time}} with {{count}} product left to check today.",
+        "limitReached_other": "Gemini limit reached at {{time}} with {{count}} products left to check today.",
+        "stillPending_one": "{{count}} still pending, retrying every 10 minutes.",
+        "stillPending_other": "{{count}} still pending, retrying every 10 minutes.",
+        "allChecked": "Gemini limit reached at {{time}}; all products were checked by retrying."
       }
     },
     "categories": {

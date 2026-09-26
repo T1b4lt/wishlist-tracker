@@ -1,4 +1,5 @@
 import { API_URL } from './constants';
+import { buildDailyCheck } from '../fixtures/dailyCheck';
 
 const API_ORIGIN = new URL(API_URL).origin;
 
@@ -55,6 +56,9 @@ export class ApiMock {
     this.products = [];
     this.details = {};
     this.extraction = null;
+    /** `GET /daily-check/` response; by default today's check has not run
+     * yet, so the dashboard shows no Gemini limit notice. */
+    this.dailyCheck = buildDailyCheck();
     /** The chat id `GET /telegram-chat-id` "finds" once a bot token is
      * configured; `null` reproduces the real endpoint's 404 ("no chat
      * found yet"). @type {string|null} */
@@ -94,6 +98,11 @@ export class ApiMock {
   /** @param {object} extraction `ProductInfoResponse`. */
   setExtraction(extraction) {
     this.extraction = extraction;
+  }
+
+  /** @param {object} status `DailyCheckStatusResponse`. */
+  setDailyCheck(status) {
+    this.dailyCheck = status;
   }
 
   /** @param {string|null} chatId See the constructor's `telegramChatId`. */
@@ -145,6 +154,12 @@ export class ApiMock {
       }
       return this._recordUnmatched(route);
     });
+
+    await page.route(`${API_URL}/daily-check/`, (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ json: this.dailyCheck })
+        : this._recordUnmatched(route)
+    );
 
     await page.route(`${API_URL}/categories/`, async (route) => {
       const req = route.request();

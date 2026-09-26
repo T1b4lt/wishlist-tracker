@@ -23,6 +23,7 @@ vi.mock('@/lib/api', () => {
   const pending = () => new Promise(() => {});
   return {
     config: { get: vi.fn(pending), update: vi.fn(pending) },
+    dailyCheck: { get: vi.fn(pending) },
     products: {
       dashboardSummary: vi.fn(pending),
       get: vi.fn(pending),

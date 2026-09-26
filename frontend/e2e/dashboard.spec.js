@@ -2,8 +2,37 @@ import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
 import { buildDashboardProduct, buildManyProducts } from './fixtures/products';
+import { buildDailyCheck } from './fixtures/dailyCheck';
 
 test.describe('Dashboard', () => {
+  test('shows the Gemini limit notice with the pending products', async ({
+    page,
+    apiMock
+  }) => {
+    const now = Math.floor(Date.now() / 1000);
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts(buildManyProducts(3));
+    apiMock.setDailyCheck(
+      buildDailyCheck({
+        started_at: now - 600,
+        total_products: 40,
+        limit_reached_at: now - 420,
+        pending_at_limit: 15,
+        pending_now: 12
+      })
+    );
+
+    await page.goto('/');
+
+    await expect(
+      page.getByText(/Gemini limit reached at .+ with 15 products left/)
+    ).toBeVisible();
+    await expect(
+      page.getByText('12 still pending, retrying every 10 minutes.')
+    ).toBeVisible();
+  });
+
   test('shows the empty state with no products', async ({ page, apiMock }) => {
     apiMock.setConfig(CONFIG_NOT_CONFIGURED);
     apiMock.setCategories([]);

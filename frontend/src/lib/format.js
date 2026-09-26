@@ -137,3 +137,23 @@ export const getTrend = (value) => {
   if (value < 0) return 'down';
   return 'flat';
 };
+
+/**
+ * Format a unix timestamp (seconds since epoch) as a localized hour and
+ * minute (e.g. "09:05").
+ *
+ * @param {number|null|undefined} ts - Seconds since epoch.
+ * @param {string} locale - An `Intl` locale tag, see `getLocale`.
+ * @param {string} [timeZone] - IANA time zone; the browser's by default.
+ * @returns {string} The formatted time, or `'-'` when `ts` is missing or invalid.
+ */
+export const formatTime = (ts, locale, timeZone) => {
+  if (ts === null || ts === undefined || Number.isNaN(ts)) {
+    return '-';
+  }
+  return new Date(ts * 1000).toLocaleTimeString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone
+  });
+};
