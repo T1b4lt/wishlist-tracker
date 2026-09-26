@@ -47,7 +47,8 @@ src/
 - `components/common/`: shared, page-agnostic pieces used across features:
   `EmptyState`, `ErrorState`, `LoadingState`, `SkeletonRows`/`SkeletonCards`,
   `ConfirmDialog`, `CategoryTag`, `CategoryColorPicker`, `PriorityBadge`,
-  `PriceChange`, `StockStatus`.
+  `PriceChange`, `StockStatus`, `StoreBadge`/`StoreFavicon` (store favicon +
+  name, with a Lucide fallback).
 - `components/dashboard/`, `components/product/`, `components/products/`,
   `components/categories/`, `components/settings/`: page-specific pieces
   (e.g. `ProductTable`/`ProductCardList`, `ProductFormDialog`,
@@ -65,8 +66,11 @@ src/
 Framework-free helpers under `src/lib/`:
 
 - `lib/api/`: a small fetch-based client (`client.js`) plus one module per
-  resource (`products.js`, `categories.js`, `config.js`, `telegram.js`),
-  re-exported from `lib/api/index.js`.
+  resource (`products.js`, `categories.js`, `config.js`, `telegram.js`,
+  `stores.js`), re-exported from `lib/api/index.js`. `stores.faviconUrl(id)`
+  builds a store favicon's `<img src>`; components import it from
+  `@/lib/api/stores` directly, so tests that mock `@/lib/api` still render
+  favicons.
 - `lib/format.js`: locale-aware price/date/relative-time formatting.
 - `lib/dashboardSummary.js`, `lib/productHistory.js`: pure functions the
   dashboard and product pages use to derive totals, chart points and stats
@@ -122,7 +126,9 @@ Smoke tests under `e2e/` drive the real app in Chromium against a Vite dev
 server, with every backend call mocked via `page.route` (`e2e/support/apiMock.js`)
 against fixtures in `e2e/fixtures/`: no backend process is started, and any
 API call the fixtures don't cover fails loudly (a `500` plus a `console.error`
-in the test output) instead of silently falling through. `playwright.config.js`
+in the test output) instead of silently falling through. Store favicons
+(`/stores/{id}/favicon`) are served as a fixed 1x1 PNG, so snapshots stay
+deterministic. `playwright.config.js`
 starts its own dev server on a dedicated port, pins `timezoneId`/`locale` to
 `UTC`/`en-US` for stable date assertions, and runs two projects: `desktop`
 (1440x900) and `mobile` (390x844, touch-enabled). Motion is reduced by

@@ -8,8 +8,16 @@ const DEFAULT_EXTRACTION = {
   name: 'Extracted Product',
   category: 'Electronics',
   description: 'A product description extracted from the page.',
-  currency: 'usd'
+  currency: 'usd',
+  store: { id: 1, name: 'Amazon', domain: 'amazon.com', has_favicon: true }
 };
+
+/** 1x1 solid-color PNG served for every mocked store favicon, so snapshots are
+ * deterministic and no request leaves the mocked API. */
+const FAVICON_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==',
+  'base64'
+);
 
 /** Smallest id greater than every id already in `items` (starts at 1). */
 function nextId(items) {
@@ -193,6 +201,11 @@ export class ApiMock {
       }
     );
 
+    await page.route(
+      (url) => matchesApiPath(url, /^\/stores\/\d+\/favicon$/),
+      (route) => route.fulfill({ contentType: 'image/png', body: FAVICON_PNG })
+    );
+
     await page.route(`${API_URL}/products/dashboard-summary`, (route) =>
       route.fulfill({ json: this.products })
     );
@@ -212,7 +225,8 @@ export class ApiMock {
             priority: product.priority,
             category_id: product.category_id,
             description: this.details[product.id]?.description ?? '',
-            currency: product.currency
+            currency: product.currency,
+            store_id: product.store_id ?? null
           }))
         });
       }
@@ -223,6 +237,17 @@ export class ApiMock {
           nextId(Object.values(this.details))
         );
         const category = this.categories.find((c) => c.id === body.category_id);
+        const extractedStore = (this.extraction ?? DEFAULT_EXTRACTION).store;
+        const store =
+          extractedStore && extractedStore.id === body.store_id
+            ? extractedStore
+            : null;
+        const storeFields = {
+          store_id: store?.id ?? null,
+          store_name: store?.name ?? null,
+          store_domain: store?.domain ?? null,
+          store_has_favicon: store?.has_favicon ?? false
+        };
 
         this.products = [
           ...this.products,
@@ -239,7 +264,8 @@ export class ApiMock {
             is_in_stock: null,
             currency: body.currency,
             recent_prices: [],
-            last_checked_at: null
+            last_checked_at: null,
+            ...storeFields
           }
         ];
         this.details[id] = {
@@ -256,7 +282,8 @@ export class ApiMock {
           is_in_stock: null,
           price_history: [],
           currency: body.currency,
-          last_checked_at: null
+          last_checked_at: null,
+          ...storeFields
         };
         return route.fulfill({ json: { id, ...body } });
       }

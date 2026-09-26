@@ -24,6 +24,10 @@ export function buildDashboardProduct(overrides = {}) {
     price_change_60d: -5.2,
     is_in_stock: true,
     currency: 'USD',
+    store_id: 1,
+    store_name: 'Amazon',
+    store_domain: 'amazon.com',
+    store_has_favicon: true,
     recent_prices: [219.99, 209.99, 199.99],
     last_checked_at: nowSeconds() - 3600,
     ...overrides
@@ -63,6 +67,10 @@ export function buildProductDetail(overrides = {}) {
     min_price: 189.99,
     is_in_stock: true,
     currency: 'USD',
+    store_id: 1,
+    store_name: 'Amazon',
+    store_domain: 'amazon.com',
+    store_has_favicon: true,
     last_checked_at: nowSeconds() - 3600,
     price_history: [
       buildHistoryPoint({
@@ -181,7 +189,15 @@ export function buildManyProducts(count = 25, { historyPoints = 180 } = {}) {
       price_change_60d: computePriceChange(history, 60),
       is_in_stock: current.is_in_stock,
       recent_prices: history.slice(-5).map((point) => point.price),
-      last_checked_at: current.timestamp
+      last_checked_at: current.timestamp,
+      ...(i % 2 === 0
+        ? {}
+        : {
+            store_id: 2,
+            store_name: 'Decathlon',
+            store_domain: 'decathlon.com',
+            store_has_favicon: false
+          })
     });
   });
 }
