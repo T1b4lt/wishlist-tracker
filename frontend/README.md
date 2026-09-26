@@ -29,7 +29,8 @@ e2e/            Playwright end-to-end smoke tests and visual snapshots
                 (fixtures/, support/, visual.spec.js-snapshots/)
 src/
   components/   Reusable UI, grouped by feature (see "Components" below)
-  hooks/        Shared hooks (useDocumentTitle, useUnsavedChangesGuard)
+  hooks/        Shared hooks (useDocumentTitle, useUnsavedChangesGuard,
+                useDashboardFilters)
   i18n/         english.json / spanish.json + the i18next instance
   lib/          API client, formatting and other framework-free helpers
   pages/        One component per route, wired to stores and components
@@ -77,6 +78,10 @@ Framework-free helpers under `src/lib/`:
   from store data.
 - `lib/settingsDraft.js`: the Settings page's dirty/merge logic (draft vs.
   saved config).
+- `lib/productFilters.js`: the dashboard's search, filter and sort logic
+  (pure, unit tested) and its URL query param (de)serialization.
+  `hooks/useDashboardFilters` keeps that state in the URL, and
+  `components/dashboard/ProductFilterBar` renders the controls.
 - `lib/categoryColors.js`, `lib/priorityVisuals.js`, `lib/web_utils.js`:
   small, focused helpers (category swatch palette, priority icon/weight
   maps, currency codes).

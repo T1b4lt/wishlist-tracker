@@ -38,19 +38,20 @@ Key highlights:
 
 ## ✨ Key Features
 
-| Feature                    | Description                                                                                                                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                           |
-| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini.                                                    |
-| **Store Detection**        | Each product records its store (AI-extracted name + favicon downloaded from the page), shown on the dashboard and detail page, so the same item tracked in several stores is easy to tell apart. |
-| **Price Tracking**         | Historical price records stored daily, with configurable tracking window (30–180 days).                                                                                                          |
-| **Interactive Dashboard**  | Overview of all products with current price, price change trend (%), stock status, and category indicators.                                                                                      |
-| **Product Detail View**    | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline.                                                                                     |
-| **Category System**        | User-defined categories with custom colors for visual organization.                                                                                                                              |
-| **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                                                                                  |
-| **Configurable Settings**  | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                                                                                    |
-| **Multi-Language (i18n)**  | Full English and Spanish translations for the entire interface.                                                                                                                                  |
-| **Dark Mode**              | Theme toggle built into Chakra UI.                                                                                                                                                               |
+| Feature                    | Description                                                                                                                                                                                                                                                                                                                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                                                                                                                                                     |
+| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini.                                                                                                                                                                              |
+| **Store Detection**        | Each product records its store (AI-extracted name + favicon downloaded from the page), shown on the dashboard and detail page, so the same item tracked in several stores is easy to tell apart.                                                                                                                           |
+| **Price Tracking**         | Historical price records stored daily, with configurable tracking window (30–180 days).                                                                                                                                                                                                                                    |
+| **Interactive Dashboard**  | Overview of all products with current price, price change trend (%), stock status, and category indicators.                                                                                                                                                                                                                |
+| **Search & Filters**       | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops and lowest price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading. |
+| **Product Detail View**    | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline.                                                                                                                                                                                                               |
+| **Category System**        | User-defined categories with custom colors for visual organization.                                                                                                                                                                                                                                                        |
+| **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                                                                                                                                                                                                            |
+| **Configurable Settings**  | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                                                                                                                                                                                                              |
+| **Multi-Language (i18n)**  | Full English and Spanish translations for the entire interface.                                                                                                                                                                                                                                                            |
+| **Dark Mode**              | Theme toggle built into Chakra UI.                                                                                                                                                                                                                                                                                         |
 
 ---
 
@@ -155,7 +156,7 @@ wishlist-tracker/
         ├── App.jsx                   # Root component with routing
         ├── theme/                    # Chakra system: tokens, semantic tokens, text styles, recipes, motion
         ├── stores/                   # Zustand stores (products, categories, config)
-        ├── hooks/                    # useDocumentTitle, useUnsavedChangesGuard
+        ├── hooks/                    # useDocumentTitle, useUnsavedChangesGuard, useDashboardFilters
         ├── i18n/
         │   ├── index.js              # i18next configuration
         │   ├── english.json          # English translations
@@ -164,12 +165,13 @@ wishlist-tracker/
         │   ├── api/                  # Typed-by-JSDoc API client (config, categories, products, telegram)
         │   ├── format.js             # Locale-aware price, percent and date formatting
         │   ├── productHistory.js     # Chart ranges, stats and out-of-stock bands
+        │   ├── productFilters.js     # Dashboard search, filters, sort and their URL params
         │   └── ...                   # Dashboard summary, settings draft, priority visuals, utils
         ├── components/
         │   ├── layout/               # AppShell, AppHeader, AppFooter, PageContainer, PageHeader
         │   ├── motion/               # Motion presets (FadeIn, Stagger, AnimatedList, PageTransition)
         │   ├── common/               # Shared UI (Empty/Error/Loading states, ConfirmDialog, badges, ...)
-        │   ├── dashboard/            # Summary strip, product table, mobile cards, sparkline
+        │   ├── dashboard/            # Summary strip, search/filter bar, product table, mobile cards, sparkline
         │   ├── product/              # Product detail: stats row, price history chart, description
         │   ├── products/             # ProductFormDialog (add and edit, AI-assisted)
         │   ├── categories/           # Category list and form dialog
@@ -516,6 +518,14 @@ All application settings can be managed through the **Settings** page (`/setting
   - Current price, price trend (% change vs. historical average), and stock status.
 - Click on any product to see its **detail page** with a full price history chart.
 - The trend is calculated using the configurable history window size.
+
+### Searching and Filtering
+
+- Type in the **search box** above the product list to filter it as you type: `DJI` shows every product (or store) containing "DJI" in its name, e.g. the same drone tracked on Amazon, PcComponentes and the DJI Store.
+- Use the **sort** menu to order by name, price (low/high), biggest price drops, priority, availability or most recently checked.
+- Open **Filters** to narrow the list by stock, price range, deals (price dropped / at lowest price), store, category and priority. Every active filter shows up as a removable chip; **Clear all** removes them while keeping the search.
+- The search, filters and sort are stored in the page URL (e.g. `/?q=dji&stock=in&sort=price_asc`), so they are kept when you open a product and go back, reload the page or bookmark it.
+- The summary strip (items, total value, price drops, at lowest price) always covers your whole wishlist.
 
 ### Telegram Notifications
 
