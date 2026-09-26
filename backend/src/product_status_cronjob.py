@@ -17,10 +17,13 @@ This script should be run every 10 minutes via cron. It will:
 """
 
 import asyncio
+import fcntl
 import logging
 import math
 import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from enum import Enum
 
@@ -208,6 +211,34 @@ def _last_record(session: Session, product_id: int, in_stock_only: bool = False)
     ).first()
 
 
+# Held for the whole run, so a run that outlasts the 10-minute schedule (a
+# full check of many products) never overlaps with the next one. Next to the
+# database, relative to the backend directory the cronjob runs from.
+RUN_LOCK_FILE = "db/cronjob.lock"
+
+
+@contextmanager
+def _run_lock() -> Iterator[bool]:
+    """Try to take the exclusive cronjob lock without waiting.
+
+    The OS releases the lock when the process ends, even if it crashes, so a
+    stale lock never blocks later runs.
+
+    Yields:
+        bool: True if this run holds the lock, False if another run does.
+    """
+    with open(RUN_LOCK_FILE, "a") as lock_file:
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+
 def _current_timestamp() -> int:
     """Return the current Unix time; a seam so tests can pin quota-error times."""
     return int(time.time())
@@ -358,7 +389,7 @@ async def _check_products(
                 if not _has_record_between(session, p.id, day_start, day_end)
             ]
             logger.warning(
-                f"Stopping: {len(pending_ids)} product(s) left for a retry next hour"
+                f"Stopping: {len(pending_ids)} product(s) left for a retry on the next run"
             )
             break
 
@@ -465,7 +496,7 @@ async def retry_rate_limited_products(now: datetime | None = None):
     A product leaves the pending list once it is checked, whether its
     record is stored or it fails for a reason other than the quota; a
     product that hits the quota again stays pending (with every product
-    after it) until the next hourly run.
+    after it) until the next run.
 
     Args:
         now (datetime | None): Naive local time of the run; defaults to
@@ -617,14 +648,20 @@ async def main(now: datetime | None = None):
     now = now or datetime.now()
     logger.info("=== Product Status Tracking Cronjob Started ===")
 
-    if _should_start_daily_run(now):
-        logger.info("Starting today's product status check...")
-        await fetch_and_store_product_status(now=now)
-    else:
-        logger.info("Checking pending rate-limit retries...")
-        await retry_rate_limited_products(now=now)
+    with _run_lock() as acquired:
+        if not acquired:
+            logger.info("Previous run still in progress. Skipping.")
+            return
 
-    await send_daily_report_if_due(now)
+        if _should_start_daily_run(now):
+            logger.info("Starting today's product status check...")
+            await fetch_and_store_product_status(now=now)
+        else:
+            logger.info("Checking pending rate-limit retries...")
+            await retry_rate_limited_products(now=now)
+
+        await send_daily_report_if_due(now)
+
     logger.info("=== Product Status Tracking Cronjob Completed ===")
 
 

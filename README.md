@@ -615,6 +615,8 @@ crontab -e
 
 Example: with 10 products and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next run retries those 5, and so on until none are left.
 
+Runs never overlap: each run holds an exclusive lock (`backend/db/cronjob.lock`), so a tick that fires while a long check is still running just exits.
+
 A quota error is recognized from the message Stagehand raises (`You exceeded your current quota … Quota exceeded for metric …`, i.e. Gemini's HTTP 429 `RESOURCE_EXHAUSTED`). Stagehand already retries each model call a few times before raising.
 
 ---

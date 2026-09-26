@@ -31,9 +31,10 @@ def _ts(moment: datetime) -> int:
 
 
 @pytest.fixture
-def cron(session, monkeypatch):
+def cron(session, monkeypatch, tmp_path):
     """Configure alerts, fake Stagehand/Telegram and return the recorders."""
     monkeypatch.setattr(cronjob, "engine", session.get_bind())
+    monkeypatch.setattr(cronjob, "RUN_LOCK_FILE", str(tmp_path / "cronjob.lock"))
     for key, value in {
         "google_api_key": "key",
         "telegram_bot_token": "token",
@@ -514,3 +515,32 @@ def test_main_evaluates_the_daily_report_after_the_run(
     asyncio.run(cronjob.main(now=NOW))
 
     assert main_calls == ["full", "report"]
+
+
+def test_main_skips_the_run_while_another_run_holds_the_lock(
+    session, cron, main_calls, monkeypatch, tmp_path
+):
+    # Review focus: a full run over many products outlasts the 10-minute
+    # schedule; an overlapping run would retry the same products twice and
+    # could report the day as done before the pending list is written.
+    import fcntl
+
+    lock_path = tmp_path / "cronjob.lock"
+    monkeypatch.setattr(cronjob, "RUN_LOCK_FILE", str(lock_path))
+    with open(lock_path, "w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+        asyncio.run(cronjob.main(now=NOW))
+
+    assert main_calls == []
+
+
+def test_main_runs_once_the_lock_is_free(
+    session, cron, main_calls, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(cronjob, "RUN_LOCK_FILE", str(tmp_path / "cronjob.lock"))
+
+    asyncio.run(cronjob.main(now=NOW))
+    asyncio.run(cronjob.main(now=NOW + timedelta(minutes=10)))
+
+    assert main_calls == ["full", "full"]
