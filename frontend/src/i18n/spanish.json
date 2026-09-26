@@ -320,7 +320,7 @@
         },
         "historicalWindow": {
           "label": "Ventana histórica",
-          "helper": "Número de días que se usarán para calcular las tendencias de cambio de precio"
+          "helper": "Número de días usados para las tendencias, promedios y precios mínimos. Las comprobaciones sin stock no cuentan en estas estadísticas."
         },
         "telegramBotToken": {
           "label": "Token del bot de Telegram",

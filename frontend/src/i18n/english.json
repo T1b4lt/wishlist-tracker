@@ -320,7 +320,7 @@
         },
         "historicalWindow": {
           "label": "Historical window size",
-          "helper": "Number of days to use for calculating price change trends"
+          "helper": "Number of days used for price trends, averages and lowest prices. Out-of-stock checks are ignored in these statistics."
         },
         "telegramBotToken": {
           "label": "Telegram bot token",

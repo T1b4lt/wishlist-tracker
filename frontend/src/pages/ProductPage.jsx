@@ -47,6 +47,7 @@ import {
   hasEnoughHistory as hasEnoughHistoryPoints,
   resolveDefaultRange
 } from '@/lib/productHistory';
+import { DEFAULT_HIST_WINDOW } from '@/lib/histWindow';
 import { useConfigStore } from '@/stores/configStore';
 import { useProductsStore } from '@/stores/productsStore';
 
@@ -59,7 +60,7 @@ const ProductPage = () => {
 
   const config = useConfigStore((state) => state.config);
   const fetchConfig = useConfigStore((state) => state.fetch);
-  const histWindowSize = config?.hist_window_size ?? 60;
+  const histWindowSize = config?.hist_window_size ?? DEFAULT_HIST_WINDOW;
 
   const detail = useProductsStore((state) => state.details[productId]);
   const fetchDetail = useProductsStore((state) => state.fetchDetail);
@@ -84,7 +85,7 @@ const ProductPage = () => {
   const deleteMenuTriggerRef = useRef(null);
 
   // The range selector defaults to the configured `hist_window_size`
-  // (rounded to the nearest offered option) until the user picks one
+  // (or the default window when it is not an offered option) until the user picks one
   // themselves; that choice is reset whenever `productId` changes (a fresh
   // page for a different product starts from the default again).
   const [range, setRange] = useState(() => resolveDefaultRange(histWindowSize));

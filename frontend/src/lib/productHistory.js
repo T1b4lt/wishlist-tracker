@@ -10,6 +10,8 @@
  * @property {boolean} is_in_stock
  */
 
+import { HIST_WINDOW_OPTIONS, resolveHistWindow } from './histWindow';
+
 /** Seconds in a day, used to turn a range's day count into a cutoff timestamp. */
 const SECONDS_PER_DAY = 60 * 60 * 24;
 
@@ -17,12 +19,12 @@ const SECONDS_PER_DAY = 60 * 60 * 24;
 export const RANGE_ALL = 'all';
 
 /**
- * The day-count range options offered by the chart's range selector, as
- * strings (matching the values `SegmentedControl` needs and what
- * `resolveDefaultRange` returns), from shortest to longest.
+ * The day-count range options offered by the chart's range selector: the
+ * historical window options (`./histWindow.js`) as strings (the values
+ * `SegmentedControl` needs), from shortest to longest.
  * @type {string[]}
  */
-export const RANGE_OPTIONS = ['30', '60', '90', '180'];
+export const RANGE_OPTIONS = HIST_WINDOW_OPTIONS.map(String);
 
 /**
  * @param {unknown} value
@@ -32,30 +34,14 @@ const isFiniteNumber = (value) =>
   typeof value === 'number' && Number.isFinite(value);
 
 /**
- * Pick the range option (a day count from `RANGE_OPTIONS`) closest to the
- * app's configured `hist_window_size`, so the chart's default range selector
- * value tracks the user's own configuration. Ties resolve to the shorter
- * option (the first minimum found, since `RANGE_OPTIONS` is ascending).
+ * The chart's default range: the app's configured `hist_window_size` when
+ * it is one of the options, otherwise the default window.
  *
  * @param {number|null|undefined} histWindowSize
- * @param {string[]} [options] - Defaults to `RANGE_OPTIONS`.
- * @returns {string} One of `options`.
+ * @returns {string} One of `RANGE_OPTIONS`.
  */
-export function resolveDefaultRange(histWindowSize, options = RANGE_OPTIONS) {
-  const target = isFiniteNumber(histWindowSize)
-    ? histWindowSize
-    : Number(options[0]);
-
-  let closest = options[0];
-  let smallestDiff = Math.abs(target - Number(options[0]));
-  for (const option of options) {
-    const diff = Math.abs(target - Number(option));
-    if (diff < smallestDiff) {
-      smallestDiff = diff;
-      closest = option;
-    }
-  }
-  return closest;
+export function resolveDefaultRange(histWindowSize) {
+  return String(resolveHistWindow(histWindowSize));
 }
 
 /**

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Field } from '@/components/ui/field';
+import { HIST_WINDOW_OPTIONS, resolveHistWindow } from '@/lib/histWindow';
 import { SettingsSection } from './SettingsSection';
 
 const hourCollection = createListCollection({
@@ -18,8 +19,6 @@ const hourCollection = createListCollection({
     value: i.toString()
   }))
 });
-
-const HIST_WINDOW_VALUES = [30, 60, 90, 180];
 
 /**
  * The "Analysis" settings section: the daily analysis hour and the
@@ -30,7 +29,7 @@ const HIST_WINDOW_VALUES = [30, 60, 90, 180];
  * @param {object} props
  * @param {number} props.analysisHour
  * @param {(value: number) => void} props.onAnalysisHourChange
- * @param {number} props.histWindowSize
+ * @param {number} props.histWindowSize - In days; see `HIST_WINDOW_OPTIONS`.
  * @param {(value: number) => void} props.onHistWindowSizeChange
  */
 export const AnalysisSection = ({
@@ -40,11 +39,14 @@ export const AnalysisSection = ({
   onHistWindowSizeChange
 }) => {
   const { t } = useTranslation();
+  // A stored value outside the options (saved before they were enforced)
+  // shows the default as selected until the user saves a valid one.
+  const selectedHistWindow = resolveHistWindow(histWindowSize).toString();
 
   const histWindowCollection = useMemo(
     () =>
       createListCollection({
-        items: HIST_WINDOW_VALUES.map((value) => ({
+        items: HIST_WINDOW_OPTIONS.map((value) => ({
           label: t('pages.settings.histWindowOption', { days: value }),
           value: value.toString()
         }))
@@ -93,14 +95,14 @@ export const AnalysisSection = ({
           hideBelow="sm"
           flexWrap="wrap"
           items={histWindowCollection.items}
-          value={histWindowSize.toString()}
+          value={selectedHistWindow}
           onValueChange={(e) => onHistWindowSizeChange(parseInt(e.value, 10))}
           size="md"
         />
         <SelectRoot
           hideFrom="sm"
           collection={histWindowCollection}
-          value={[histWindowSize.toString()]}
+          value={[selectedHistWindow]}
           onValueChange={(details) => {
             const next = details.value[0];
             if (next) onHistWindowSizeChange(parseInt(next, 10));

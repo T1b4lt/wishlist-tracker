@@ -43,4 +43,11 @@ describe('AnalysisSection', () => {
 
     expect(onHistWindowSizeChange).toHaveBeenCalledWith(90);
   });
+
+  it('selects the default window when the stored value is not an option', () => {
+    // Review focus: a value saved before the options were enforced.
+    renderWithProviders(<AnalysisSection {...baseProps} histWindowSize={45} />);
+
+    expect(screen.getByRole('radio', { name: '60 days' })).toBeChecked();
+  });
 });

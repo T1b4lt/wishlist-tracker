@@ -16,32 +16,16 @@ const DAY = 60 * 60 * 24;
 const NOW = 1_700_000_000;
 
 describe('resolveDefaultRange', () => {
-  it('returns the exact option when hist_window_size matches one', () => {
-    expect(resolveDefaultRange(90)).toBe('90');
+  it('returns the configured window when it is one of the options', () => {
+    for (const option of RANGE_OPTIONS) {
+      expect(resolveDefaultRange(Number(option))).toBe(option);
+    }
   });
 
-  it('rounds to the nearest option', () => {
-    expect(resolveDefaultRange(70)).toBe('60');
-    expect(resolveDefaultRange(80)).toBe('90');
-  });
-
-  it('resolves a tie to the shorter (first) option', () => {
-    // 45 is equidistant between 30 and 60.
-    expect(resolveDefaultRange(45)).toBe('30');
-  });
-
-  it('clamps below the shortest option to the shortest option', () => {
-    expect(resolveDefaultRange(1)).toBe('30');
-  });
-
-  it('clamps above the longest option to the longest option', () => {
-    expect(resolveDefaultRange(1000)).toBe('180');
-  });
-
-  it('falls back to the first option for a missing/invalid size', () => {
-    expect(resolveDefaultRange(null)).toBe(RANGE_OPTIONS[0]);
-    expect(resolveDefaultRange(undefined)).toBe(RANGE_OPTIONS[0]);
-    expect(resolveDefaultRange(NaN)).toBe(RANGE_OPTIONS[0]);
+  it('falls back to the default window for any other value', () => {
+    for (const value of [45, 1, 1000, null, undefined, NaN]) {
+      expect(resolveDefaultRange(value)).toBe('60');
+    }
   });
 });
 
