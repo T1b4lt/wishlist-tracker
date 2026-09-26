@@ -29,7 +29,7 @@
 Key highlights:
 
 - **Any product from any website** — the AI agent can navigate and extract data from virtually any e-commerce page.
-- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results.
+- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out are retried every hour until they are checked.
 - **Instant Telegram alerts** — get notified the moment a price drops or an item is back in stock.
 - **Complete price history** — visualize how prices evolve over time with interactive charts.
 - **Multi-language support** — the UI is fully translated in English and Spanish (i18n).
@@ -192,7 +192,7 @@ wishlist-tracker/
 
 ## 🗄 Database Schema
 
-The application uses **SQLite** with **SQLModel** as ORM. There are 5 tables:
+The application uses **SQLite** with **SQLModel** as ORM. There are 6 tables:
 
 ```
 ┌──────────────┐       ┌──────────────┐
@@ -226,7 +226,16 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 5 tables:
 │ favicon      │ (BLOB, nullable)
 │ favicon_mime │
 └──────────────┘
+
+┌────────────────────┐
+│ PendingStatusRetry │
+├────────────────────┤
+│ product_id (PK)    │ (FK → Product, CASCADE DELETE)
+│ day_start          │ (Unix seconds, start of the local day)
+└────────────────────┘
 ```
+
+`PendingStatusRetry` holds the products whose daily check hit the Gemini quota; the cronjob retries them every hour for the rest of that local day (see [What the Cronjob Does](#what-the-cronjob-does)).
 
 **Config keys** stored in the `Config` table:
 
@@ -574,13 +583,21 @@ crontab -e
 ### What the Cronjob Does
 
 1. Checks if the current hour matches the configured **analysis hour**.
-2. If it matches, iterates over all products and:
+2. If it matches, iterates over all products not yet checked today — least recently checked first (never-checked products at the front), so if the daily quota cannot cover every product, the ones left out one day go first the next — and:
    - Opens each product URL via the AI agent (Stagehand + Gemini).
    - Extracts the current price and stock status.
    - Stores a new `ProductHist` record in the database.
 3. Compares current values with the previous record:
    - If the price dropped → sends a **price drop alert** via Telegram (if enabled).
    - If the item is back in stock → sends a **stock alert** via Telegram (if enabled).
+4. If the **Gemini quota** runs out (requests per minute or per day), the run stops right away — every later call would fail too — and the products left are saved in `PendingStatusRetry`.
+5. At every other hour, it retries only today's pending products (same steps 2–3), stopping again at the next quota error, until all of them have their record:
+   - A product leaves the list once it is stored, or if it fails for another reason (e.g. an invalid price or a page that does not load), so it does not keep spending quota.
+   - Pending products are dropped when the local day ends; the next analysis-hour run checks everything again.
+
+Example: with 10 products and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next hour retries those 5, and so on until none are left.
+
+A quota error is recognized from the message Stagehand raises (`You exceeded your current quota … Quota exceeded for metric …`, i.e. Gemini's HTTP 429 `RESOURCE_EXHAUSTED`). Stagehand already retries each model call a few times before raising.
 
 ---
 

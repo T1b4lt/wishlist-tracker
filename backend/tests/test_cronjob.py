@@ -12,8 +12,15 @@ from types import SimpleNamespace
 import pytest
 from sqlmodel import select
 from src import product_status_cronjob as cronjob
-from src.models.database_models import Category, Config, Product, ProductHist
+from src.models.database_models import (
+    Category,
+    Config,
+    PendingStatusRetry,
+    Product,
+    ProductHist,
+)
 from src.stagehand_utils import ProductStatusExtraction
+from stagehand.rpc_client import RPCError, _JSONRPCError
 
 NOW = datetime(2026, 9, 26, 12, 0)  # Naive local time, like datetime.now()
 
@@ -37,6 +44,7 @@ def cron(session, monkeypatch):
     category = Category(name="Electronics", color="#FF0000")
     session.add(category)
     session.commit()
+    category_id = category.id
     product = Product(
         name="Widget",
         url="https://example.com/widget",
@@ -54,7 +62,9 @@ def cron(session, monkeypatch):
     env = SimpleNamespace(
         product_id=product_id,
         product_url=product_url,
+        category_id=category_id,
         status=ProductStatusExtraction(price=100.0, is_in_stock=True),
+        errors={},  # url -> exception raised instead of returning a status
         scraped=[],
         price_drop_alerts=[],
         stock_alerts=[],
@@ -62,6 +72,8 @@ def cron(session, monkeypatch):
 
     async def fake_get_product_status(api_key, url):
         env.scraped.append(url)
+        if url in env.errors:
+            raise env.errors[url]
         return env.status
 
     async def fake_price_drop_alert(**kwargs):
@@ -97,8 +109,59 @@ def _history(session, product_id):
     ).all()
 
 
-def _run():
-    asyncio.run(cronjob.fetch_and_store_product_status(now=NOW))
+def _run(now=NOW):
+    asyncio.run(cronjob.fetch_and_store_product_status(now=now))
+
+
+def _retry(now=NOW + timedelta(hours=1)):
+    asyncio.run(cronjob.retry_rate_limited_products(now=now))
+
+
+def _quota_error():
+    return RPCError(
+        _JSONRPCError(
+            code=-32603,
+            message=(
+                "Failed after 3 attempts. Last error: AI_APICallError: You exceeded "
+                "your current quota, please check your plan and billing details."
+            ),
+            data={"name": "AI_RetryError"},
+        )
+    )
+
+
+def _day_start(moment):
+    return _ts(datetime.combine(moment.date(), datetime.min.time()))
+
+
+def _add_product(session, cron, name):
+    product = Product(
+        name=name,
+        url=f"https://example.com/{name.lower()}",
+        priority="medium",
+        category_id=cron.category_id,
+        description=name,
+        currency="EUR",
+    )
+    session.add(product)
+    session.commit()
+    session.refresh(product)
+    product_id, url = product.id, product.url
+    session.commit()  # Release the connection before the cronjob uses it.
+    return SimpleNamespace(id=product_id, url=url)
+
+
+def _mark_pending(session, product_id, day_start):
+    session.add(PendingStatusRetry(product_id=product_id, day_start=day_start))
+    session.commit()
+
+
+def _pending(session):
+    session.expire_all()
+    return {
+        (p.product_id, p.day_start)
+        for p in session.exec(select(PendingStatusRetry)).all()
+    }
 
 
 def test_stores_a_valid_status(session, cron):
@@ -174,3 +237,172 @@ def test_back_in_stock_without_previous_in_stock_price(session, cron):
 
     assert cron.price_drop_alerts == []
     assert len(cron.stock_alerts) == 1
+
+
+# --- Rate-limit retries ---
+
+
+def test_rate_limit_stops_the_run_and_marks_the_rest_pending(session, cron):
+    second = _add_product(session, cron, "Gadget")
+    third = _add_product(session, cron, "Gizmo")
+    cron.errors[second.url] = _quota_error()
+
+    _run()
+
+    assert cron.scraped == [cron.product_url, second.url]
+    assert len(_history(session, cron.product_id)) == 1
+    assert _pending(session) == {
+        (second.id, _day_start(NOW)),
+        (third.id, _day_start(NOW)),
+    }
+
+
+def test_products_already_checked_today_are_not_marked_pending(session, cron):
+    second = _add_product(session, cron, "Gadget")
+    _add(session, second.id, 50.0, True, NOW.replace(hour=1))
+    cron.errors[cron.product_url] = _quota_error()
+
+    _run()
+
+    assert _pending(session) == {(cron.product_id, _day_start(NOW))}
+
+
+def test_other_errors_do_not_stop_the_run_nor_mark_pending(session, cron):
+    second = _add_product(session, cron, "Gadget")
+    cron.errors[cron.product_url] = RuntimeError("page did not load")
+
+    _run()
+
+    assert cron.scraped == [cron.product_url, second.url]
+    assert len(_history(session, second.id)) == 1
+    assert _pending(session) == set()
+
+
+def test_retry_processes_only_pending_products(session, cron):
+    second = _add_product(session, cron, "Gadget")
+    _mark_pending(session, second.id, _day_start(NOW))
+
+    _retry()
+
+    assert cron.scraped == [second.url]
+    assert len(_history(session, second.id)) == 1
+    assert _history(session, cron.product_id) == []
+    assert _pending(session) == set()
+
+
+def test_retry_stops_and_keeps_products_pending_on_rate_limit(session, cron):
+    second = _add_product(session, cron, "Gadget")
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+    _mark_pending(session, second.id, _day_start(NOW))
+    cron.errors[cron.product_url] = _quota_error()
+
+    _retry()
+
+    assert cron.scraped == [cron.product_url]
+    assert _pending(session) == {
+        (cron.product_id, _day_start(NOW)),
+        (second.id, _day_start(NOW)),
+    }
+
+
+def test_retry_drops_a_product_that_fails_for_another_reason(session, cron):
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+    cron.errors[cron.product_url] = RuntimeError("page did not load")
+
+    _retry()
+
+    assert _pending(session) == set()
+    assert _history(session, cron.product_id) == []
+
+
+def test_retry_drops_a_product_with_an_invalid_price(session, cron):
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+    cron.status = ProductStatusExtraction(price=0.0, is_in_stock=True)
+
+    _retry()
+
+    assert _pending(session) == set()
+
+
+def test_retry_drops_a_product_already_checked_today(session, cron):
+    _add(session, cron.product_id, 100.0, True, NOW.replace(hour=1))
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+
+    _retry()
+
+    assert cron.scraped == []
+    assert _pending(session) == set()
+
+
+def test_retry_ignores_and_deletes_pending_products_from_another_day(session, cron):
+    _mark_pending(session, cron.product_id, _day_start(NOW - timedelta(days=1)))
+
+    _retry()
+
+    assert cron.scraped == []
+    assert _pending(session) == set()
+
+
+def test_retry_stores_the_record_at_the_retry_time(session, cron):
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+    retry_at = NOW + timedelta(hours=3)
+
+    _retry(now=retry_at)
+
+    assert [h.timestamp for h in _history(session, cron.product_id)] == [_ts(retry_at)]
+
+
+def test_deleting_a_product_deletes_its_pending_retry(session, cron):
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+
+    session.delete(session.get(Product, cron.product_id))
+    session.commit()
+
+    assert _pending(session) == set()
+
+
+@pytest.mark.parametrize(
+    ("hour", "expected"), [(12, "full"), (13, "retry"), (11, "retry")]
+)
+def test_main_runs_the_full_check_at_the_analysis_hour_and_retries_otherwise(
+    session, cron, monkeypatch, hour, expected
+):
+    calls = []
+
+    async def fake_full(now=None):
+        calls.append("full")
+
+    async def fake_retry(now=None):
+        calls.append("retry")
+
+    monkeypatch.setattr(cronjob, "fetch_and_store_product_status", fake_full)
+    monkeypatch.setattr(cronjob, "retry_rate_limited_products", fake_retry)
+
+    asyncio.run(cronjob.main(now=NOW.replace(hour=hour)))
+
+    assert calls == [expected]
+
+
+def test_full_run_checks_the_least_recently_checked_products_first(session, cron):
+    # Review focus: when the daily quota cannot cover every product, the ones
+    # left out today go first tomorrow instead of always being the last IDs.
+    never_checked = _add_product(session, cron, "Gadget")
+    checked_long_ago = _add_product(session, cron, "Gizmo")
+    _add(session, cron.product_id, 100.0, True, NOW - timedelta(days=1))
+    _add(session, checked_long_ago.id, 100.0, True, NOW - timedelta(days=3))
+
+    _run()
+
+    assert cron.scraped == [never_checked.url, checked_long_ago.url, cron.product_url]
+
+
+def test_retry_checks_the_least_recently_checked_products_first(session, cron):
+    second = _add_product(session, cron, "Gadget")
+    _add(session, cron.product_id, 100.0, True, NOW - timedelta(days=1))
+    _add(session, second.id, 100.0, True, NOW - timedelta(days=3))
+    _mark_pending(session, cron.product_id, _day_start(NOW))
+    _mark_pending(session, second.id, _day_start(NOW))
+
+    _retry()
+
+    assert cron.scraped == [second.url, cron.product_url]

@@ -13,8 +13,10 @@ from src.stagehand_utils import (
     FaviconData,
     ProductInfoExtraction,
     ProductInfoResult,
+    is_rate_limit_error,
     parse_favicon_payload,
 )
+from stagehand.rpc_client import RPCError, _JSONRPCError
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
 ICO = b"\x00\x00\x01\x00" + b"\x00" * 8
@@ -183,3 +185,48 @@ def test_fetch_favicon_times_out_to_none(monkeypatch):
     )
 
     assert result is None
+
+
+# --- is_rate_limit_error ---
+
+# Message raised by Stagehand when Gemini answers 429 RESOURCE_EXHAUSTED
+# (captured from a real free-tier quota error).
+QUOTA_MESSAGE = (
+    "Failed after 3 attempts. Last error: AI_APICallError: You exceeded your "
+    "current quota, please check your plan and billing details. For more "
+    "information on this error, head to: "
+    "https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current "
+    "usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: "
+    "generativelanguage.googleapis.com/generate_content_free_tier_requests, "
+    "limit: 5, model: gemini-2.5-flash\nPlease retry in 10.598793198s."
+)
+
+
+def _rpc_error(message):
+    return RPCError(
+        _JSONRPCError(code=-32603, message=message, data={"name": "AI_RetryError"})
+    )
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        QUOTA_MESSAGE,
+        "AI_APICallError: 429 Too Many Requests",
+        "AI_APICallError: RESOURCE_EXHAUSTED",
+    ],
+)
+def test_quota_errors_are_rate_limit_errors(message):
+    assert is_rate_limit_error(_rpc_error(message))
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        _rpc_error("Failed after 3 attempts. Last error: AI_APICallError: timeout"),
+        RuntimeError(QUOTA_MESSAGE),  # Not raised by Stagehand's RPC layer.
+        ValueError("price must be a float"),
+    ],
+)
+def test_other_errors_are_not_rate_limit_errors(error):
+    assert not is_rate_limit_error(error)

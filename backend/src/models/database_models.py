@@ -53,3 +53,21 @@ class ProductHist(SQLModel, table=True):
     price: float
     is_in_stock: bool
     timestamp: int  # Unix timestamp in seconds
+
+
+class PendingStatusRetry(SQLModel, table=True):
+    """A product whose daily status check hit the Gemini quota.
+
+    The hourly cronjob retries these products later the same local day until
+    each one gets its record. Rows from a previous day are stale: they are
+    discarded, since the next analysis-hour run checks every product again.
+    """
+
+    product_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("product.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+    )
+    day_start: int  # Unix timestamp (seconds) of the local day's start

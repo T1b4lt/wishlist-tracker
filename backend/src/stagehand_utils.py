@@ -12,11 +12,13 @@ import base64
 import binascii
 import json
 import os
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from pydantic import BaseModel, Field
 from stagehand import Page, Stagehand, local_browser
+from stagehand.rpc_client import RPCError
 
 # Model used for act() and extract() calls.
 MODEL_NAME = "google/gemini-flash-lite-latest"
@@ -31,6 +33,15 @@ CHROME_ARGS = [
     "--disable-gpu",
     "--disable-dev-shm-usage",
 ]
+
+# Markers of a Gemini quota error (HTTP 429 RESOURCE_EXHAUSTED) in the message
+# Stagehand raises. Today only the human-readable text reaches Python
+# ("You exceeded your current quota ... Quota exceeded for metric ..."); the
+# status markers cover SDK versions that forward Google's raw error.
+_RATE_LIMIT_PATTERN = re.compile(
+    r"exceeded your current quota|quota exceeded|resource_exhausted|\b429\b",
+    re.IGNORECASE,
+)
 
 # Largest favicon accepted (bytes); anything bigger is ignored.
 MAX_FAVICON_BYTES = 256 * 1024
@@ -190,6 +201,22 @@ def parse_favicon_payload(raw: object) -> FaviconData | None:
     if detected_mime is None:
         return None
     return FaviconData(content=content, mime=detected_mime)
+
+
+def is_rate_limit_error(error: BaseException) -> bool:
+    """Whether a Stagehand call failed because the Gemini quota was exhausted.
+
+    Covers both the per-minute and the per-day limits. Stagehand already
+    retries the model call a few times before raising, so a quota error that
+    reaches Python means the limit is still in effect.
+
+    Args:
+        error (BaseException): The exception raised by a Stagehand call.
+
+    Returns:
+        bool: True for a Stagehand ``RPCError`` reporting a quota error.
+    """
+    return isinstance(error, RPCError) and bool(_RATE_LIMIT_PATTERN.search(str(error)))
 
 
 # --- Internal helpers ---
