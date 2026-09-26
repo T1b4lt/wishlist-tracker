@@ -10,6 +10,8 @@
  * be unit tested directly, without rendering anything.
  */
 
+import { resolveHistWindow } from './histWindow';
+
 /** The config fields the Settings form can edit and save. Deliberately
  * excludes `telegram_bot_chat_id` and `telegram_status`: both are set by
  * backend actions (not typed by the user) and are always read live from the
@@ -27,7 +29,9 @@ export const EDITABLE_FIELDS = [
 /**
  * Builds a draft object (the editable fields only) from a `GET /config/`
  * response. Nullable string fields fall back to `''` so inputs stay
- * controlled.
+ * controlled, and a `hist_window_size` outside the offered options (saved
+ * before they were enforced) becomes the default window, so the next save
+ * writes a valid option instead of being rejected by the backend.
  * @param {object} config
  * @returns {object}
  */
@@ -35,7 +39,7 @@ export function draftFromConfig(config) {
   return {
     selected_language: config.selected_language,
     analysis_hour: config.analysis_hour,
-    hist_window_size: config.hist_window_size,
+    hist_window_size: resolveHistWindow(config.hist_window_size),
     google_api_key: config.google_api_key || '',
     telegram_bot_token: config.telegram_bot_token || '',
     is_price_drop_alert: config.is_price_drop_alert,

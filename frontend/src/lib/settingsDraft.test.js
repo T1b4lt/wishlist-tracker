@@ -138,4 +138,13 @@ describe('buildConfigPatch', () => {
       is_stock_change_alert: false
     });
   });
+
+  it('replaces a stored off-list window with the default so saving never sends an invalid option', () => {
+    // A `hist_window_size` saved before the options were enforced (e.g. 45)
+    // would make the backend reject the whole save with a 422.
+    const patch = buildConfigPatch(
+      draftFromConfig({ ...CONFIG, hist_window_size: 45 })
+    );
+    expect(patch.hist_window_size).toBe(60);
+  });
 });
