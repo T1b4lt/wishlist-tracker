@@ -1,13 +1,14 @@
 """Request and response schemas for application configuration."""
 
 from pydantic import BaseModel
+from src.core.config import HistWindowSize
 
 
 class ConfigUpdate(BaseModel):
     """Partial update payload for application configuration."""
 
     analysis_hour: int | None = None
-    hist_window_size: int | None = None
+    hist_window_size: HistWindowSize | None = None
     is_price_drop_alert: bool | None = None
     is_stock_change_alert: bool | None = None
     telegram_bot_token: str | None = None

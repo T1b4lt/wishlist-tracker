@@ -5,14 +5,23 @@ Provides low-level get/set access to the Config table and
 defines the default values used during database setup.
 """
 
+from typing import Literal
+
 from sqlmodel import Session, select
 from src.models.database_models import Config
+
+# Historical window options, in days. Mirrored by the frontend
+# (``frontend/src/lib/histWindow.js``) and pinned for both sides by
+# ``contracts/hist-window.json``.
+HIST_WINDOW_OPTIONS = (30, 60, 90, 180)
+DEFAULT_HIST_WINDOW = 60
+HistWindowSize = Literal[30, 60, 90, 180]
 
 # Default configuration values used during initial database setup
 # and as fallback when a key is missing.
 CONFIG_DEFAULTS = {
     "analysis_hour": "12",
-    "hist_window_size": "60",
+    "hist_window_size": str(DEFAULT_HIST_WINDOW),
     "is_price_drop_alert": "false",
     "is_stock_change_alert": "false",
     "telegram_bot_token": "",
@@ -54,3 +63,25 @@ def set_config_value(session: Session, key: str, value: str) -> None:
         config.value = value
     else:
         session.add(Config(key=key, value=value))
+
+
+def get_hist_window_size(session: Session) -> int:
+    """Return the configured historical window size, in days.
+
+    A stored value that is not a positive integer (e.g. a corrupted row)
+    falls back to ``DEFAULT_HIST_WINDOW``. A positive value outside
+    ``HIST_WINDOW_OPTIONS`` (saved before the options were enforced) is
+    returned as-is.
+
+    Args:
+        session (Session): The database session.
+
+    Returns:
+        int: The window size in days.
+    """
+    raw = get_config_value(session, "hist_window_size", str(DEFAULT_HIST_WINDOW))
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_HIST_WINDOW
+    return value if value > 0 else DEFAULT_HIST_WINDOW

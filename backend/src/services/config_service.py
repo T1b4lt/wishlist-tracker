@@ -7,7 +7,7 @@ validation rules before persisting changes.
 
 from fastapi import HTTPException
 from sqlmodel import Session
-from src.core.config import get_config_value, set_config_value
+from src.core.config import get_config_value, get_hist_window_size, set_config_value
 from src.schemas.config import ConfigResponse, ConfigUpdate
 
 
@@ -46,7 +46,7 @@ def get_all_config(session: Session) -> ConfigResponse:
 
     return ConfigResponse(
         analysis_hour=int(get_config_value(session, "analysis_hour", "12")),
-        hist_window_size=int(get_config_value(session, "hist_window_size", "60")),
+        hist_window_size=get_hist_window_size(session),
         is_price_drop_alert=get_config_value(
             session, "is_price_drop_alert", "false"
         ).lower()
@@ -74,7 +74,7 @@ def update_config(session: Session, config_update: ConfigUpdate) -> ConfigRespon
         ConfigResponse: The full configuration after applying changes.
 
     Raises:
-        HTTPException: If a value fails validation (e.g. hour out of range).
+        HTTPException: If analysis_hour is out of range.
     """
     if config_update.analysis_hour is not None:
         if config_update.analysis_hour < 0 or config_update.analysis_hour > 23:
@@ -84,10 +84,7 @@ def update_config(session: Session, config_update: ConfigUpdate) -> ConfigRespon
         set_config_value(session, "analysis_hour", str(config_update.analysis_hour))
 
     if config_update.hist_window_size is not None:
-        if config_update.hist_window_size < 30 or config_update.hist_window_size > 180:
-            raise HTTPException(
-                status_code=400, detail="hist_window_size must be between 30 and 180"
-            )
+        # Already restricted to HIST_WINDOW_OPTIONS by the schema (422).
         set_config_value(
             session, "hist_window_size", str(config_update.hist_window_size)
         )
