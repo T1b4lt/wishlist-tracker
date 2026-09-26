@@ -110,8 +110,6 @@ Test files live next to the code they cover (`*.test.js` / `*.test.jsx`).
 `vite.config.js` pins `TZ=UTC` for Vitest, so every unit test is
 timezone-independent (the suite passes the same under, e.g.,
 `TZ=America/Los_Angeles npm test` or `TZ=Pacific/Kiritimati npm test`).
-The unit suite also runs on `git push` through the pre-commit `pre-push`
-hook (see "Git Hooks" in the root README).
 Shared test infrastructure lives in `src/test/`:
 
 - `src/test/setup.js`: global test setup (jest-dom matchers, jsdom polyfills).

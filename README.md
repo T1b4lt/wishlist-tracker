@@ -422,11 +422,9 @@ cd backend && uv sync && cd ..
 # Frontend hooks use the local Prettier/ESLint installs
 cd frontend && npm install && cd ..
 
-# Install the pre-commit, commit-msg and pre-push hooks
+# Install the pre-commit and commit-msg hooks
 backend/.venv/bin/pre-commit install
 ```
-
-> The pre-push hooks were added after the others. If you installed the hooks before, re-run `backend/.venv/bin/pre-commit install` (or `just hooks`) once to activate them: it installs every hook type listed in `default_install_hook_types`.
 
 Run all hooks manually against the entire repository with:
 
@@ -447,10 +445,8 @@ backend/.venv/bin/pre-commit run --all-files
 | Frontend   | `prettier`                                 | Format frontend files using `frontend/.prettierrc`                             |
 | Frontend   | `eslint`                                   | Lint (with autofix) JS/JSX using `frontend/eslint.config.js`                   |
 | Commit msg | `conventional-pre-commit`                  | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages  |
-| Pre-push   | `frontend-unit-tests`                      | Run the frontend unit tests (`npm test`) when pushed commits touch `frontend/` |
-| Pre-push   | `backend-tests`                            | Run the backend tests (`uv run pytest`) when pushed commits touch `backend/`   |
 
-The Playwright e2e suite is not part of any hook (it needs a browser and its own dev server); run it with `just test-e2e`. Run the pre-push hooks on demand with `backend/.venv/bin/pre-commit run --hook-stage pre-push --all-files`.
+Tests are not part of any hook. Run them manually before committing: `just test` (frontend and backend unit tests) and `just test-e2e` (Playwright).
 
 Ruff settings are in `backend/pyproject.toml` (`[tool.ruff]`). Frontend formatting can also be run with `npm run format` / `npm run format:check`.
 

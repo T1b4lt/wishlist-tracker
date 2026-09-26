@@ -1,6 +1,6 @@
 # Git hooks managed with pre-commit (https://pre-commit.com).
 # Setup: see "Git Hooks" in the root README.
-default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
 
 repos:
@@ -68,28 +68,6 @@ repos:
         language: system
         types_or: [javascript, jsx]
         files: ^frontend/
-
-  # ---------------------------------------------------------------------------
-  # Test suites (pre-push only: too slow to run on every commit)
-  # Unit tests only; the Playwright e2e suite is run manually (`just test-e2e`).
-  # Each suite runs only when the pushed commits touch its side of the repo.
-  # ---------------------------------------------------------------------------
-  - repo: local
-    hooks:
-      - id: frontend-unit-tests
-        name: frontend unit tests (vitest)
-        entry: bash -c 'cd frontend && npm test'
-        language: system
-        files: ^frontend/
-        pass_filenames: false
-        stages: [pre-push]
-      - id: backend-tests
-        name: backend tests (pytest)
-        entry: bash -c 'cd backend && uv run pytest'
-        language: system
-        files: ^backend/
-        pass_filenames: false
-        stages: [pre-push]
 
   # ---------------------------------------------------------------------------
   # Commit message (Conventional Commits)
