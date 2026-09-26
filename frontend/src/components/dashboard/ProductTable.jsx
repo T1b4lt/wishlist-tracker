@@ -76,7 +76,7 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
       </Table.Cell>
       <Table.Cell textAlign="end">
         <PriceChange
-          value={product.price_change_60d}
+          value={product.price_change_pct}
           locale={locale}
           justify="flex-end"
         />

@@ -18,7 +18,8 @@ const product = (overrides = {}) => ({
   category_color: '#3B82F6',
   priority: 'medium',
   current_price: 100,
-  price_change_60d: 0,
+  price_change_pct: 0,
+  is_at_lowest: false,
   is_in_stock: true,
   currency: 'EUR',
   store_id: 1,
@@ -158,21 +159,21 @@ describe('filterProducts', () => {
 
   it('keeps only products whose price dropped when priceDrop is on', () => {
     const products = [
-      product({ id: 1, price_change_60d: -5 }),
-      product({ id: 2, price_change_60d: 0 }),
-      product({ id: 3, price_change_60d: 3 }),
-      product({ id: 4, price_change_60d: null })
+      product({ id: 1, price_change_pct: -5 }),
+      product({ id: 2, price_change_pct: 0 }),
+      product({ id: 3, price_change_pct: 3 }),
+      product({ id: 4, price_change_pct: null })
     ];
     expect(ids(filterProducts(products, filters({ priceDrop: true })))).toEqual(
       [1]
     );
   });
 
-  it('keeps only products at their lowest recent price when atLowest is on', () => {
+  it('keeps only products flagged at their lowest price when atLowest is on', () => {
     const products = [
-      product({ id: 1, current_price: 90, recent_prices: [100, 90] }),
-      product({ id: 2, current_price: 100, recent_prices: [90, 100] }),
-      product({ id: 3, current_price: 100, recent_prices: [] })
+      product({ id: 1, is_at_lowest: true }),
+      product({ id: 2, is_at_lowest: false }),
+      product({ id: 3, is_at_lowest: undefined })
     ];
     expect(ids(filterProducts(products, filters({ atLowest: true })))).toEqual([
       1
@@ -235,10 +236,10 @@ describe('sortProducts', () => {
 
   it('sorts by price change with the biggest drops first', () => {
     const products = [
-      product({ id: 1, price_change_60d: 5 }),
-      product({ id: 2, price_change_60d: -20 }),
-      product({ id: 3, price_change_60d: null }),
-      product({ id: 4, price_change_60d: -3 })
+      product({ id: 1, price_change_pct: 5 }),
+      product({ id: 2, price_change_pct: -20 }),
+      product({ id: 3, price_change_pct: null }),
+      product({ id: 4, price_change_pct: -3 })
     ];
     expect(ids(sortProducts(products, 'change_asc'))).toEqual([2, 4, 1, 3]);
   });

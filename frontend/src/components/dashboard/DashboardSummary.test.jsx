@@ -12,7 +12,8 @@ vi.mock('motion/react', async (importOriginal) => {
 const product = (overrides = {}) => ({
   current_price: 100,
   currency: 'EUR',
-  price_change_60d: 0,
+  price_change_pct: 0,
+  is_at_lowest: false,
   recent_prices: [100],
   ...overrides
 });
@@ -30,11 +31,16 @@ describe('DashboardSummary', () => {
     renderWithProviders(
       <DashboardSummary
         products={[
-          product({ current_price: 10, currency: 'EUR', price_change_60d: -5 }),
+          product({
+            current_price: 10,
+            currency: 'EUR',
+            price_change_pct: -5,
+            is_at_lowest: true
+          }),
           product({
             current_price: 20,
             currency: 'USD',
-            price_change_60d: 3,
+            price_change_pct: 3,
             recent_prices: [20, 25]
           })
         ]}
@@ -54,7 +60,13 @@ describe('DashboardSummary', () => {
   it('hides the price-drops and at-lowest stats when neither is computable', () => {
     renderWithProviders(
       <DashboardSummary
-        products={[product({ price_change_60d: null, recent_prices: null })]}
+        products={[
+          product({
+            current_price: null,
+            price_change_pct: null,
+            recent_prices: []
+          })
+        ]}
         locale="en-US"
       />
     );

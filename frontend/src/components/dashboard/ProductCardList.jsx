@@ -59,7 +59,7 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
               <Text textStyle="numeric" fontWeight="medium">
                 {formatPrice(product.current_price, product.currency, locale)}
               </Text>
-              <PriceChange value={product.price_change_60d} locale={locale} />
+              <PriceChange value={product.price_change_pct} locale={locale} />
             </Flex>
             <StockStatus inStock={product.is_in_stock} />
           </VStack>

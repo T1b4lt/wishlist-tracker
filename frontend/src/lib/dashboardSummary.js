@@ -6,8 +6,8 @@
  * @typedef {object} DashboardSummaryProduct
  * @property {number|null|undefined} current_price
  * @property {string|null|undefined} currency
- * @property {number|null|undefined} price_change_60d
- * @property {number[]|null|undefined} recent_prices
+ * @property {number|null|undefined} price_change_pct
+ * @property {boolean|undefined} is_at_lowest
  */
 
 /**
@@ -16,25 +16,6 @@
  */
 const isFiniteNumber = (value) =>
   typeof value === 'number' && Number.isFinite(value);
-
-/**
- * @param {DashboardSummaryProduct} product
- * @returns {boolean} Whether `product.current_price` is currently at (or
- *   below) the minimum of its own `recent_prices`.
- */
-export const isAtLowestPrice = (product) => {
-  if (!isFiniteNumber(product.current_price)) return false;
-  if (
-    !Array.isArray(product.recent_prices) ||
-    product.recent_prices.length === 0
-  ) {
-    return false;
-  }
-  const numericRecentPrices = product.recent_prices.filter(isFiniteNumber);
-  if (numericRecentPrices.length === 0) return false;
-
-  return product.current_price === Math.min(...numericRecentPrices);
-};
 
 /**
  * Computes the dashboard summary strip's stats from the dashboard-summary
@@ -64,25 +45,26 @@ export function computeDashboardSummary(products) {
   }
 
   const productsWithPriceChange = products.filter((product) =>
-    isFiniteNumber(product.price_change_60d)
+    isFiniteNumber(product.price_change_pct)
   );
   const priceDropCount =
     productsWithPriceChange.length === 0
       ? null
       : productsWithPriceChange.filter(
-          (product) => product.price_change_60d < 0
+          (product) => product.price_change_pct < 0
         ).length;
 
-  const productsWithRecentPrices = products.filter(
-    (product) =>
-      Array.isArray(product.recent_prices) &&
-      product.recent_prices.some(isFiniteNumber) &&
-      isFiniteNumber(product.current_price)
+  // "At lowest" is decided by the backend (`is_at_lowest`, see
+  // `backend/src/services/price_stats.py`); hidden when no product has any
+  // history yet (no current price).
+  const productsWithHistory = products.filter((product) =>
+    isFiniteNumber(product.current_price)
   );
   const atLowestCount =
-    productsWithRecentPrices.length === 0
+    productsWithHistory.length === 0
       ? null
-      : productsWithRecentPrices.filter(isAtLowestPrice).length;
+      : productsWithHistory.filter((product) => product.is_at_lowest === true)
+          .length;
 
   return {
     itemCount,

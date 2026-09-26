@@ -16,12 +16,10 @@
  * @property {StockFilter} stock
  * @property {number|null} minPrice - Inclusive lower bound on `current_price`.
  * @property {number|null} maxPrice - Inclusive upper bound on `current_price`.
- * @property {boolean} priceDrop - Only products whose `price_change_60d` is negative.
- * @property {boolean} atLowest - Only products at their lowest recent price.
+ * @property {boolean} priceDrop - Only products whose `price_change_pct` is negative.
+ * @property {boolean} atLowest - Only products the backend flags as at their lowest price (`is_at_lowest`).
  * @property {SortKey} sort
  */
-
-import { isAtLowestPrice } from './dashboardSummary';
 
 export const STOCK_FILTERS = ['all', 'in', 'out'];
 export const PRIORITIES = ['high', 'medium', 'low'];
@@ -113,12 +111,12 @@ export function filterProducts(products, filters) {
     if (
       filters.priceDrop &&
       !(
-        isFiniteNumber(product.price_change_60d) && product.price_change_60d < 0
+        isFiniteNumber(product.price_change_pct) && product.price_change_pct < 0
       )
     ) {
       return false;
     }
-    if (filters.atLowest && !isAtLowestPrice(product)) return false;
+    if (filters.atLowest && product.is_at_lowest !== true) return false;
 
     return true;
   });
@@ -146,7 +144,7 @@ const COMPARATORS = {
   price_asc: (a, b) => compareNullable(a.current_price, b.current_price, 1),
   price_desc: (a, b) => compareNullable(a.current_price, b.current_price, -1),
   change_asc: (a, b) =>
-    compareNullable(a.price_change_60d, b.price_change_60d, 1),
+    compareNullable(a.price_change_pct, b.price_change_pct, 1),
   priority_desc: (a, b) =>
     compareNullable(
       PRIORITY_RANK[normalizePriority(a.priority)],
