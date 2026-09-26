@@ -18,6 +18,20 @@ class Category(SQLModel, table=True):
     color: str
 
 
+class Store(SQLModel, table=True):
+    """An online store (retailer), identified by its normalized domain.
+
+    Shared by every product whose URL points to the same domain, so the
+    favicon is downloaded and stored only once per store.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    domain: str = Field(unique=True, index=True)  # e.g. "pccomponentes.com"
+    name: str
+    favicon: bytes | None = None  # Raw image bytes
+    favicon_mime: str | None = None  # e.g. "image/png"
+
+
 class Product(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
@@ -26,6 +40,7 @@ class Product(SQLModel, table=True):
     category_id: int | None = Field(default=None, foreign_key="category.id")
     description: str
     currency: str
+    store_id: int | None = Field(default=None, foreign_key="store.id", index=True)
 
 
 class ProductHist(SQLModel, table=True):
