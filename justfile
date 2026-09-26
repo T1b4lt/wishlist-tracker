@@ -36,7 +36,7 @@ install-backend:
 install-frontend:
     cd {{ frontend }} && npm ci
 
-# Install the pre-commit and commit-msg git hooks
+# Install the pre-commit, commit-msg and pre-push git hooks
 [group('setup')]
 hooks:
     {{ backend }}/.venv/bin/pre-commit install
