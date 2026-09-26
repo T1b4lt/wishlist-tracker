@@ -18,8 +18,29 @@
 /** Seconds in a day. */
 export const DAY_SECONDS = 60 * 60 * 24;
 
-/** Current time, in Unix seconds (rounded down). */
-export const nowSeconds = () => Math.floor(Date.now() / 1000);
+/**
+ * When set (in milliseconds since epoch), `nowSeconds()` returns this fixed
+ * instant instead of the real current time. Only the visual snapshot spec
+ * (`visual.spec.js`) pins it, together with the browser's own clock
+ * (`page.clock.setFixedTime`), so every date and relative time it renders
+ * is identical on every run. A worker process can go on to run other spec
+ * files, so that spec unpins it again after each test (`afterEach`).
+ * @type {number|null}
+ */
+let pinnedNowMs = null;
+
+/**
+ * Pins (or, with `null`, unpins) the "current time" fixtures are built
+ * from. See `pinnedNowMs`.
+ * @param {number|null} ms - Milliseconds since epoch.
+ */
+export const pinFixtureNow = (ms) => {
+  pinnedNowMs = ms;
+};
+
+/** Current time (or the pinned one, see `pinFixtureNow`), in Unix seconds
+ * (rounded down). */
+export const nowSeconds = () => Math.floor((pinnedNowMs ?? Date.now()) / 1000);
 
 /**
  * Formats a Unix timestamp (seconds) the same way `src/lib/format.js`'s

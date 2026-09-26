@@ -13,6 +13,14 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'list',
 
+  // Visual snapshots (`e2e/visual.spec.js`): a small but non-zero tolerance
+  // absorbs sub-pixel anti-aliasing noise without hiding real regressions.
+  // Baselines are platform-specific; see "Visual snapshots" in the
+  // frontend README.
+  expect: {
+    toHaveScreenshot: { maxDiffPixelRatio: 0.01 }
+  },
+
   // Every API call is mocked per-test via `e2e/support/apiMock.js`
   // (`page.route` against `API_URL`). `VITE_API_URL` is pinned to that same
   // mocked origin here, in the dev server's own environment, so the app
