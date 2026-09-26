@@ -70,6 +70,12 @@ describe('formatPercent', () => {
 });
 
 describe('formatDate', () => {
+  // `vite.config.js` pins `TZ=UTC` for Vitest, so the expectations below
+  // hold whatever timezone the machine running the suite is in.
+  it('runs with the timezone pinned to UTC', () => {
+    expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('UTC');
+  });
+
   const ts = Date.UTC(2024, 2, 5) / 1000; // 2024-03-05T00:00:00Z
 
   it('formats a "short" date (the default) with month, day and year', () => {
