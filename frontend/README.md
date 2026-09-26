@@ -191,6 +191,9 @@ stores under `src/stores/` (one file per store, tests beside them):
   revisit.
 - `categoriesStore.js`: the categories `items` list, with `fetch`, `create`,
   `update` and `remove` actions.
+- `dailyCheckStore.js`: today's daily check status (`GET /daily-check/`),
+  with a `fetch` action. Read by the dashboard's `DailyCheckNotice`, which
+  refetches on mount and on window focus and renders nothing if it fails.
 - `configStore.js`: the application `config`, with `fetch(force)` and
   `save(patch)`. This is the single source of truth for the UI language:
   every successful `fetch()`/`save()` applies `config.selected_language`

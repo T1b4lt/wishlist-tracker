@@ -22,5 +22,7 @@ Stagehand mocked, including the Gemini quota error detection
 (`src/services/price_stats.py`), window options and product response fields
 are also pinned by the shared contracts in `../contracts/`
 (`test_price_stats_contract.py`, `test_contracts.py`); the cronjob, including the
-hourly retries of products that hit the Gemini quota, is covered by
-`test_cronjob.py`.
+once-per-day full run, the 10-minute retries of products that hit the Gemini
+quota and the daily run summary, is covered by `test_cronjob.py`; the
+Telegram daily check report by `test_daily_report.py`; `GET /daily-check/` by
+`test_daily_check.py`; and the local-day helpers by `test_local_day.py`.

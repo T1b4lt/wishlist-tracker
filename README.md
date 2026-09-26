@@ -44,6 +44,7 @@ Key highlights:
 | **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini.                                                                                                                                                                              |
 | **Store Detection**        | Each product records its store (AI-extracted name + favicon downloaded from the page), shown on the dashboard and detail page, so the same item tracked in several stores is easy to tell apart.                                                                                                                           |
 | **Price Tracking**         | One price check per product per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                      |
+| **Gemini Quota Handling**  | When the Gemini quota runs out, the products left are retried every 10 minutes for the rest of the day, least recently checked first; the dashboard shows when the limit was reached and how many products are still pending. |
 | **Interactive Dashboard**  | Overview of all products with current price, price change vs. the window's average (%), sparkline, stock status, and category indicators.                                                                                                                                                                                  |
 | **Search & Filters**       | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops and lowest price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading. |
 | **Product Detail View**    | Detailed product page with a stepped price history chart (Recharts), lowest and average price in the selected range, and out-of-stock bands.                                                                                                                                                                               |
@@ -123,6 +124,7 @@ wishlist-tracker/
 │       │   └── store.py              # StoreResponse
 │       ├── services/                 # Business logic layer
 │       │   ├── config_service.py     # Configuration read/update logic
+│       │   ├── daily_check_service.py # Today's daily check summary & counts
 │       │   ├── category_service.py   # Category CRUD operations
 │       │   ├── price_stats.py        # Pure price statistics (window, average, change, lowest)
 │       │   ├── product_service.py    # Product CRUD, dashboard, detail & AI extraction
@@ -130,13 +132,14 @@ wishlist-tracker/
 │       │   └── telegram_service.py   # Telegram chat ID & test message orchestration
 │       ├── routers/                  # FastAPI route definitions (thin controllers)
 │       │   ├── config_router.py      # GET/PATCH /config/
+│       │   ├── daily_check_router.py # GET /daily-check/
 │       │   ├── category_router.py    # CRUD /categories/
 │       │   ├── product_router.py     # CRUD /products/ + /extract-product-info/
 │       │   ├── store_router.py       # GET /stores/{id}/favicon
 │       │   └── telegram_router.py    # /telegram-chat-id, /telegram-test-message
 │       ├── stagehand_utils.py        # Stagehand v4 AI scraping functions
 │       ├── telegram_utils.py         # Telegram notification helpers
-│       ├── product_status_cronjob.py # Daily price tracking script
+│       ├── product_status_cronjob.py # Daily price tracking, quota retries & daily report (every 10 min)
 │       └── setup_backend.py          # Database initialization script
 │
 └── frontend/                         # React frontend (Vite)
@@ -318,6 +321,7 @@ Products are linked to a store resolved from their URL's domain on create and on
 | Method | Endpoint               | Description                                                    |
 | ------ | ---------------------- | -------------------------------------------------------------- |
 | `GET`  | `/stores/{id}/favicon` | Store favicon image (cached for a week; 404 if none was found) |
+| `GET`  | `/daily-check/` | Today's daily check: full-run snapshot (start, total products, Gemini limit time and products left then; nulls before it runs) and products still pending |
 
 ### AI Extraction
 
@@ -524,13 +528,14 @@ All application settings can be managed through the **Settings** page (`/setting
 | Setting                 | Description                                                              |
 | ----------------------- | ------------------------------------------------------------------------ |
 | **Google API Key**      | Required for AI-powered product extraction (Gemini).                     |
-| **Analysis Hour**       | Hour of the day (0–23) when the cronjob should run.                      |
+| **Analysis Hour**       | Hour of the day (0–23) when the daily check starts (first run at or after it). |
 | **History Window**      | Days used for price trends, averages and lowest prices (30, 60, 90 or 180). |
 | **Language**            | Switch between English and Spanish.                                      |
 | **Telegram Bot Token**  | Your Telegram Bot API token (from [@BotFather](https://t.me/BotFather)). |
 | **Telegram Chat ID**    | Auto-detected when you send a message to the bot.                        |
 | **Price Drop Alerts**   | Toggle Telegram notifications for price drops.                           |
 | **Stock Change Alerts** | Toggle Telegram notifications when items return to stock.                |
+| **Daily Check Report**  | Telegram report of the day's check: off, only on days the Gemini limit is reached, or every day. |
 
 ---
 
