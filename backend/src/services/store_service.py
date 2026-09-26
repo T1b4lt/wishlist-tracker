@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from src.models.database_models import Store
+from src.schemas.store import StoreResponse
 
 # Second-level labels used under country-code TLDs (e.g. "amazon.co.uk"),
 # skipped when deriving a store name from its domain.
@@ -142,3 +143,20 @@ def get_favicon(session: Session, store_id: int) -> tuple[bytes, str]:
     if not store or not store.favicon or not store.favicon_mime:
         raise HTTPException(status_code=404, detail="Favicon not found")
     return store.favicon, store.favicon_mime
+
+
+def to_response(store: Store) -> StoreResponse:
+    """Convert a store into its public response schema.
+
+    Args:
+        store (Store): The store to convert.
+
+    Returns:
+        StoreResponse: Store data without the favicon bytes.
+    """
+    return StoreResponse(
+        id=store.id,
+        name=store.name,
+        domain=store.domain,
+        has_favicon=bool(store.favicon),
+    )

@@ -13,6 +13,7 @@ from src.routers import (
     category_router,
     config_router,
     product_router,
+    store_router,
     telegram_router,
 )
 
@@ -37,4 +38,5 @@ app.add_middleware(
 app.include_router(config_router.router)
 app.include_router(category_router.router)
 app.include_router(product_router.router)
+app.include_router(store_router.router)
 app.include_router(telegram_router.router)

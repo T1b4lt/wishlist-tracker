@@ -141,3 +141,65 @@ def test_get_favicon_404_when_store_missing_or_without_favicon(session):
         with pytest.raises(HTTPException) as exc_info:
             store_service.get_favicon(session, store_id)
         assert exc_info.value.status_code == 404
+
+
+# --- to_response ---
+
+
+def test_to_response_reports_favicon_presence(session):
+    with_icon = store_service.get_or_create(
+        session, "https://a.com", name="A", favicon=b"x", favicon_mime="image/png"
+    )
+    without_icon = store_service.get_or_create(session, "https://b.com", name="B")
+
+    assert store_service.to_response(with_icon).model_dump() == {
+        "id": with_icon.id,
+        "name": "A",
+        "domain": "a.com",
+        "has_favicon": True,
+    }
+    assert store_service.to_response(without_icon).has_favicon is False
+
+
+# --- GET /stores/{id}/favicon ---
+
+
+def test_favicon_endpoint_returns_bytes_with_stored_mime(client, session):
+    store = store_service.get_or_create(
+        session,
+        "https://a.com",
+        name="A",
+        favicon=b"<svg/>",
+        favicon_mime="image/svg+xml",
+    )
+
+    response = client.get(f"/stores/{store.id}/favicon")
+
+    assert response.status_code == 200
+    assert response.content == b"<svg/>"
+    assert response.headers["content-type"] == "image/svg+xml"
+
+
+def test_favicon_endpoint_sets_cache_and_security_headers(client, session):
+    store = store_service.get_or_create(
+        session,
+        "https://a.com",
+        name="A",
+        favicon=b"<svg/>",
+        favicon_mime="image/svg+xml",
+    )
+
+    response = client.get(f"/stores/{store.id}/favicon")
+
+    assert response.headers["cache-control"] == "public, max-age=604800"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["content-security-policy"] == (
+        "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+    )
+
+
+def test_favicon_endpoint_404(client, session):
+    store = store_service.get_or_create(session, "https://a.com", name="A")
+
+    assert client.get(f"/stores/{store.id}/favicon").status_code == 404
+    assert client.get("/stores/999/favicon").status_code == 404
