@@ -1,0 +1,231 @@
+{
+  "tolerance": 1e-6,
+  "cases": [
+    {
+      "name": "empty history",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [],
+      "expected": {
+        "window_prices": [],
+        "average": null,
+        "price_change_pct": null,
+        "lowest": null,
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "single in-stock record",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99913600, "price": 10.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [10.0],
+        "average": null,
+        "price_change_pct": null,
+        "lowest": {"price": 10.0, "timestamp": 99913600},
+        "is_at_lowest": true
+      }
+    },
+    {
+      "name": "baseline excludes current; tie on lowest resolves to most recent",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99740800, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 99827200, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 110.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [100.0, 100.0, 110.0],
+        "average": 100.0,
+        "price_change_pct": 10.0,
+        "lowest": {"price": 100.0, "timestamp": 99827200},
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "current below average is at lowest",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99740800, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 99827200, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 90.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [100.0, 100.0, 90.0],
+        "average": 100.0,
+        "price_change_pct": -10.0,
+        "lowest": {"price": 90.0, "timestamp": 99913600},
+        "is_at_lowest": true
+      }
+    },
+    {
+      "name": "record exactly at the cutoff is included",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 97408000, "price": 50.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 100.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [50.0, 100.0],
+        "average": 50.0,
+        "price_change_pct": 100.0,
+        "lowest": {"price": 50.0, "timestamp": 97408000},
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "record one second before the cutoff is excluded",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 97407999, "price": 50.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 100.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [100.0],
+        "average": null,
+        "price_change_pct": null,
+        "lowest": {"price": 100.0, "timestamp": 99913600},
+        "is_at_lowest": true
+      }
+    },
+    {
+      "name": "out-of-stock records are ignored by the stats but kept in the window",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99740800, "price": 10.0, "is_in_stock": false},
+        {"timestamp": 99827200, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 100.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [10.0, 100.0, 100.0],
+        "average": 100.0,
+        "price_change_pct": 0.0,
+        "lowest": {"price": 100.0, "timestamp": 99913600},
+        "is_at_lowest": true
+      }
+    },
+    {
+      "name": "current out of stock has no change and is never at lowest",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99827200, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 80.0, "is_in_stock": false}
+      ],
+      "expected": {
+        "window_prices": [100.0, 80.0],
+        "average": 100.0,
+        "price_change_pct": null,
+        "lowest": {"price": 100.0, "timestamp": 99827200},
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "current outside the window",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 96544000, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 96976000, "price": 90.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [],
+        "average": null,
+        "price_change_pct": null,
+        "lowest": null,
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "non-positive average gives no change",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99827200, "price": 0.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 10.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [0.0, 10.0],
+        "average": 0.0,
+        "price_change_pct": null,
+        "lowest": {"price": 0.0, "timestamp": 99827200},
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "unsorted input is sorted by timestamp",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99913600, "price": 120.0, "is_in_stock": true},
+        {"timestamp": 99740800, "price": 100.0, "is_in_stock": true},
+        {"timestamp": 99827200, "price": 80.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [100.0, 80.0, 120.0],
+        "average": 90.0,
+        "price_change_pct": 33.33333333333333,
+        "lowest": {"price": 80.0, "timestamp": 99827200},
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "null window keeps the full history",
+      "now": 100000000,
+      "window_days": null,
+      "history": [
+        {"timestamp": 65440000, "price": 50.0, "is_in_stock": true},
+        {"timestamp": 82720000, "price": 150.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 100.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [50.0, 150.0, 100.0],
+        "average": 100.0,
+        "price_change_pct": 0.0,
+        "lowest": {"price": 50.0, "timestamp": 65440000},
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "every record out of stock",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99827200, "price": 50.0, "is_in_stock": false},
+        {"timestamp": 99913600, "price": 60.0, "is_in_stock": false}
+      ],
+      "expected": {
+        "window_prices": [50.0, 60.0],
+        "average": null,
+        "price_change_pct": null,
+        "lowest": null,
+        "is_at_lowest": false
+      }
+    },
+    {
+      "name": "current equal to an older lowest is at lowest",
+      "now": 100000000,
+      "window_days": 30,
+      "history": [
+        {"timestamp": 99740800, "price": 120.0, "is_in_stock": true},
+        {"timestamp": 99827200, "price": 90.0, "is_in_stock": true},
+        {"timestamp": 99913600, "price": 90.0, "is_in_stock": true}
+      ],
+      "expected": {
+        "window_prices": [120.0, 90.0, 90.0],
+        "average": 105.0,
+        "price_change_pct": -14.285714285714285,
+        "lowest": {"price": 90.0, "timestamp": 99913600},
+        "is_at_lowest": true
+      }
+    }
+  ]
+}
