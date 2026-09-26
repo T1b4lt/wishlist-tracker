@@ -8,6 +8,8 @@ so the two implementations cannot drift apart silently.
 from types import SimpleNamespace
 
 import pytest
+from src.models.database_models import Category, Config, Product, ProductHist
+from src.services import product_service
 from src.services.price_stats import compute_price_stats
 from tests.contract_utils import load_contract
 
@@ -49,3 +51,42 @@ def test_compute_price_stats_does_not_mutate_the_input():
     compute_price_stats(history, None, 100)
 
     assert history == original
+
+
+# The dashboard does not call ``compute_price_stats``: it builds the window
+# and the current record with SQL (``product_service._window_records`` and
+# ``_latest_records``) and passes them to ``compute_window_stats``. Running
+# the same cases through the endpoint's service pins that production path
+# too, so a change in the SQL (e.g. the cutoff comparison or the tie-break)
+# cannot drift from the contract silently.
+DASHBOARD_CASES = [case for case in CONTRACT["cases"] if case["window_days"]]
+
+
+@pytest.mark.parametrize("case", DASHBOARD_CASES, ids=lambda case: case["name"])
+def test_dashboard_summary_follows_the_price_stats_contract(session, case):
+    category = Category(name="Contract", color="#000000")
+    session.add(category)
+    session.add(Config(key="hist_window_size", value=str(case["window_days"])))
+    session.commit()
+    product = Product(
+        name="Contract product",
+        url="https://example.com/contract",
+        priority="low",
+        category_id=category.id,
+        description="",
+        currency="EUR",
+    )
+    session.add(product)
+    session.commit()
+    for record in case["history"]:
+        session.add(ProductHist(product_id=product.id, **record))
+    session.commit()
+    expected = case["expected"]
+
+    (summary,) = product_service.get_dashboard_summary(session, now=case["now"])
+
+    assert summary.recent_prices == [
+        _approx(price) for price in expected["window_prices"]
+    ]
+    assert summary.price_change_pct == _approx(expected["price_change_pct"])
+    assert summary.is_at_lowest is expected["is_at_lowest"]
