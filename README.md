@@ -45,8 +45,9 @@ Key highlights:
 | **Store Detection**        | Each product records its store (AI-extracted name + favicon downloaded from the page), shown on the dashboard and detail page, so the same item tracked in several stores is easy to tell apart.                                                                                                                           |
 | **Price Tracking**         | One price check per product per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                      |
 | **Gemini Quota Handling**  | When the Gemini quota runs out, the products left are retried every 10 minutes for the rest of the day, least recently checked first; the dashboard shows when the limit was reached and how many products are still pending. |
+| **Outdated Price Warning** | Products whose price has not been updated for 3 days or more (the store may be down, the product may have been removed, or the page may be blocking the agent) get a badge on the dashboard, a warning on their detail page, a count in the summary strip and their own filter. |
 | **Interactive Dashboard**  | Overview of all products with current price, price change vs. the window's average (%), sparkline, stock status, and category indicators.                                                                                                                                                                                  |
-| **Search & Filters**       | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops and lowest price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading. |
+| **Search & Filters**       | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops, lowest price and outdated price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading. |
 | **Product Detail View**    | Detailed product page with a stepped price history chart (Recharts), lowest and average price in the selected range, and out-of-stock bands.                                                                                                                                                                               |
 | **Category System**        | User-defined categories with custom colors for visual organization.                                                                                                                                                                                                                                                        |
 | **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                                                                                                                                                                                                            |
@@ -562,15 +563,16 @@ All application settings can be managed through the **Settings** page (`/setting
 - The **Dashboard** shows all products with:
   - Current price, price trend (% change vs. the average of the previous in-stock checks in the window), and stock status.
 - Click on any product to see its **detail page** with a full price history chart.
+- If a product has had no new price record for **3 days or more**, the daily check is failing for it: the store may be down, the product may have been removed, or the page may be blocking the agent. The dashboard marks it with a **"No updates for N days"** badge (with the likely causes in a tooltip) and counts it as **Outdated** in the summary strip, and its detail page shows a warning with the date of the last price and a link to check the store page. Products that were never checked are not flagged.
 - The trend is calculated over the configurable history window (in days); see "How price statistics are computed" below the config keys.
 
 ### Searching and Filtering
 
 - Type in the **search box** above the product list to filter it as you type: `DJI` shows every product (or store) containing "DJI" in its name, e.g. the same drone tracked on Amazon, PcComponentes and the DJI Store.
 - Use the **sort** menu to order by name, price (low/high), biggest price drops, priority, availability or most recently checked.
-- Open **Filters** to narrow the list by stock, price range, deals (price dropped / at lowest price), store, category and priority. Every active filter shows up as a removable chip; **Clear all** removes them while keeping the search.
+- Open **Filters** to narrow the list by stock, price range, deals (price dropped / at lowest price), price updates (not updated for 3+ days, URL param `stale=1`), store, category and priority. Every active filter shows up as a removable chip; **Clear all** removes them while keeping the search.
 - The search, filters and sort are stored in the page URL (e.g. `/?q=dji&stock=in&sort=price_asc`), so they are kept when you open a product and go back, reload the page or bookmark it.
-- The summary strip (items, total value, price drops, at lowest price) always covers your whole wishlist.
+- The summary strip (items, total value, price drops, at lowest price, and outdated when any) always covers your whole wishlist.
 
 ### Telegram Notifications
 
