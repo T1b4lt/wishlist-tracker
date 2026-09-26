@@ -18,13 +18,13 @@ import asyncio
 import logging
 import math
 import sys
-from datetime import datetime, timedelta
-from datetime import time as dt_time
+from datetime import datetime
 from enum import Enum
 
 from sqlmodel import Session, delete, func, select
 from src.core.config import get_config_value
 from src.core.database import engine
+from src.core.local_day import local_day_bounds
 from src.models.database_models import PendingStatusRetry, Product, ProductHist
 from src.stagehand_utils import get_product_status, is_rate_limit_error
 from src.telegram_utils import send_price_drop_alert, send_stock_alert
@@ -167,20 +167,6 @@ def _is_valid_price(price) -> bool:
     )
 
 
-def _local_day_bounds(now: datetime) -> tuple[int, int]:
-    """Return the Unix timestamps of the start of ``now``'s local day and the next.
-
-    Args:
-        now (datetime): A naive local datetime.
-
-    Returns:
-        tuple[int, int]: ``(start, end)`` with ``start <= t < end`` for
-            every timestamp ``t`` of that day.
-    """
-    start = datetime.combine(now.date(), dt_time.min)
-    return int(start.timestamp()), int((start + timedelta(days=1)).timestamp())
-
-
 def _has_record_between(
     session: Session, product_id: int, start: int, end: int
 ) -> bool:
@@ -235,7 +221,7 @@ async def _check_product(
     Returns:
         _CheckOutcome: What happened to the product.
     """
-    day_start, day_end = _local_day_bounds(now)
+    day_start, day_end = local_day_bounds(now)
     try:
         if _has_record_between(session, product.id, day_start, day_end):
             logger.info(
@@ -341,7 +327,7 @@ async def _check_products(
         outcome = await _check_product(session, product, google_api_key, tg, now)
         counts[outcome] += 1
         if outcome is _CheckOutcome.RATE_LIMITED:
-            day_start, day_end = _local_day_bounds(now)
+            day_start, day_end = local_day_bounds(now)
             pending_ids = [product.id] + [
                 p.id
                 for p in products[index + 1 :]
@@ -424,7 +410,7 @@ async def fetch_and_store_product_status(now: datetime | None = None):
         logger.info(f"Found {len(products)} products to process")
         pending_ids = await _check_products(session, products, google_api_key, now)
 
-        day_start, _ = _local_day_bounds(now)
+        day_start, _ = local_day_bounds(now)
         for product_id in pending_ids:
             session.add(PendingStatusRetry(product_id=product_id, day_start=day_start))
         session.commit()
@@ -444,7 +430,7 @@ async def retry_rate_limited_products(now: datetime | None = None):
             ``datetime.now()``.
     """
     now = now or datetime.now()
-    day_start, _ = _local_day_bounds(now)
+    day_start, _ = local_day_bounds(now)
 
     with Session(engine) as session:
         session.exec(
