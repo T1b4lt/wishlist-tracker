@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Text } from '@chakra-ui/react';
+import { Button, Icon, Text } from '@chakra-ui/react';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { ProductFormDialog } from '@/components/products';
@@ -112,7 +112,11 @@ const DashboardPage = () => {
     setProductToDelete(null);
   };
 
-  const isLoading = status === 'loading' && products.length === 0;
+  // `idle` (before the first `fetchSummary()` has even started) counts as
+  // loading too: nothing is known yet, so the empty state must not flash
+  // for a frame before the request begins.
+  const isLoading =
+    (status === 'loading' || status === 'idle') && products.length === 0;
   // `status === 'error'` is handled by the branch above, so by the time
   // this is checked it can only mean "loaded successfully, zero products".
   const isEmpty = !isLoading && products.length === 0;
@@ -124,7 +128,7 @@ const DashboardPage = () => {
         description={t('pages.dashboard.subtitle')}
         actions={
           <Button size="lg" variant="solid" onClick={handleAddProduct}>
-            <LuPlus size={20} />
+            <Icon as={LuPlus} />
             {t('pages.dashboard.addButton')}
           </Button>
         }
@@ -142,7 +146,7 @@ const DashboardPage = () => {
           description={t('pages.dashboard.table.empty.subtitle')}
           action={
             <Button onClick={handleAddProduct}>
-              <LuPlus size={18} />
+              <Icon as={LuPlus} />
               {t('pages.dashboard.addButton')}
             </Button>
           }

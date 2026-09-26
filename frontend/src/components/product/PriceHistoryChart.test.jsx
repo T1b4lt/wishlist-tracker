@@ -86,6 +86,27 @@ describe('PriceHistoryChart', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a "not enough data in this range" message instead of "tracking started" when a longer range would plot', () => {
+    renderWithProviders(
+      <PriceHistoryChart
+        {...BASE_PROPS}
+        chartPoints={[]}
+        hasEnoughHistory={false}
+        hasEnoughTotalHistory
+        average={null}
+        lowest={null}
+        trackingStartDate={1700000000}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        'Not enough data in this range. Pick a longer range to see the chart.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Tracking started/)).not.toBeInTheDocument();
+  });
+
   it('falls back to a dash in the message when no tracking start date is known', () => {
     renderWithProviders(
       <PriceHistoryChart

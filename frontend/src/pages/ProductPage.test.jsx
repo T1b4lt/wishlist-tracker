@@ -33,7 +33,8 @@ vi.mock('@/lib/api', () => ({
 // `PriceHistoryChart` already has its own full test file (recharts +
 // range-filtering behavior); stubbed out here so this file's tests stay
 // about the page's own composition (loading/error states, data flow). The
-// stub still surfaces the `hasEnoughHistory` prop it was given, so this file
+// stub still surfaces the `hasEnoughHistory`/`hasEnoughTotalHistory` props
+// it was given, so this file
 // can assert on *what ProductPage computed and passed down* (e.g. that a
 // narrow range with too few points in it is treated the same as a genuinely
 // new product) without needing the real chart to render.
@@ -41,10 +42,11 @@ vi.mock('@/components/product', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    PriceHistoryChart: ({ hasEnoughHistory }) => (
+    PriceHistoryChart: ({ hasEnoughHistory, hasEnoughTotalHistory }) => (
       <div
         data-testid="price-history-chart-stub"
         data-has-enough-history={String(hasEnoughHistory)}
+        data-has-enough-total-history={String(hasEnoughTotalHistory)}
       />
     )
   };
@@ -155,10 +157,11 @@ describe('ProductPage', () => {
     renderProductPage();
 
     await screen.findByRole('heading', { name: 'Mechanical Keyboard' });
-    expect(screen.getByTestId('price-history-chart-stub')).toHaveAttribute(
-      'data-has-enough-history',
-      'false'
-    );
+    const chart = screen.getByTestId('price-history-chart-stub');
+    expect(chart).toHaveAttribute('data-has-enough-history', 'false');
+    // ...but the lifetime history is long enough, so the chart can tell
+    // "not enough data in this range" apart from "tracking just started".
+    expect(chart).toHaveAttribute('data-has-enough-total-history', 'true');
   });
 
   it('shows a 404 page state that links back to the dashboard when the product is not found', async () => {

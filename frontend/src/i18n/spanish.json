@@ -44,7 +44,7 @@
     "header": {
       "menu": "Menú",
       "nav": {
-        "dashboard": "Panel",
+        "wishlist": "Lista de deseos",
         "categories": "Categorías",
         "settings": "Ajustes"
       },
@@ -52,7 +52,7 @@
       "toggleColorMode": "Cambiar modo de color"
     },
     "footer": {
-      "credits": "Desarrollado por {{author}} - <link>Github</link>"
+      "credits": "Desarrollado por {{author}} - <link>GitHub</link>"
     },
     "categoryFormDialog": {
       "titleCreate": "Añadir categoría",
@@ -240,7 +240,8 @@
           "change": "Cambio",
           "stock": "Existencias"
         },
-        "empty": "El seguimiento comenzó el {{date}}. El gráfico se completa a medida que se comprueban los precios."
+        "empty": "El seguimiento comenzó el {{date}}. El gráfico se completa a medida que se comprueban los precios.",
+        "emptyRange": "No hay suficientes datos en este rango. Elige un rango más amplio para ver el gráfico."
       },
       "description": {
         "title": "Descripción",
@@ -306,7 +307,8 @@
       "histWindowOption": "{{days}} días",
       "aria": {
         "showSecret": "Mostrar {{label}}",
-        "hideSecret": "Ocultar {{label}}"
+        "hideSecret": "Ocultar {{label}}",
+        "copySecret": "Copiar {{label}}"
       },
       "badges": {
         "configured": "Configurado"
@@ -433,6 +435,14 @@
       "saveError": {
         "title": "Error al guardar los ajustes",
         "description": "No se pudieron guardar los ajustes. Inténtalo de nuevo."
+      },
+      "copySuccess": {
+        "title": "Copiado al portapapeles",
+        "description": "{{label}} está en tu portapapeles."
+      },
+      "copyError": {
+        "title": "No se pudo copiar",
+        "description": "Tu navegador bloqueó el acceso al portapapeles. Muestra el valor y cópialo manualmente."
       }
     }
   }

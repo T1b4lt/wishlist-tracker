@@ -80,7 +80,12 @@ const ChartTooltip = ({ active, payload, currency, locale, t }) => {
  * @param {Array<{x1: number, x2: number}>} props.outOfStockBands
  * @param {number|null} props.average
  * @param {{price: number, timestamp: number}|null} props.lowest
- * @param {boolean} props.hasEnoughHistory
+ * @param {boolean} props.hasEnoughHistory - Whether the selected range has
+ *   enough points to plot.
+ * @param {boolean} [props.hasEnoughTotalHistory] - Whether the product's
+ *   whole history (all ranges) has enough points to plot. When the range is
+ *   too narrow but this is `true`, a "not enough data in this range" message
+ *   is shown instead of "tracking started". Defaults to `hasEnoughHistory`.
  * @param {number|null} props.trackingStartDate - Seconds since epoch.
  * @param {string} props.currency - ISO 4217 currency code.
  * @param {string} props.locale - An `Intl` locale tag, see `getLocale`.
@@ -94,6 +99,7 @@ export const PriceHistoryChart = ({
   average,
   lowest,
   hasEnoughHistory,
+  hasEnoughTotalHistory = hasEnoughHistory,
   trackingStartDate,
   currency,
   locale
@@ -239,11 +245,13 @@ export const PriceHistoryChart = ({
           </Box>
         ) : (
           <Text color="fg.muted" textAlign="center" py="12">
-            {t('pages.product.chart.empty', {
-              date: trackingStartDate
-                ? formatDate(trackingStartDate, locale)
-                : '-'
-            })}
+            {hasEnoughTotalHistory
+              ? t('pages.product.chart.emptyRange')
+              : t('pages.product.chart.empty', {
+                  date: trackingStartDate
+                    ? formatDate(trackingStartDate, locale)
+                    : '-'
+                })}
           </Text>
         )}
       </Card.Body>

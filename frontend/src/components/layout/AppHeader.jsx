@@ -8,7 +8,7 @@ import {
   LuLayoutDashboard,
   LuSettings
 } from 'react-icons/lu';
-import { Box, Flex, IconButton, Text } from '@chakra-ui/react';
+import { Box, Flex, Icon, IconButton, Text } from '@chakra-ui/react';
 import { useColorMode } from '@/components/ui/color-mode';
 import {
   DrawerBackdrop,
@@ -25,18 +25,31 @@ import { useTranslation } from 'react-i18next';
 const HEADER_HEIGHT = '64px';
 
 /**
- * App header: brand on the left, an inline nav with an active state from
- * `md` up, a drawer-based nav below `md`, and the theme toggle on the right.
+ * App header: brand on the left (a link home), an inline nav with an active
+ * state from `md` up, a drawer-based nav below `md`, and the theme toggle on
+ * the right.
+ *
+ * The mobile drawer closes whenever the location changes, not only from its
+ * links' own `onClick`: a navigation confirmed through
+ * `useUnsavedChangesGuard` (which stops the original click in the capture
+ * phase, so that `onClick` never runs) must close it too.
  */
 const AppHeader = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [location] = useLocation();
+  // "Adjusting state when a prop changes" (React docs): closes the drawer
+  // during the render that sees a new location, without an effect.
+  const [drawerLocation, setDrawerLocation] = useState(location);
+  if (drawerLocation !== location) {
+    setDrawerLocation(location);
+    setIsDrawerOpen(false);
+  }
   const { colorMode, toggleColorMode } = useColorMode();
   const { t } = useTranslation();
 
   const navItems = [
     {
-      label: t('components.header.nav.dashboard'),
+      label: t('components.header.nav.wishlist'),
       path: '/',
       icon: LuChartLine
     },
@@ -84,7 +97,7 @@ const AppHeader = () => {
                   variant="ghost"
                   size="md"
                 >
-                  <LuMenu size={20} />
+                  <Icon as={LuMenu} />
                 </IconButton>
               </DrawerTrigger>
               <DrawerContent offset={4}>
@@ -97,7 +110,6 @@ const AppHeader = () => {
                 <DrawerBody>
                   <Flex as="nav" direction="column" gap={2}>
                     {navItems.map((item) => {
-                      const Icon = item.icon;
                       const isActive = location === item.path;
                       return (
                         <Link
@@ -116,7 +128,7 @@ const AppHeader = () => {
                             bg={isActive ? 'bg.muted' : 'transparent'}
                             _hover={{ bg: 'bg.muted' }}
                           >
-                            <Icon size={20} />
+                            <Icon as={item.icon} size="lg" />
                             <Text>{item.label}</Text>
                           </Flex>
                         </Link>
@@ -128,7 +140,11 @@ const AppHeader = () => {
             </DrawerRoot>
           </Box>
 
-          <Text textStyle="heading.sm">{t('common.appName')}</Text>
+          <Link href="/">
+            <Text as="span" textStyle="heading.sm">
+              {t('common.appName')}
+            </Text>
+          </Link>
         </Flex>
 
         {/* Right side: inline nav (md+) and theme toggle */}
@@ -165,7 +181,7 @@ const AppHeader = () => {
             size="md"
             onClick={toggleColorMode}
           >
-            {colorMode === 'light' ? <LuMoon size={20} /> : <LuSun size={20} />}
+            <Icon as={colorMode === 'light' ? LuMoon : LuSun} />
           </IconButton>
         </Flex>
       </Flex>

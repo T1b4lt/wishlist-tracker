@@ -6,6 +6,7 @@ import {
   Card,
   Flex,
   HStack,
+  Icon,
   IconButton,
   Menu,
   Portal,
@@ -130,10 +131,12 @@ const ProductPage = () => {
     [filteredHistory]
   );
   // Gated on the *filtered* points (what the chart would actually plot),
-  // not the product's total lifetime history: a narrow range with too few
-  // points in it gets the same "not enough data" message as a genuinely new
-  // product, instead of an empty/broken-looking chart.
+  // not the product's total lifetime history, so a narrow range with too few
+  // points in it never renders an empty/broken-looking chart. The total
+  // history decides which message replaces it: "not enough data in this
+  // range" when a longer range would plot, "tracking started" otherwise.
   const hasEnoughHistory = hasEnoughHistoryPoints(chartPoints);
+  const hasEnoughTotalHistory = hasEnoughHistoryPoints(rawHistory);
   const yDomain = useMemo(
     () => computeYDomain(filteredHistory),
     [filteredHistory]
@@ -247,12 +250,12 @@ const ProductPage = () => {
           <HStack gap={2} wrap="wrap" justify="flex-end">
             <Button variant="outline" asChild>
               <a href={product.url} target="_blank" rel="noopener noreferrer">
-                <LuExternalLink size={16} aria-hidden="true" />
+                <Icon as={LuExternalLink} />
                 {t('pages.product.actions.openStorePage')}
               </a>
             </Button>
             <Button onClick={() => setIsFormOpen(true)}>
-              <LuPencil size={16} aria-hidden="true" />
+              <Icon as={LuPencil} />
               {t('common.actions.edit')}
             </Button>
             <Menu.Root positioning={{ placement: 'bottom-end' }}>
@@ -264,7 +267,7 @@ const ProductPage = () => {
                     name: product.name
                   })}
                 >
-                  <LuEllipsis />
+                  <Icon as={LuEllipsis} />
                 </IconButton>
               </Menu.Trigger>
               <Portal>
@@ -275,7 +278,7 @@ const ProductPage = () => {
                       onSelect={() => setDeleteDialogOpen(true)}
                     >
                       <HStack gap={2}>
-                        <LuTrash2 size={16} aria-hidden="true" />
+                        <Icon as={LuTrash2} size="md" />
                         {t('common.actions.delete')}
                       </HStack>
                     </Menu.Item>
@@ -326,6 +329,7 @@ const ProductPage = () => {
           average={average}
           lowest={lowest}
           hasEnoughHistory={hasEnoughHistory}
+          hasEnoughTotalHistory={hasEnoughTotalHistory}
           trackingStartDate={trackingStartDate}
           currency={product.currency}
           locale={locale}

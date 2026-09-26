@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -23,13 +24,13 @@ describe('AppHeader', () => {
       )
     ).toBe(true);
 
-    const dashboardLinks = screen.getAllByRole('link', { name: 'Dashboard' });
-    dashboardLinks.forEach((link) =>
+    const wishlistLinks = screen.getAllByRole('link', { name: 'Wishlist' });
+    wishlistLinks.forEach((link) =>
       expect(link).not.toHaveAttribute('aria-current')
     );
   });
 
-  it('renders the brand name and a theme toggle button', () => {
+  it('renders the brand name as a link home and a theme toggle button', () => {
     const { hook } = memoryLocation({ path: '/' });
 
     renderWithProviders(
@@ -38,9 +39,36 @@ describe('AppHeader', () => {
       </Router>
     );
 
-    expect(screen.getByText('Wishlist Tracker')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Wishlist Tracker' })
+    ).toHaveAttribute('href', '/');
     expect(
       screen.getByRole('button', { name: 'Toggle color mode' })
     ).toBeInTheDocument();
+  });
+
+  it('closes the mobile drawer when the location changes without a click on its links', async () => {
+    // e.g. a navigation confirmed through `useUnsavedChangesGuard`, which
+    // stops the original link click before the link's own `onClick` runs.
+    const user = userEvent.setup();
+    const { hook, navigate } = memoryLocation({ path: '/settings' });
+
+    renderWithProviders(
+      <Router hook={hook}>
+        <AppHeader />
+      </Router>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(
+      within(drawer).getByRole('link', { name: 'Categories' })
+    ).toBeInTheDocument();
+
+    act(() => navigate('/categories'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 });

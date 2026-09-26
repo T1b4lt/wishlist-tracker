@@ -44,7 +44,7 @@
     "header": {
       "menu": "Menu",
       "nav": {
-        "dashboard": "Dashboard",
+        "wishlist": "Wishlist",
         "categories": "Categories",
         "settings": "Settings"
       },
@@ -52,7 +52,7 @@
       "toggleColorMode": "Toggle color mode"
     },
     "footer": {
-      "credits": "Developed by {{author}} - <link>Github</link>"
+      "credits": "Developed by {{author}} - <link>GitHub</link>"
     },
     "categoryFormDialog": {
       "titleCreate": "Add category",
@@ -240,7 +240,8 @@
           "change": "Change",
           "stock": "Stock"
         },
-        "empty": "Tracking started {{date}}. The chart fills in as prices are checked."
+        "empty": "Tracking started {{date}}. The chart fills in as prices are checked.",
+        "emptyRange": "Not enough data in this range. Pick a longer range to see the chart."
       },
       "description": {
         "title": "Description",
@@ -306,7 +307,8 @@
       "histWindowOption": "{{days}} days",
       "aria": {
         "showSecret": "Show {{label}}",
-        "hideSecret": "Hide {{label}}"
+        "hideSecret": "Hide {{label}}",
+        "copySecret": "Copy {{label}}"
       },
       "badges": {
         "configured": "Configured"
@@ -433,6 +435,14 @@
       "saveError": {
         "title": "Error saving settings",
         "description": "Failed to save settings. Please try again."
+      },
+      "copySuccess": {
+        "title": "Copied to clipboard",
+        "description": "{{label}} is on your clipboard."
+      },
+      "copyError": {
+        "title": "Couldn't copy",
+        "description": "Your browser blocked clipboard access. Reveal the value and copy it manually."
       }
     }
   }

@@ -53,7 +53,7 @@ const renderSettingsPage = () => {
   return renderWithProviders(
     <Router hook={hook}>
       <LocationProbe />
-      <Link href="/">Dashboard</Link>
+      <Link href="/">Wishlist</Link>
       <Switch>
         <Route path="/settings" component={SettingsPage} />
         <Route path="/" component={() => <div>Dashboard page</div>} />
@@ -81,7 +81,7 @@ describe('SettingsPage leave guard', () => {
       screen.getAllByText('You have unsaved changes')[0]
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('link', { name: 'Dashboard' }));
+    await user.click(screen.getByRole('link', { name: 'Wishlist' }));
 
     // Still on the Settings page: the click was intercepted.
     expect(screen.getByTestId('location')).toHaveTextContent('/settings');

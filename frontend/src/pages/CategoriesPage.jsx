@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Text } from '@chakra-ui/react';
+import { Button, Icon, Text } from '@chakra-ui/react';
 import { LuPlus, LuShapes } from 'react-icons/lu';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
@@ -151,7 +151,11 @@ const CategoriesPage = () => {
     }
   };
 
-  const isLoading = status === 'loading' && categories.length === 0;
+  // `idle` (before the first `fetch()` has even started) counts as loading
+  // too: nothing is known yet, so the empty state must not flash for a
+  // frame before the request begins.
+  const isLoading =
+    (status === 'loading' || status === 'idle') && categories.length === 0;
   // `status === 'error'` is handled by the branch above, so by the time
   // this is checked it can only mean "loaded successfully, zero categories".
   const isEmpty = !isLoading && status !== 'error' && categories.length === 0;
@@ -163,7 +167,7 @@ const CategoriesPage = () => {
         description={t('pages.categories.subtitle')}
         actions={
           <Button size="lg" onClick={handleAddCategory}>
-            <LuPlus size={20} /> {t('pages.categories.addButton')}
+            <Icon as={LuPlus} /> {t('pages.categories.addButton')}
           </Button>
         }
       />
@@ -182,7 +186,7 @@ const CategoriesPage = () => {
           title={t('pages.categories.existingSection.empty')}
           action={
             <Button onClick={handleAddCategory}>
-              <LuPlus size={18} /> {t('pages.categories.addButton')}
+              <Icon as={LuPlus} /> {t('pages.categories.addButton')}
             </Button>
           }
         />
