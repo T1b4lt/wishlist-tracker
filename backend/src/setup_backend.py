@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 from sqlmodel import Session, SQLModel, create_engine, select
 from src.core.config import CONFIG_DEFAULTS
-from src.models.database_models import Category, Config, Product, ProductHist
+from src.models.database_models import Category, Config, Product, ProductHist, Store
 
 
 def check_database_exists(db_path: str) -> bool:
@@ -107,6 +107,17 @@ def populate_test_data(engine):
         print(f"  ✓ Created category: {hogar.name} (ID: {hogar.id})")
         print(f"  ✓ Created category: {electronica.name} (ID: {electronica.id})")
 
+        # Create stores (no favicons: they are fetched on real extractions)
+        print("Creating stores...")
+        thomann = Store(domain="thomann.es", name="Thomann")
+        amazon = Store(domain="amazon.es", name="Amazon")
+        session.add(thomann)
+        session.add(amazon)
+        session.commit()
+        session.refresh(thomann)
+        session.refresh(amazon)
+        print(f"  ✓ Created stores: {thomann.name}, {amazon.name}")
+
         # Create product
         print("Creating product...")
         producto = Product(
@@ -116,6 +127,7 @@ def populate_test_data(engine):
             priority="high",
             description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar.",
             currency="EUR",
+            store_id=thomann.id,
         )
 
         session.add(producto)
@@ -126,32 +138,49 @@ def populate_test_data(engine):
         print(f"    Category: {electronica.name}")
         print(f"    Priority: {producto.priority}")
 
-        # Create 60 days of price history
+        # Same product in a second store, with its own prices
+        producto_amazon = Product(
+            name="Millenium MPS-850 E-Drum Set Bundle",
+            url="https://www.amazon.es/dp/B07MPS850",
+            category_id=electronica.id,
+            priority="high",
+            description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar.",
+            currency="EUR",
+            store_id=amazon.id,
+        )
+        session.add(producto_amazon)
+        session.commit()
+        session.refresh(producto_amazon)
+        print(
+            f"  ✓ Created product: {producto_amazon.name} (ID: {producto_amazon.id}, store: {amazon.name})"
+        )
+
+        # Create 60 days of price history for each product
         print("Creating price history (60 days)...")
-        base_price = 599.99
         current_date = datetime.now()
 
-        for days_ago in range(59, -1, -1):  # From 59 days ago to today
-            record_date = current_date - timedelta(days=days_ago)
-            timestamp = int(record_date.timestamp())
+        for product, base_price in ((producto, 599.99), (producto_amazon, 629.99)):
+            for days_ago in range(59, -1, -1):  # From 59 days ago to today
+                record_date = current_date - timedelta(days=days_ago)
+                timestamp = int(record_date.timestamp())
 
-            # Realistic price fluctuation
-            price_variation = random.uniform(-50, 30)
-            price = round(base_price + price_variation, 2)
+                # Realistic price fluctuation
+                price_variation = random.uniform(-50, 30)
+                price = round(base_price + price_variation, 2)
 
-            # 80% chance of being in stock
-            is_in_stock = random.random() < 0.8
+                # 80% chance of being in stock
+                is_in_stock = random.random() < 0.8
 
-            price_hist = ProductHist(
-                product_id=producto.id,
-                price=price,
-                is_in_stock=is_in_stock,
-                timestamp=timestamp,
-            )
-            session.add(price_hist)
+                price_hist = ProductHist(
+                    product_id=product.id,
+                    price=price,
+                    is_in_stock=is_in_stock,
+                    timestamp=timestamp,
+                )
+                session.add(price_hist)
 
         session.commit()
-        print("  ✓ Created 60 price history records")
+        print("  ✓ Created 60 price history records per product")
 
     print("✓ Test data populated successfully")
 

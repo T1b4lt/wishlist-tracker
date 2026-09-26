@@ -14,4 +14,6 @@ Shared fixtures (`session`, `client`) live in `tests/conftest.py`. The suite
 covers the response fields the frontend relies on, e.g. `product_count` on
 `GET /categories/`, the derived `telegram_status` on `GET /config/`, and
 `url`, `recent_prices` and `last_checked_at` on the product endpoints (see
-"API Reference" in the root README).
+"API Reference" in the root README), the store linking and favicon
+endpoint (`test_stores.py`, `test_product_store.py`) and the favicon
+validation/extraction flow with Stagehand mocked (`test_extraction.py`).

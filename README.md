@@ -38,18 +38,19 @@ Key highlights:
 
 ## ✨ Key Features
 
-| Feature                    | Description                                                                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                 |
-| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, price, and stock status from any URL using Stagehand v4 + Gemini. |
-| **Price Tracking**         | Historical price records stored daily, with configurable tracking window (30–180 days).                                                |
-| **Interactive Dashboard**  | Overview of all products with current price, price change trend (%), stock status, and category indicators.                            |
-| **Product Detail View**    | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline.                           |
-| **Category System**        | User-defined categories with custom colors for visual organization.                                                                    |
-| **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                        |
-| **Configurable Settings**  | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                          |
-| **Multi-Language (i18n)**  | Full English and Spanish translations for the entire interface.                                                                        |
-| **Dark Mode**              | Theme toggle built into Chakra UI.                                                                                                     |
+| Feature                    | Description                                                                                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                           |
+| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini.                                                    |
+| **Store Detection**        | Each product records its store (AI-extracted name + favicon downloaded from the page), shown on the dashboard and detail page, so the same item tracked in several stores is easy to tell apart. |
+| **Price Tracking**         | Historical price records stored daily, with configurable tracking window (30–180 days).                                                                                                          |
+| **Interactive Dashboard**  | Overview of all products with current price, price change trend (%), stock status, and category indicators.                                                                                      |
+| **Product Detail View**    | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline.                                                                                     |
+| **Category System**        | User-defined categories with custom colors for visual organization.                                                                                                                              |
+| **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                                                                                  |
+| **Configurable Settings**  | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                                                                                    |
+| **Multi-Language (i18n)**  | Full English and Spanish translations for the entire interface.                                                                                                                                  |
+| **Dark Mode**              | Theme toggle built into Chakra UI.                                                                                                                                                               |
 
 ---
 
@@ -116,16 +117,19 @@ wishlist-tracker/
 │       ├── schemas/                  # Pydantic request/response schemas
 │       │   ├── config.py             # ConfigUpdate, ConfigResponse
 │       │   ├── category.py           # CategoryCreate, CategoryUpdate, CategoryResponse
-│       │   └── product.py            # Product CRUD, Dashboard & Detail schemas
+│       │   ├── product.py            # Product CRUD, Dashboard & Detail schemas
+│       │   └── store.py              # StoreResponse
 │       ├── services/                 # Business logic layer
 │       │   ├── config_service.py     # Configuration read/update logic
 │       │   ├── category_service.py   # Category CRUD operations
 │       │   ├── product_service.py    # Product CRUD, dashboard, detail & AI extraction
+│       │   ├── store_service.py      # Store lookup/creation by domain & favicon access
 │       │   └── telegram_service.py   # Telegram chat ID & test message orchestration
 │       ├── routers/                  # FastAPI route definitions (thin controllers)
 │       │   ├── config_router.py      # GET/PATCH /config/
 │       │   ├── category_router.py    # CRUD /categories/
 │       │   ├── product_router.py     # CRUD /products/ + /extract-product-info/
+│       │   ├── store_router.py       # GET /stores/{id}/favicon
 │       │   └── telegram_router.py    # /telegram-chat-id, /telegram-test-message
 │       ├── stagehand_utils.py        # Stagehand v4 AI scraping functions
 │       ├── telegram_utils.py         # Telegram notification helpers
@@ -184,7 +188,7 @@ wishlist-tracker/
 
 ## 🗄 Database Schema
 
-The application uses **SQLite** with **SQLModel** as ORM. There are 4 tables:
+The application uses **SQLite** with **SQLModel** as ORM. There are 5 tables:
 
 ```
 ┌──────────────┐       ┌──────────────┐
@@ -206,6 +210,17 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 4 tables:
 │ category_id  │ (FK)  │ timestamp    │ (Unix seconds)
 │ description  │       └──────────────┘
 │ currency     │
+│ store_id     │ (FK)
+└──────▲───────┘
+       │ N:1
+┌──────┴───────┐
+│    Store     │
+├──────────────┤
+│ id (PK)      │
+│ domain       │ (UNIQUE, e.g. "amazon.es")
+│ name         │
+│ favicon      │ (BLOB, nullable)
+│ favicon_mime │
 └──────────────┘
 ```
 
@@ -247,20 +262,28 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 
 ### Products
 
-| Method   | Endpoint                      | Description                                                                                                                              |
-| -------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`   | `/products/`                  | Create a new product                                                                                                                     |
-| `GET`    | `/products/`                  | List all products                                                                                                                        |
-| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view (`url`, current price, change, stock, `recent_prices` for the sparkline, `last_checked_at`) |
-| `GET`    | `/products/{id}`              | Get full product detail with price history and `last_checked_at`                                                                         |
-| `PATCH`  | `/products/{id}`              | Update a product (name, URL, priority, category, description, currency)                                                                  |
-| `DELETE` | `/products/{id}`              | Delete a product (cascades to price history)                                                                                             |
+| Method   | Endpoint                      | Description                                                                                                                                            |
+| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST`   | `/products/`                  | Create a new product                                                                                                                                   |
+| `GET`    | `/products/`                  | List all products                                                                                                                                      |
+| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view (`url`, current price, change, stock, `recent_prices` for the sparkline, `last_checked_at`, store fields) |
+| `GET`    | `/products/{id}`              | Get full product detail with price history, `last_checked_at` and store fields                                                                         |
+| `PATCH`  | `/products/{id}`              | Update a product (name, URL, priority, category, description, currency)                                                                                |
+| `DELETE` | `/products/{id}`              | Delete a product (cascades to price history)                                                                                                           |
+
+Products are linked to a store resolved from their URL's domain on create and on URL change. The dashboard summary and detail responses include `store_id`, `store_name`, `store_domain` and `store_has_favicon`.
+
+### Stores
+
+| Method | Endpoint               | Description                                                    |
+| ------ | ---------------------- | -------------------------------------------------------------- |
+| `GET`  | `/stores/{id}/favicon` | Store favicon image (cached for a week; 404 if none was found) |
 
 ### AI Extraction
 
-| Method | Endpoint                 | Description                              |
-| ------ | ------------------------ | ---------------------------------------- |
-| `POST` | `/extract-product-info/` | AI-extract product info from a given URL |
+| Method | Endpoint                 | Description                                                                                                                |
+| ------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/extract-product-info/` | AI-extract product info from a given URL, including its `store` (created with its favicon the first time a domain is seen) |
 
 ### Telegram
 
@@ -434,17 +457,17 @@ backend/.venv/bin/pre-commit run --all-files
 
 ### Hooks
 
-| Scope      | Hook                                       | Purpose                                                                        |
-| ---------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
-| All files  | `trailing-whitespace`, `end-of-file-fixer` | Remove trailing whitespace and ensure a final newline                          |
-| All files  | `mixed-line-ending`                        | Enforce LF line endings (also set in `.gitattributes`)                         |
-| All files  | `check-json`, `check-yaml`, `check-toml`   | Validate syntax of config/data files                                           |
-| All files  | `detect-private-key`, `gitleaks`           | Block commits containing private keys or secrets                               |
-| Backend    | `ruff-check`, `ruff-format`                | Lint (with autofix) and format Python code                                     |
-| Backend    | `uv-lock`                                  | Keep `backend/uv.lock` in sync with `pyproject.toml`                           |
-| Frontend   | `prettier`                                 | Format frontend files using `frontend/.prettierrc`                             |
-| Frontend   | `eslint`                                   | Lint (with autofix) JS/JSX using `frontend/eslint.config.js`                   |
-| Commit msg | `conventional-pre-commit`                  | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages  |
+| Scope      | Hook                                       | Purpose                                                                       |
+| ---------- | ------------------------------------------ | ----------------------------------------------------------------------------- |
+| All files  | `trailing-whitespace`, `end-of-file-fixer` | Remove trailing whitespace and ensure a final newline                         |
+| All files  | `mixed-line-ending`                        | Enforce LF line endings (also set in `.gitattributes`)                        |
+| All files  | `check-json`, `check-yaml`, `check-toml`   | Validate syntax of config/data files                                          |
+| All files  | `detect-private-key`, `gitleaks`           | Block commits containing private keys or secrets                              |
+| Backend    | `ruff-check`, `ruff-format`                | Lint (with autofix) and format Python code                                    |
+| Backend    | `uv-lock`                                  | Keep `backend/uv.lock` in sync with `pyproject.toml`                          |
+| Frontend   | `prettier`                                 | Format frontend files using `frontend/.prettierrc`                            |
+| Frontend   | `eslint`                                   | Lint (with autofix) JS/JSX using `frontend/eslint.config.js`                  |
+| Commit msg | `conventional-pre-commit`                  | Enforce [Conventional Commits](https://www.conventionalcommits.org/) messages |
 
 Tests are not part of any hook. Run them manually before committing: `just test` (frontend and backend unit tests) and `just test-e2e` (Playwright).
 
