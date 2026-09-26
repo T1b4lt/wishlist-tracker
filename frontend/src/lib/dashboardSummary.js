@@ -22,7 +22,7 @@ const isFiniteNumber = (value) =>
  * @returns {boolean} Whether `product.current_price` is currently at (or
  *   below) the minimum of its own `recent_prices`.
  */
-const isAtLowestPrice = (product) => {
+export const isAtLowestPrice = (product) => {
   if (!isFiniteNumber(product.current_price)) return false;
   if (
     !Array.isArray(product.recent_prices) ||
