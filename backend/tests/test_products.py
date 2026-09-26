@@ -1,11 +1,24 @@
-"""Tests for dashboard summary / detail enrichment added in Task 8:
+"""Tests for the dashboard summary and product detail responses.
 
-``recent_prices`` and ``last_checked_at`` on the dashboard summary,
-``last_checked_at`` on the detail response, and the ``description``
-field on partial product updates.
+Covers the day-based window (``recent_prices``, ``price_change_pct``,
+``is_at_lowest``), ``last_checked_at``, the absence of ``min_price``, the
+dashboard's constant query count, and partial product updates.
 """
 
-from src.models.database_models import Category, Config, Product, ProductHist
+import time
+
+import pytest
+from sqlalchemy import event
+from src.models.database_models import (
+    Category,
+    Config,
+    Product,
+    ProductHist,
+    Store,
+)
+from src.services import product_service
+
+DAY = 60 * 60 * 24
 
 
 def _make_category(session, name="Electronics", color="#FF0000"):
@@ -69,34 +82,8 @@ def test_dashboard_summary_empty_history_has_empty_recent_prices_and_no_last_che
     data = response.json()[0]
     assert data["recent_prices"] == []
     assert data["last_checked_at"] is None
-
-
-def test_dashboard_summary_recent_prices_window_smaller_than_history(client, session):
-    category = _make_category(session)
-    product = _make_product(session, category.id)
-    entries = [(10.0 * i, True, 100 * i) for i in range(1, 6)]  # 5 records
-    _add_history(session, product.id, entries)
-    _set_hist_window_size(session, 3)
-
-    response = client.get("/products/dashboard-summary")
-    data = response.json()[0]
-
-    assert data["recent_prices"] == [30.0, 40.0, 50.0]
-    assert data["last_checked_at"] == 500
-
-
-def test_dashboard_summary_recent_prices_window_larger_than_history(client, session):
-    category = _make_category(session)
-    product = _make_product(session, category.id)
-    entries = [(float(i), True, i) for i in range(1, 4)]  # 3 records
-    _add_history(session, product.id, entries)
-    # Default hist_window_size is 60, well above the 3 available records.
-
-    response = client.get("/products/dashboard-summary")
-    data = response.json()[0]
-
-    assert data["recent_prices"] == [1.0, 2.0, 3.0]
-    assert data["last_checked_at"] == 3
+    assert data["price_change_pct"] is None
+    assert data["is_at_lowest"] is False
 
 
 def test_dashboard_summary_includes_product_url(client, session):
@@ -109,20 +96,148 @@ def test_dashboard_summary_includes_product_url(client, session):
     assert data["url"] == product.url
 
 
-def test_dashboard_summary_recent_prices_capped_at_60(client, session):
+def test_dashboard_summary_recent_prices_follow_the_day_window(client, session):
+    now = int(time.time())
     category = _make_category(session)
     product = _make_product(session, category.id)
-    entries = [(float(i), True, i) for i in range(1, 66)]  # 65 records
-    _add_history(session, product.id, entries)
-    _set_hist_window_size(session, 180)  # window bigger than the 60-point cap
+    _add_history(
+        session,
+        product.id,
+        [
+            (1.0, True, now - 40 * DAY),  # Outside the 30-day window
+            (2.0, True, now - 20 * DAY),
+            (3.0, False, now - 10 * DAY),  # Out of stock: still drawn
+            (4.0, True, now - DAY),
+        ],
+    )
+    _set_hist_window_size(session, 30)
 
-    response = client.get("/products/dashboard-summary")
-    data = response.json()[0]
+    data = client.get("/products/dashboard-summary").json()[0]
 
-    assert len(data["recent_prices"]) == 60
-    assert data["recent_prices"][0] == 6.0
-    assert data["recent_prices"][-1] == 65.0
-    assert data["last_checked_at"] == 65
+    assert data["recent_prices"] == [2.0, 3.0, 4.0]
+
+
+def test_dashboard_summary_recent_prices_are_not_capped(client, session):
+    now = int(time.time())
+    category = _make_category(session)
+    product = _make_product(session, category.id)
+    _add_history(
+        session,
+        product.id,
+        [(float(day), True, now - day * DAY) for day in range(100)],
+    )
+    _set_hist_window_size(session, 180)
+
+    data = client.get("/products/dashboard-summary").json()[0]
+
+    assert len(data["recent_prices"]) == 100
+
+
+def test_dashboard_summary_price_change_and_at_lowest(client, session):
+    now = int(time.time())
+    category = _make_category(session)
+    product = _make_product(session, category.id)
+    _add_history(
+        session,
+        product.id,
+        [
+            (100.0, True, now - 3 * DAY),
+            (100.0, True, now - 2 * DAY),
+            (90.0, True, now - DAY),
+        ],
+    )
+
+    data = client.get("/products/dashboard-summary").json()[0]
+
+    assert data["price_change_pct"] == pytest.approx(-10.0)
+    assert data["is_at_lowest"] is True
+    assert data["current_price"] == 90.0
+
+
+def test_dashboard_summary_current_out_of_stock(client, session):
+    now = int(time.time())
+    category = _make_category(session)
+    product = _make_product(session, category.id)
+    _add_history(
+        session,
+        product.id,
+        [(100.0, True, now - 2 * DAY), (80.0, False, now - DAY)],
+    )
+
+    data = client.get("/products/dashboard-summary").json()[0]
+
+    assert data["current_price"] == 80.0
+    assert data["is_in_stock"] is False
+    assert data["price_change_pct"] is None
+    assert data["is_at_lowest"] is False
+
+
+def test_dashboard_summary_history_older_than_the_window(client, session):
+    # Review focus: the cron stopped weeks ago.
+    now = int(time.time())
+    category = _make_category(session)
+    product = _make_product(session, category.id)
+    old_timestamp = now - 100 * DAY
+    _add_history(session, product.id, [(50.0, True, old_timestamp)])
+    _set_hist_window_size(session, 60)
+
+    data = client.get("/products/dashboard-summary").json()[0]
+
+    assert data["current_price"] == 50.0
+    assert data["is_in_stock"] is True
+    assert data["last_checked_at"] == old_timestamp
+    assert data["recent_prices"] == []
+    assert data["price_change_pct"] is None
+    assert data["is_at_lowest"] is False
+
+
+def _count_queries(session, action):
+    """Run ``action`` and return how many SQL statements it executed."""
+    engine = session.get_bind()
+    statements = []
+
+    def _record(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", _record)
+    try:
+        action()
+    finally:
+        event.remove(engine, "before_cursor_execute", _record)
+    return len(statements)
+
+
+def _seed_products(session, count, start=0):
+    now = int(time.time())
+    for index in range(start, start + count):
+        category = _make_category(session, name=f"Category {index}")
+        store = Store(domain=f"store{index}.com", name=f"Store {index}")
+        session.add(store)
+        session.commit()
+        product = _make_product(session, category.id, name=f"Product {index}")
+        product.store_id = store.id
+        session.add(product)
+        session.commit()
+        _add_history(
+            session,
+            product.id,
+            [(10.0, True, now - 2 * DAY), (9.0, True, now - DAY)],
+        )
+    session.expire_all()
+
+
+def test_dashboard_summary_query_count_does_not_grow_with_products(session):
+    _seed_products(session, 1)
+    one_product = _count_queries(
+        session, lambda: product_service.get_dashboard_summary(session)
+    )
+
+    _seed_products(session, 4, start=1)
+    five_products = _count_queries(
+        session, lambda: product_service.get_dashboard_summary(session)
+    )
+
+    assert five_products == one_product
 
 
 # --- Detail: last_checked_at ---
@@ -147,6 +262,19 @@ def test_product_detail_last_checked_at_is_newest_history_timestamp(client, sess
 
     assert response.status_code == 200
     assert response.json()["last_checked_at"] == 200
+
+
+def test_product_detail_has_no_min_price(client, session):
+    category = _make_category(session)
+    product = _make_product(session, category.id)
+    _add_history(session, product.id, [(10.0, True, 100)])
+
+    data = client.get(f"/products/{product.id}").json()
+
+    assert "min_price" not in data
+    assert data["price_history"] == [
+        {"price": 10.0, "is_in_stock": True, "timestamp": 100}
+    ]
 
 
 # --- Update: description ---

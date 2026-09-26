@@ -1,13 +1,16 @@
 """
 Product service — business logic for products, dashboard summaries, and detail views.
 
-Contains the complex aggregation logic that was previously embedded in the
-API route handlers (price change calculation, min price, etc.).
+Dashboard price statistics are delegated to ``price_stats``.
 """
 
+import time
+from collections import defaultdict
+
 from fastapi import HTTPException
-from sqlmodel import Session, select
-from src.core.config import get_config_value
+from sqlalchemy import and_, func
+from sqlmodel import Session, col, select
+from src.core.config import get_config_value, get_hist_window_size
 from src.models.database_models import Category, Product, ProductHist, Store
 from src.schemas.product import (
     ProductCreate,
@@ -19,6 +22,7 @@ from src.schemas.product import (
     ProductUpdate,
 )
 from src.services import store_service
+from src.services.price_stats import SECONDS_PER_DAY, compute_window_stats
 from src.stagehand_utils import get_product_info
 
 # --- Store resolution ---
@@ -50,18 +54,16 @@ def _resolve_store(session: Session, url: str, store_id: int | None = None) -> S
     return store_service.get_or_create(session, url)
 
 
-def _store_fields(session: Session, store_id: int | None) -> dict:
+def _store_fields(store: Store | None) -> dict:
     """Return the store fields shared by the summary and detail responses.
 
     Args:
-        session (Session): Active database session.
-        store_id (int | None): The product's store id.
+        store (Store | None): The product's store, if any.
 
     Returns:
         dict: ``store_id``, ``store_name``, ``store_domain`` and
             ``store_has_favicon`` (empty values when there is no store).
     """
-    store = session.get(Store, store_id) if store_id is not None else None
     return {
         "store_id": store.id if store else None,
         "store_name": store.name if store else None,
@@ -163,115 +165,110 @@ def delete(session: Session, product_id: int) -> dict:
 # --- Dashboard and detail aggregation ---
 
 
-def _get_hist_window_size(session: Session) -> int:
-    """Read the configured history window size from the Config table.
+def _by_id(session: Session, model, ids: set) -> dict:
+    """Load the rows of ``model`` whose id is in ``ids``, in one query.
+
+    Args:
+        session (Session): Active database session.
+        model: A SQLModel table class with an ``id`` column.
+        ids (set): Ids to load (``None`` values are ignored).
+
+    Returns:
+        dict: Rows keyed by id.
+    """
+    wanted = {row_id for row_id in ids if row_id is not None}
+    rows = session.exec(select(model).where(col(model.id).in_(wanted))).all()
+    return {row.id: row for row in rows}
+
+
+def _window_records(session: Session, cutoff: int) -> dict[int, list[ProductHist]]:
+    """Load every history record at or after ``cutoff``, grouped by product.
+
+    Args:
+        session (Session): Active database session.
+        cutoff (int): Oldest Unix timestamp to include.
+
+    Returns:
+        dict[int, list[ProductHist]]: Records per product id, oldest first.
+    """
+    rows = session.exec(
+        select(ProductHist)
+        .where(ProductHist.timestamp >= cutoff)
+        .order_by(ProductHist.product_id, ProductHist.timestamp, ProductHist.id)
+    ).all()
+    grouped: dict[int, list[ProductHist]] = defaultdict(list)
+    for row in rows:
+        grouped[row.product_id].append(row)
+    return grouped
+
+
+def _latest_records(session: Session) -> dict[int, ProductHist]:
+    """Load the newest history record of every product, in one query.
+
+    It may be older than the window (e.g. when the cronjob stopped), so it
+    is loaded separately from ``_window_records``.
 
     Args:
         session (Session): Active database session.
 
     Returns:
-        int: Number of history records to consider (default 60).
+        dict[int, ProductHist]: Newest record per product id (the highest
+            id wins when two records share the newest timestamp).
     """
-    return int(get_config_value(session, "hist_window_size", "60"))
+    newest = (
+        select(
+            ProductHist.product_id,
+            func.max(ProductHist.timestamp).label("max_timestamp"),
+        )
+        .group_by(ProductHist.product_id)
+        .subquery()
+    )
+    rows = session.exec(
+        select(ProductHist)
+        .join(
+            newest,
+            and_(
+                ProductHist.product_id == newest.c.product_id,
+                ProductHist.timestamp == newest.c.max_timestamp,
+            ),
+        )
+        .order_by(ProductHist.id)
+    ).all()
+    return {row.product_id: row for row in rows}
 
 
-def _compute_price_change(
-    current_price: float,
-    history: list,
-    window_size: int,
-) -> float | None:
-    """Calculate the percentage price change vs. historical average.
-
-    The comparison window skips the most recent record (current) and
-    averages the next *window_size* records.
-
-    Args:
-        current_price (float): The latest known price.
-        history (list): Product history ordered newest-first.
-        window_size (int): How many historical records to average.
-
-    Returns:
-        float | None: Percentage change, or None if insufficient data.
-    """
-    if len(history) <= 1:
-        return None
-
-    historical_records = history[1 : window_size + 1]
-    if not historical_records:
-        return None
-
-    avg_price = sum(r.price for r in historical_records) / len(historical_records)
-    if avg_price <= 0:
-        return None
-
-    return ((current_price - avg_price) / avg_price) * 100
-
-
-# Hard ceiling on how many points the dashboard sparkline ever receives,
-# regardless of how large the configured history window is.
-MAX_RECENT_PRICES = 60
-
-
-def _get_recent_prices(history: list, window_size: int) -> list[float]:
-    """Return recent prices in chronological order, capped at 60 points.
-
-    Args:
-        history (list): Product history ordered newest-first.
-        window_size (int): Configured history window size.
-
-    Returns:
-        list[float]: Prices of the last ``min(window_size, 60)`` records,
-            oldest first (chronological order), or ``[]`` if there is no
-            history.
-    """
-    cap = min(window_size, MAX_RECENT_PRICES)
-    recent_records = history[:cap]
-    return [record.price for record in reversed(recent_records)]
-
-
-def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
+def get_dashboard_summary(
+    session: Session, now: int | None = None
+) -> list[ProductDashboardSummary]:
     """Build the enriched dashboard summary for all products.
 
-    For each product this includes the current price, a price-change
-    percentage over the configured history window, and the stock status.
+    Runs a constant number of queries regardless of the number of
+    products. Price statistics follow ``price_stats`` over the configured
+    historical window (in days).
 
     Args:
         session (Session): Active database session.
+        now (int | None): Reference Unix timestamp; defaults to the
+            current time.
 
     Returns:
         List[ProductDashboardSummary]: Enriched product summaries.
     """
-    hist_window_size = _get_hist_window_size(session)
+    now = int(time.time()) if now is None else now
+    cutoff = now - get_hist_window_size(session) * SECONDS_PER_DAY
+
     products = session.exec(select(Product)).all()
+    categories = _by_id(session, Category, {p.category_id for p in products})
+    stores = _by_id(session, Store, {p.store_id for p in products})
+    windows = _window_records(session, cutoff)
+    latest = _latest_records(session)
+
     summary_list: list[ProductDashboardSummary] = []
-
     for product in products:
-        # Category info
-        category = session.get(Category, product.category_id)
-        category_name = category.name if category else "Unknown"
-        category_color = category.color if category else "gray"
-
-        # Price history (newest first)
-        product_history = session.exec(
-            select(ProductHist)
-            .where(ProductHist.product_id == product.id)
-            .order_by(ProductHist.timestamp.desc())
-        ).all()
-
-        current_price = None
-        price_change_60d = None
-        is_in_stock = None
-        last_checked_at = None
-
-        if product_history:
-            current_price = product_history[0].price
-            is_in_stock = product_history[0].is_in_stock
-            last_checked_at = product_history[0].timestamp
-            price_change_60d = _compute_price_change(
-                current_price, product_history, hist_window_size
-            )
-
-        recent_prices = _get_recent_prices(product_history, hist_window_size)
+        category = categories.get(product.category_id)
+        current = latest.get(product.id)
+        window = windows.get(product.id, [])
+        stats = compute_window_stats(window, current)
 
         summary_list.append(
             ProductDashboardSummary(
@@ -279,16 +276,17 @@ def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
                 name=product.name,
                 url=product.url,
                 category_id=product.category_id,
-                category_name=category_name,
-                category_color=category_color,
+                category_name=category.name if category else "Unknown",
+                category_color=category.color if category else "gray",
                 priority=product.priority,
-                current_price=current_price,
-                price_change_60d=price_change_60d,
-                is_in_stock=is_in_stock,
+                current_price=current.price if current else None,
+                price_change_pct=stats.price_change_pct,
+                is_in_stock=current.is_in_stock if current else None,
+                is_at_lowest=stats.is_at_lowest,
                 currency=product.currency,
-                **_store_fields(session, product.store_id),
-                recent_prices=recent_prices,
-                last_checked_at=last_checked_at,
+                **_store_fields(stores.get(product.store_id)),
+                recent_prices=[record.price for record in window],
+                last_checked_at=current.timestamp if current else None,
             )
         )
 
@@ -312,43 +310,18 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Category info
     category = session.get(Category, product.category_id)
-    category_name = category.name if category else "Unknown"
-    category_color = category.color if category else "gray"
+    store = (
+        session.get(Store, product.store_id) if product.store_id is not None else None
+    )
 
-    hist_window_size = _get_hist_window_size(session)
-
-    # Price history (newest first)
+    # Chronological order for charts
     product_history = session.exec(
         select(ProductHist)
         .where(ProductHist.product_id == product_id)
-        .order_by(ProductHist.timestamp.desc())
+        .order_by(ProductHist.timestamp, ProductHist.id)
     ).all()
-
-    current_price = None
-    min_price = None
-    is_in_stock = None
-    last_checked_at = None
-
-    if product_history:
-        current_price = product_history[0].price
-        is_in_stock = product_history[0].is_in_stock
-        last_checked_at = product_history[0].timestamp
-
-        recent_records = product_history[:hist_window_size]
-        if recent_records:
-            min_price = min(record.price for record in recent_records)
-
-    # Chronological order for charts
-    price_history = [
-        ProductHistResponse(
-            price=record.price,
-            is_in_stock=record.is_in_stock,
-            timestamp=record.timestamp,
-        )
-        for record in reversed(product_history)
-    ]
+    current = product_history[-1] if product_history else None
 
     return ProductDetailResponse(
         id=product.id,
@@ -356,16 +329,22 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
         url=product.url,
         priority=product.priority,
         category_id=product.category_id,
-        category_name=category_name,
-        category_color=category_color,
+        category_name=category.name if category else "Unknown",
+        category_color=category.color if category else "gray",
         description=product.description,
-        current_price=current_price,
-        min_price=min_price,
-        is_in_stock=is_in_stock,
-        price_history=price_history,
+        current_price=current.price if current else None,
+        is_in_stock=current.is_in_stock if current else None,
+        price_history=[
+            ProductHistResponse(
+                price=record.price,
+                is_in_stock=record.is_in_stock,
+                timestamp=record.timestamp,
+            )
+            for record in product_history
+        ],
         currency=product.currency,
-        **_store_fields(session, product.store_id),
-        last_checked_at=last_checked_at,
+        **_store_fields(store),
+        last_checked_at=current.timestamp if current else None,
     )
 
 

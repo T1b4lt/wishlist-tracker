@@ -46,8 +46,9 @@ class ProductInfoResponse(BaseModel):
 class ProductDashboardSummary(BaseModel):
     """Summary of a product for the dashboard view.
 
-    Includes current price, price change trend, and stock status
-    enriched from the most recent history records.
+    Price statistics follow ``src/services/price_stats.py`` over the
+    configured historical window (in days). Field names are pinned by
+    ``contracts/api-fields.json``.
     """
 
     id: int
@@ -58,8 +59,9 @@ class ProductDashboardSummary(BaseModel):
     category_color: str
     priority: str
     current_price: float | None
-    price_change_60d: float | None
+    price_change_pct: float | None
     is_in_stock: bool | None
+    is_at_lowest: bool
     currency: str
     store_id: int | None
     store_name: str | None
@@ -78,7 +80,11 @@ class ProductHistResponse(BaseModel):
 
 
 class ProductDetailResponse(BaseModel):
-    """Full product detail including history for the detail page."""
+    """Full product detail including the whole price history.
+
+    Range statistics are computed by the frontend from ``price_history``.
+    Field names are pinned by ``contracts/api-fields.json``.
+    """
 
     id: int
     name: str
@@ -89,7 +95,6 @@ class ProductDetailResponse(BaseModel):
     category_color: str
     description: str
     current_price: float | None
-    min_price: float | None
     is_in_stock: bool | None
     price_history: list[ProductHistResponse]
     currency: str
