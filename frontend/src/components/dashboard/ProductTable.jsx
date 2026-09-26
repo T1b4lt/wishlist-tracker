@@ -1,4 +1,4 @@
-import { Card, Table, Text, VStack } from '@chakra-ui/react';
+import { Card, HStack, Table, Text, VStack } from '@chakra-ui/react';
 import { Link } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { AnimatedList, AnimatedListItem } from '@/components/motion';
@@ -8,7 +8,8 @@ import {
   CategoryTag,
   PriorityBadge,
   PriceChange,
-  StockStatus
+  StockStatus,
+  StoreFavicon
 } from '@/components/common';
 import { formatPrice } from '@/lib/format';
 import { Sparkline } from './Sparkline';
@@ -30,23 +31,36 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
     >
       <Table.Cell>
         <VStack align="flex-start" gap={1}>
-          <Link href={`/product/${product.id}`} asChild>
-            <Text
-              as="a"
-              fontWeight="medium"
-              color="fg"
-              _hover={{ textDecoration: 'underline' }}
-              focusVisibleRing="inside"
-              focusRingWidth="2px"
-              focusRingColor="fg"
-            >
-              {product.name}
-            </Text>
-          </Link>
-          <CategoryTag
-            name={product.category_name}
-            color={product.category_color}
-          />
+          <HStack gap={2} minW={0}>
+            <StoreFavicon
+              storeId={product.store_id}
+              hasFavicon={product.store_has_favicon}
+            />
+            <Link href={`/product/${product.id}`} asChild>
+              <Text
+                as="a"
+                fontWeight="medium"
+                color="fg"
+                _hover={{ textDecoration: 'underline' }}
+                focusVisibleRing="inside"
+                focusRingWidth="2px"
+                focusRingColor="fg"
+              >
+                {product.name}
+              </Text>
+            </Link>
+          </HStack>
+          <HStack gap={2} wrap="wrap">
+            {product.store_name && (
+              <Text textStyle="xs" color="fg.muted">
+                {product.store_name}
+              </Text>
+            )}
+            <CategoryTag
+              name={product.category_name}
+              color={product.category_color}
+            />
+          </HStack>
         </VStack>
       </Table.Cell>
       <Table.Cell>

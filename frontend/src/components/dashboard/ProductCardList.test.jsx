@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import { Router, useLocation } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { faviconUrl } from '@/lib/api/stores';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import { ProductCardList } from './ProductCardList';
 
@@ -25,7 +26,11 @@ const PRODUCT = {
   is_in_stock: false,
   currency: 'USD',
   recent_prices: [330, 340, 350],
-  last_checked_at: 1700000000
+  last_checked_at: 1700000000,
+  store_id: 7,
+  store_name: 'Amazon',
+  store_domain: 'amazon.es',
+  store_has_favicon: true
 };
 
 /** Shows the current location, so a test can assert whether navigation happened. */
@@ -106,5 +111,15 @@ describe('ProductCardList', () => {
 
     expect(screen.queryByText('Espresso Machine')).not.toBeInTheDocument();
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
+  });
+
+  it('shows the store favicon and name for each product', () => {
+    const { container } = renderCards();
+
+    expect(screen.getByText('Amazon')).toBeInTheDocument();
+    expect(container.querySelector('img')).toHaveAttribute(
+      'src',
+      faviconUrl(7)
+    );
   });
 });

@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import { Router, useLocation } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { faviconUrl } from '@/lib/api/stores';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import { ProductTable } from './ProductTable';
 
@@ -28,7 +29,11 @@ const PRODUCT = {
   is_in_stock: true,
   currency: 'EUR',
   recent_prices: [140, 130, 125, 120],
-  last_checked_at: 1700000000
+  last_checked_at: 1700000000,
+  store_id: 7,
+  store_name: 'Amazon',
+  store_domain: 'amazon.es',
+  store_has_favicon: true
 };
 
 /** Shows the current location, so a test can assert whether navigation happened. */
@@ -140,6 +145,16 @@ describe('ProductTable', () => {
     expect(container.querySelector('tbody')).toHaveAttribute(
       'aria-busy',
       'true'
+    );
+  });
+
+  it('shows the store favicon and name for each product', () => {
+    const { container } = renderTable();
+
+    expect(screen.getByText('Amazon')).toBeInTheDocument();
+    expect(container.querySelector('img')).toHaveAttribute(
+      'src',
+      faviconUrl(7)
     );
   });
 });

@@ -1,4 +1,4 @@
-import { Box, Card, Flex, Text, VStack } from '@chakra-ui/react';
+import { Box, Card, Flex, HStack, Text, VStack } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
 import { AnimatedList, AnimatedListItem } from '@/components/motion';
 import { staggerStepSeconds } from '@/theme/motion';
@@ -6,7 +6,8 @@ import {
   SkeletonCards,
   CategoryTag,
   PriceChange,
-  StockStatus
+  StockStatus,
+  StoreFavicon
 } from '@/components/common';
 import { formatPrice } from '@/lib/format';
 import { ProductRowActions } from './ProductRowActions';
@@ -34,13 +35,26 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
       >
         <Flex justify="space-between" align="flex-start" gap={3}>
           <VStack align="flex-start" gap={1.5} flex={1} minW={0}>
-            <Text fontWeight="medium" color="fg">
-              {product.name}
-            </Text>
-            <CategoryTag
-              name={product.category_name}
-              color={product.category_color}
-            />
+            <HStack gap={2} minW={0}>
+              <StoreFavicon
+                storeId={product.store_id}
+                hasFavicon={product.store_has_favicon}
+              />
+              <Text fontWeight="medium" color="fg">
+                {product.name}
+              </Text>
+            </HStack>
+            <HStack gap={2} wrap="wrap">
+              {product.store_name && (
+                <Text textStyle="xs" color="fg.muted">
+                  {product.store_name}
+                </Text>
+              )}
+              <CategoryTag
+                name={product.category_name}
+                color={product.category_color}
+              />
+            </HStack>
             <Flex align="baseline" gap={2} wrap="wrap">
               <Text textStyle="numeric" fontWeight="medium">
                 {formatPrice(product.current_price, product.currency, locale)}
