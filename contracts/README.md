@@ -10,6 +10,7 @@ image nor of the frontend bundle.
 | --- | --- | --- | --- |
 | `price-stats-cases.json` | Price statistics formulas (window, average, price change, lowest, at lowest) | `backend/tests/test_price_stats_contract.py` | `frontend/src/lib/productHistory.contract.test.js` |
 | `hist-window.json` | Historical window options and default | `backend/tests/test_contracts.py` | `frontend/src/lib/contracts.test.js` |
+| `daily-check-report.json` | Telegram daily check report modes and default | `backend/tests/test_contracts.py` | `frontend/src/lib/contracts.test.js` |
 | `api-fields.json` | Field names of the product dashboard/detail/history responses | `backend/tests/test_contracts.py` | `frontend/src/lib/contracts.test.js` |
 
 ## Changing a shared rule

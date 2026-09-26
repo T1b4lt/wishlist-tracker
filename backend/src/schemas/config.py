@@ -1,7 +1,7 @@
 """Request and response schemas for application configuration."""
 
 from pydantic import BaseModel
-from src.core.config import HistWindowSize
+from src.core.config import DailyCheckReport, HistWindowSize
 
 
 class ConfigUpdate(BaseModel):
@@ -11,6 +11,7 @@ class ConfigUpdate(BaseModel):
     hist_window_size: HistWindowSize | None = None
     is_price_drop_alert: bool | None = None
     is_stock_change_alert: bool | None = None
+    daily_check_report: DailyCheckReport | None = None
     telegram_bot_token: str | None = None
     telegram_bot_chat_id: str | None = None
     selected_language: str | None = None
@@ -24,6 +25,7 @@ class ConfigResponse(BaseModel):
     hist_window_size: int
     is_price_drop_alert: bool
     is_stock_change_alert: bool
+    daily_check_report: str
     telegram_bot_token: str | None
     telegram_bot_chat_id: str | None
     selected_language: str

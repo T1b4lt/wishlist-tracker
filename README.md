@@ -256,6 +256,7 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 7 tables:
 | `hist_window_size`      | `60`      | Days of history used for price trends, averages and lowest prices (30, 60, 90 or 180) |
 | `is_price_drop_alert`   | `false`   | Enable Telegram alerts on price drops                                                 |
 | `is_stock_change_alert` | `false`   | Enable Telegram alerts on stock changes                                               |
+| `daily_check_report`    | `limit_days` | Telegram daily check report: `off`, `limit_days` (only on days the Gemini limit was reached) or `every_day` |
 | `telegram_bot_token`    | `""`      | Telegram Bot API token                                                                |
 | `telegram_bot_chat_id`  | `""`      | Telegram chat ID for notifications                                                    |
 | `selected_language`     | `english` | UI language (`english` / `spanish`)                                                   |

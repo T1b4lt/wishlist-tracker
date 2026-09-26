@@ -7,7 +7,12 @@ validation rules before persisting changes.
 
 from fastapi import HTTPException
 from sqlmodel import Session
-from src.core.config import get_config_value, get_hist_window_size, set_config_value
+from src.core.config import (
+    get_config_value,
+    get_daily_check_report,
+    get_hist_window_size,
+    set_config_value,
+)
 from src.schemas.config import ConfigResponse, ConfigUpdate
 
 
@@ -55,6 +60,7 @@ def get_all_config(session: Session) -> ConfigResponse:
             session, "is_stock_change_alert", "false"
         ).lower()
         == "true",
+        daily_check_report=get_daily_check_report(session),
         telegram_bot_token=token if token else None,
         telegram_bot_chat_id=chat_id if chat_id else None,
         selected_language=get_config_value(session, "selected_language", "english"),
@@ -101,6 +107,12 @@ def update_config(session: Session, config_update: ConfigUpdate) -> ConfigRespon
             session,
             "is_stock_change_alert",
             str(config_update.is_stock_change_alert).lower(),
+        )
+
+    if config_update.daily_check_report is not None:
+        # Already restricted to DAILY_CHECK_REPORT_OPTIONS by the schema (422).
+        set_config_value(
+            session, "daily_check_report", config_update.daily_check_report
         )
 
     if config_update.telegram_bot_token is not None:

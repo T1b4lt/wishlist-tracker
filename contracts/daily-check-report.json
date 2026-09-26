@@ -1,0 +1,4 @@
+{
+  "options": ["off", "limit_days", "every_day"],
+  "default": "limit_days"
+}

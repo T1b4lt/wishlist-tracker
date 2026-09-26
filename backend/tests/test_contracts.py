@@ -8,6 +8,8 @@ from typing import get_args
 import pytest
 from src.core.config import (
     CONFIG_DEFAULTS,
+    DAILY_CHECK_REPORT_OPTIONS,
+    DEFAULT_DAILY_CHECK_REPORT,
     DEFAULT_HIST_WINDOW,
     HIST_WINDOW_OPTIONS,
 )
@@ -40,6 +42,28 @@ def test_config_update_accepts_exactly_the_contract_options():
 def test_default_hist_window_matches_contract():
     assert DEFAULT_HIST_WINDOW == HIST_WINDOW["default"]
     assert CONFIG_DEFAULTS["hist_window_size"] == str(HIST_WINDOW["default"])
+
+
+DAILY_CHECK_REPORT = load_contract("daily-check-report.json")
+
+
+# --- daily-check-report.json ---
+
+
+def test_daily_check_report_options_match_contract():
+    assert list(DAILY_CHECK_REPORT_OPTIONS) == DAILY_CHECK_REPORT["options"]
+
+
+def test_config_update_accepts_exactly_the_report_options():
+    annotation = ConfigUpdate.model_fields["daily_check_report"].annotation
+    literal = next(arg for arg in get_args(annotation) if arg is not type(None))
+
+    assert list(get_args(literal)) == DAILY_CHECK_REPORT["options"]
+
+
+def test_default_daily_check_report_matches_contract():
+    assert DEFAULT_DAILY_CHECK_REPORT == DAILY_CHECK_REPORT["default"]
+    assert CONFIG_DEFAULTS["daily_check_report"] == DAILY_CHECK_REPORT["default"]
 
 
 API_FIELDS = load_contract("api-fields.json")

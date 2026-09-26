@@ -17,6 +17,13 @@ HIST_WINDOW_OPTIONS = (30, 60, 90, 180)
 DEFAULT_HIST_WINDOW = 60
 HistWindowSize = Literal[30, 60, 90, 180]
 
+# Telegram daily check report modes. Mirrored by the frontend
+# (``frontend/src/lib/dailyCheckReport.js``) and pinned for both sides by
+# ``contracts/daily-check-report.json``.
+DAILY_CHECK_REPORT_OPTIONS = ("off", "limit_days", "every_day")
+DEFAULT_DAILY_CHECK_REPORT = "limit_days"
+DailyCheckReport = Literal["off", "limit_days", "every_day"]
+
 # Default configuration values used during initial database setup
 # and as fallback when a key is missing.
 CONFIG_DEFAULTS = {
@@ -24,6 +31,7 @@ CONFIG_DEFAULTS = {
     "hist_window_size": str(DEFAULT_HIST_WINDOW),
     "is_price_drop_alert": "false",
     "is_stock_change_alert": "false",
+    "daily_check_report": DEFAULT_DAILY_CHECK_REPORT,
     "telegram_bot_token": "",
     "telegram_bot_chat_id": "",
     "selected_language": "english",
@@ -85,3 +93,18 @@ def get_hist_window_size(session: Session) -> int:
     except ValueError:
         return DEFAULT_HIST_WINDOW
     return value if value > 0 else DEFAULT_HIST_WINDOW
+
+
+def get_daily_check_report(session: Session) -> str:
+    """Return the configured Telegram daily check report mode.
+
+    An unknown stored value falls back to ``DEFAULT_DAILY_CHECK_REPORT``.
+
+    Args:
+        session (Session): The database session.
+
+    Returns:
+        str: One of ``DAILY_CHECK_REPORT_OPTIONS``.
+    """
+    value = get_config_value(session, "daily_check_report", DEFAULT_DAILY_CHECK_REPORT)
+    return value if value in DAILY_CHECK_REPORT_OPTIONS else DEFAULT_DAILY_CHECK_REPORT

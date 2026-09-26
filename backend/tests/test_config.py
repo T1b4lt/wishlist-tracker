@@ -68,3 +68,29 @@ def test_off_list_stored_hist_window_size_is_used_as_is(session):
     _store_hist_window_size(session, "45")
 
     assert get_hist_window_size(session) == 45
+
+
+def test_daily_check_report_defaults_to_limit_days(client):
+    assert client.get("/config/").json()["daily_check_report"] == "limit_days"
+
+
+@pytest.mark.parametrize("value", ["off", "limit_days", "every_day"])
+def test_daily_check_report_accepts_every_option(client, value):
+    response = client.patch("/config/", json={"daily_check_report": value})
+
+    assert response.status_code == 200
+    assert response.json()["daily_check_report"] == value
+
+
+@pytest.mark.parametrize("value", ["always", "", "OFF"])
+def test_daily_check_report_rejects_other_values(client, value):
+    response = client.patch("/config/", json={"daily_check_report": value})
+
+    assert response.status_code == 422
+
+
+def test_corrupt_daily_check_report_falls_back_to_default(client, session):
+    session.add(Config(key="daily_check_report", value="weekly"))
+    session.commit()
+
+    assert client.get("/config/").json()["daily_check_report"] == "limit_days"
