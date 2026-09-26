@@ -116,7 +116,8 @@
           "label": "Moneda",
           "placeholder": "Selecciona una moneda",
           "empty": "No hay monedas que coincidan"
-        }
+        },
+        "store": "Tienda"
       },
       "actions": {
         "submitCreate": "Añadir producto",
@@ -220,7 +221,8 @@
       },
       "actions": {
         "openStorePage": "Abrir página de la tienda",
-        "moreActions": "Más acciones para {{name}}"
+        "moreActions": "Más acciones para {{name}}",
+        "openInStore": "Abrir en {{store}}"
       },
       "stats": {
         "currentPrice": "Precio actual",

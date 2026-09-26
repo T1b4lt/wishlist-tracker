@@ -116,7 +116,8 @@
           "label": "Currency",
           "placeholder": "Select currency",
           "empty": "No matching currency"
-        }
+        },
+        "store": "Store"
       },
       "actions": {
         "submitCreate": "Add product",
@@ -220,7 +221,8 @@
       },
       "actions": {
         "openStorePage": "Open store page",
-        "moreActions": "More actions for {{name}}"
+        "moreActions": "More actions for {{name}}",
+        "openInStore": "Open in {{store}}"
       },
       "stats": {
         "currentPrice": "Current price",
