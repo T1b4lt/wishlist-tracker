@@ -23,7 +23,9 @@ def test_normalize_domain_variants(url, expected):
     assert store_service.normalize_domain(url) == expected
 
 
-@pytest.mark.parametrize("url", ["", "   ", "amazon.es/dp/x", "not a url"])
+@pytest.mark.parametrize(
+    "url", ["", "   ", "amazon.es/dp/x", "not a url", "http://[abc/x"]
+)
 def test_normalize_domain_rejects_urls_without_host(url):
     with pytest.raises(HTTPException) as exc_info:
         store_service.normalize_domain(url)

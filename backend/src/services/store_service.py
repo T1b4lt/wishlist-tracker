@@ -35,7 +35,10 @@ def normalize_domain(url: str) -> str:
     Raises:
         HTTPException: 422 if the URL has no hostname.
     """
-    hostname = urlparse((url or "").strip()).hostname
+    try:
+        hostname = urlparse((url or "").strip()).hostname
+    except ValueError:  # e.g. an unbalanced IPv6 bracket
+        hostname = None
     if not hostname or not hostname.strip("."):
         raise HTTPException(
             status_code=422, detail="Invalid product URL: no domain found."

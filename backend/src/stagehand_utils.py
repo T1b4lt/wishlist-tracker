@@ -7,6 +7,7 @@ Product-info extraction can also download the store favicon from the loaded
 page.
 """
 
+import asyncio
 import base64
 import binascii
 import json
@@ -34,6 +35,20 @@ CHROME_ARGS = [
 # Largest favicon accepted (bytes); anything bigger is ignored.
 MAX_FAVICON_BYTES = 256 * 1024
 
+# Upper bound for the whole in-page favicon download (all candidates), so a
+# stalled icon host never holds up the product extraction.
+FAVICON_TIMEOUT_SECONDS = 10
+
+# Leading bytes of the raster formats accepted as favicons, with their mime.
+_IMAGE_SIGNATURES = (
+    (b"\x00\x00\x01\x00", "image/x-icon"),
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"BM", "image/bmp"),
+)
+
 # Runs inside the product page: tries the declared icons (``rel=icon`` first,
 # then ``apple-touch-icon``) and ``/favicon.ico``, downloading them with the
 # page's own session (so anti-bot checks already passed apply). Returns a JSON
@@ -48,12 +63,18 @@ FAVICON_SCRIPT = """
   candidates.push(new URL('/favicon.ico', location.origin).href);
   for (const href of candidates) {
     try {
-      const response = await fetch(href, { credentials: 'include' });
+      const response = await fetch(href, {
+        credentials: 'include',
+        signal: AbortSignal.timeout(4000)
+      });
       if (!response.ok) continue;
       const blob = await response.blob();
       const mime = blob.type.startsWith('image/')
         ? blob.type
-        : /\\.ico(\\?|$)/i.test(href) ? 'image/x-icon' : '';
+        : ['', 'application/octet-stream'].includes(blob.type) &&
+            /\\.ico(\\?|$)/i.test(href)
+          ? 'image/x-icon'
+          : '';
       if (!mime || blob.size === 0 || blob.size > MAX_BYTES) continue;
       const bytes = new Uint8Array(await blob.arrayBuffer());
       let binary = '';
@@ -119,6 +140,31 @@ class ProductInfoResult(BaseModel):
     favicon: FaviconData | None = None
 
 
+def _detect_image_mime(content: bytes, claimed_mime: str) -> str | None:
+    """Identify an image from its content, ignoring what the server claimed.
+
+    Guards against soft-404s: many sites answer ``/favicon.ico`` with an
+    HTML page labelled as an image.
+
+    Args:
+        content (bytes): The downloaded bytes.
+        claimed_mime (str): The normalized ``Content-Type`` of the response.
+
+    Returns:
+        str | None: The detected mime type, or None if it is not an image.
+    """
+    for signature, mime in _IMAGE_SIGNATURES:
+        if content.startswith(signature):
+            return mime
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "image/webp"
+    if claimed_mime == "image/svg+xml":
+        head = content[:512].lstrip().lower()
+        if head.startswith(b"<svg") or (head.startswith(b"<?xml") and b"<svg" in head):
+            return "image/svg+xml"
+    return None
+
+
 def parse_favicon_payload(raw: object) -> FaviconData | None:
     """Validate the JSON string returned by ``FAVICON_SCRIPT``.
 
@@ -126,8 +172,9 @@ def parse_favicon_payload(raw: object) -> FaviconData | None:
         raw (object): The value returned by ``page.evaluate``.
 
     Returns:
-        FaviconData | None: The favicon if it is a non-empty ``image/*``
-            of at most ``MAX_FAVICON_BYTES``; otherwise None.
+        FaviconData | None: The favicon if it is a non-empty ``image/*`` of
+            at most ``MAX_FAVICON_BYTES`` whose content really is an image
+            (its mime is taken from the content); otherwise None.
     """
     if not isinstance(raw, str) or not raw:
         return None
@@ -139,7 +186,10 @@ def parse_favicon_payload(raw: object) -> FaviconData | None:
         return None
     if not mime.startswith("image/") or not 0 < len(content) <= MAX_FAVICON_BYTES:
         return None
-    return FaviconData(content=content, mime=mime)
+    detected_mime = _detect_image_mime(content, mime)
+    if detected_mime is None:
+        return None
+    return FaviconData(content=content, mime=detected_mime)
 
 
 # --- Internal helpers ---
@@ -200,7 +250,10 @@ async def _fetch_favicon(page: Page) -> FaviconData | None:
         FaviconData | None: The favicon, or None if none could be fetched.
     """
     try:
-        return parse_favicon_payload(await page.evaluate(FAVICON_SCRIPT))
+        raw = await asyncio.wait_for(
+            page.evaluate(FAVICON_SCRIPT), timeout=FAVICON_TIMEOUT_SECONDS
+        )
+        return parse_favicon_payload(raw)
     except Exception as error:  # noqa: BLE001 - best effort by design
         print(f"Could not fetch favicon: {error}")
         return None
