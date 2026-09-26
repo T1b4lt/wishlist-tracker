@@ -68,13 +68,16 @@ on create/update (see 2.4), so every product created through the API has a store
   stripped. Other subdomains are kept (`es.aliexpress.com` stays as is).
   Raises `HTTPException(422)` if the URL has no hostname.
 - `derive_name(domain: str) -> str`
-  Fallback name: first label of the domain, capitalised
-  (`pccomponentes.com` → `Pccomponentes`).
+  Fallback name: the registrable name label, capitalised
+  (`pccomponentes.com` → `Pccomponentes`, `es.aliexpress.com` → `Aliexpress`,
+  `amazon.co.uk` → `Amazon`).
 - `get_by_domain(session, domain) -> Store | None`
 - `get_or_create(session, url, name=None, favicon=None, favicon_mime=None) -> Store`
   If a store with that domain exists, return it **unchanged** (the first name
   and favicon win, so names stay consistent). Otherwise create it with `name`
   (or `derive_name(domain)` when `name` is empty/blank) and the favicon data.
+  A unique-constraint race (two requests creating the same domain) is
+  recovered by rolling back and returning the existing row.
 - `get_favicon(session, store_id) -> tuple[bytes, str]`
   Raises `HTTPException(404)` if the store does not exist or has no favicon.
 
@@ -125,8 +128,11 @@ on create/update (see 2.4), so every product created through the API has a store
 ### 2.6 API (`backend/src/routers/store_router.py`, new; registered in `api.py`)
 
 - `GET /stores/{store_id}/favicon` → `Response(content=bytes, media_type=mime)`
-  with header `Cache-Control: public, max-age=604800`. 404 when the store or
-  its favicon is missing.
+  with headers `Cache-Control: public, max-age=604800`,
+  `X-Content-Type-Options: nosniff` and
+  `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`
+  (keeps a stored SVG inert if opened directly). 404 when the store or its
+  favicon is missing.
 
 ### 2.7 Test data (`backend/src/setup_backend.py --populate`)
 
@@ -144,7 +150,8 @@ in two stores at different prices.
 
 ### 3.2 `StoreBadge` (`frontend/src/components/common/StoreBadge.jsx`, new)
 
-- Props: `name`, `faviconUrl` (nullable), `size` (`'sm' | 'md'`, default `'sm'`).
+- Props: `storeId`, `name`, `hasFavicon`, `size` (`'sm' | 'md'`, default `'sm'`);
+  the favicon URL is built internally with `faviconUrl` from `@/lib/api/stores`.
 - Renders the favicon (`<img alt="">`, 16px for `sm`, 20px for `md`, small
   radius) followed by the store name (muted text for `sm`).
 - Falls back to the Lucide `LuStore` icon (following the global icon
@@ -157,7 +164,8 @@ in two stores at different prices.
 
 - `ProductTable` row and `ProductCardList` card:
   - `StoreFavicon` placed immediately before the product name.
-  - Meta line under the name: `StoreBadge sm` followed by `CategoryTag`.
+  - Meta line under the name: the store name as muted text (no second
+    favicon) followed by `CategoryTag`.
 
 ### 3.4 Detail page (`ProductPage`)
 
@@ -175,8 +183,9 @@ in two stores at different prices.
 ### 3.6 i18n
 
 New keys in `english.json` and `spanish.json`:
-`components.storeBadge.fallbackLabel`, `components.productForm.store`,
-`pages.product.actions.openInStore` (with `{{store}}`).
+`components.productFormDialog.fields.store` and
+`pages.product.actions.openInStore` (with `{{store}}`). The fallback icon is
+decorative, so it needs no label.
 
 ## 4. Error handling
 
