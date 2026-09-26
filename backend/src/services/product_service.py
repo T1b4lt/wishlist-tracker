@@ -379,7 +379,9 @@ async def extract_product_info(
     """Use Stagehand to extract product information from a URL.
 
     Reads the Google API key, language, and category list from the
-    database and delegates to ``stagehand_utils.get_product_info``.
+    database and delegates to ``stagehand_utils.get_product_info``. When
+    the URL's domain is not a known store yet, the store is created with
+    the extracted name and the favicon downloaded from the page.
 
     Args:
         session (Session): Active database session.
@@ -389,8 +391,12 @@ async def extract_product_info(
         ProductInfoResponse: AI-extracted product information.
 
     Raises:
-        HTTPException: 400 if Google key or categories are missing.
+        HTTPException: 400 if Google key or categories are missing,
+            422 if the URL has no hostname.
     """
+    # Validate the URL before any database or browser work.
+    domain = store_service.normalize_domain(request.url)
+
     # Get categories
     categories = session.exec(select(Category)).all()
     category_names = [c.name for c in categories]
@@ -412,9 +418,23 @@ async def extract_product_info(
             detail="Google API key not configured. Please set it in Settings.",
         )
 
-    # Delegate to Stagehand
-    product_info = await get_product_info(
-        google_api_key, request.url, selected_language, category_names
+    # Delegate to Stagehand; the favicon is only downloaded for new stores.
+    existing_store = store_service.get_by_domain(session, domain)
+    result = await get_product_info(
+        google_api_key,
+        request.url,
+        selected_language,
+        category_names,
+        fetch_favicon=existing_store is None,
+    )
+    product_info = result.info
+
+    store = existing_store or store_service.get_or_create(
+        session,
+        request.url,
+        name=product_info.store_name,
+        favicon=result.favicon.content if result.favicon else None,
+        favicon_mime=result.favicon.mime if result.favicon else None,
     )
 
     return ProductInfoResponse(
@@ -422,4 +442,5 @@ async def extract_product_info(
         category=product_info.category,
         description=product_info.description,
         currency=product_info.currency,
+        store=store_service.to_response(store),
     )

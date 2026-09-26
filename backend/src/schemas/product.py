@@ -1,6 +1,7 @@
 """Request and response schemas for products."""
 
 from pydantic import BaseModel
+from src.schemas.store import StoreResponse
 
 
 class ProductCreate(BaseModel):
@@ -39,6 +40,7 @@ class ProductInfoResponse(BaseModel):
     category: str
     description: str
     currency: str
+    store: StoreResponse
 
 
 class ProductDashboardSummary(BaseModel):

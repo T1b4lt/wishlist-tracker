@@ -3,8 +3,13 @@
 Each public function launches a local headless Chrome, attaches a Stagehand
 instance driven by Gemini 3.1 Flash-Lite, visits the product page, dismisses
 pop-ups and extracts structured data validated by a Pydantic model.
+Product-info extraction can also download the store favicon from the loaded
+page.
 """
 
+import base64
+import binascii
+import json
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -26,6 +31,42 @@ CHROME_ARGS = [
     "--disable-dev-shm-usage",
 ]
 
+# Largest favicon accepted (bytes); anything bigger is ignored.
+MAX_FAVICON_BYTES = 256 * 1024
+
+# Runs inside the product page: tries the declared icons (``rel=icon`` first,
+# then ``apple-touch-icon``) and ``/favicon.ico``, downloading them with the
+# page's own session (so anti-bot checks already passed apply). Returns a JSON
+# string ``{"mime", "data"}`` (base64) for the first usable image, or null.
+FAVICON_SCRIPT = """
+(async () => {
+  const MAX_BYTES = __MAX_BYTES__;
+  const links = Array.from(document.querySelectorAll('link[rel][href]'))
+    .filter((link) => /(^|\\s)(icon|apple-touch-icon)(\\s|$)/i.test(link.rel));
+  const rank = (link) => (/apple-touch-icon/i.test(link.rel) ? 1 : 0);
+  const candidates = links.sort((a, b) => rank(a) - rank(b)).map((l) => l.href);
+  candidates.push(new URL('/favicon.ico', location.origin).href);
+  for (const href of candidates) {
+    try {
+      const response = await fetch(href, { credentials: 'include' });
+      if (!response.ok) continue;
+      const blob = await response.blob();
+      const mime = blob.type.startsWith('image/')
+        ? blob.type
+        : /\\.ico(\\?|$)/i.test(href) ? 'image/x-icon' : '';
+      if (!mime || blob.size === 0 || blob.size > MAX_BYTES) continue;
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let binary = '';
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return JSON.stringify({ mime, data: btoa(binary) });
+    } catch (error) {
+      // Unreachable or CORS-blocked candidate: try the next one.
+    }
+  }
+  return null;
+})()
+""".replace("__MAX_BYTES__", str(MAX_FAVICON_BYTES))
+
 
 # --- Extraction result models ---
 # In v4, extract() takes a Pydantic model class as schema and returns
@@ -42,7 +83,7 @@ class ProductStatusExtraction(BaseModel):
 
 
 class ProductInfoExtraction(BaseModel):
-    """Extracted product information (name, category, currency, description)."""
+    """Extracted product information (name, category, currency, description, store)."""
 
     name: str = Field(
         description="Short, descriptive product name (brand, type, specs)"
@@ -56,6 +97,49 @@ class ProductInfoExtraction(BaseModel):
     description: str = Field(
         description="Concise summary of the product's key features and uses"
     )
+    store_name: str = Field(
+        description=(
+            "Name of the online store/retailer selling the product "
+            "(e.g. Amazon, Decathlon, PcComponentes)"
+        )
+    )
+
+
+class FaviconData(BaseModel):
+    """A validated favicon image downloaded from the store page."""
+
+    content: bytes
+    mime: str
+
+
+class ProductInfoResult(BaseModel):
+    """Product information plus the store favicon, if it was fetched."""
+
+    info: ProductInfoExtraction
+    favicon: FaviconData | None = None
+
+
+def parse_favicon_payload(raw: object) -> FaviconData | None:
+    """Validate the JSON string returned by ``FAVICON_SCRIPT``.
+
+    Args:
+        raw (object): The value returned by ``page.evaluate``.
+
+    Returns:
+        FaviconData | None: The favicon if it is a non-empty ``image/*``
+            of at most ``MAX_FAVICON_BYTES``; otherwise None.
+    """
+    if not isinstance(raw, str) or not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+        mime = str(payload["mime"]).split(";")[0].strip().lower()
+        content = base64.b64decode(payload["data"], validate=True)
+    except (ValueError, KeyError, TypeError, binascii.Error):
+        return None
+    if not mime.startswith("image/") or not 0 < len(content) <= MAX_FAVICON_BYTES:
+        return None
+    return FaviconData(content=content, mime=mime)
 
 
 # --- Internal helpers ---
@@ -103,22 +187,47 @@ async def _open_product_page(
         await browser.close()
 
 
+async def _fetch_favicon(page: Page) -> FaviconData | None:
+    """Download the favicon of the page currently loaded.
+
+    Never raises: any failure is logged and results in None, so a missing
+    favicon never breaks the product extraction.
+
+    Args:
+        page (Page): The loaded product page.
+
+    Returns:
+        FaviconData | None: The favicon, or None if none could be fetched.
+    """
+    try:
+        return parse_favicon_payload(await page.evaluate(FAVICON_SCRIPT))
+    except Exception as error:  # noqa: BLE001 - best effort by design
+        print(f"Could not fetch favicon: {error}")
+        return None
+
+
 # --- Public functions ---
 
 
 async def get_product_info(
-    google_api_key: str, url: str, language: str, categories: list[str]
-) -> ProductInfoExtraction:
-    """Fetch the product information from the given URL using Stagehand.
+    google_api_key: str,
+    url: str,
+    language: str,
+    categories: list[str],
+    fetch_favicon: bool = True,
+) -> ProductInfoResult:
+    """Fetch the product information (and store favicon) from the given URL.
 
     Args:
         google_api_key (str): The Google API key for the AI model.
         url (str): The URL of the product page.
         language (str): The language to use for the extraction output.
         categories (list[str]): List of possible product categories to choose from.
+        fetch_favicon (bool): Whether to download the store favicon too
+            (skipped when the store is already known).
 
     Returns:
-        ProductInfoExtraction: The extracted product information.
+        ProductInfoResult: The extracted information and the favicon, if any.
 
     Raises:
         pydantic.ValidationError: If the extracted data doesn't match the schema.
@@ -126,18 +235,20 @@ async def get_product_info(
     async with _open_product_page(google_api_key, url) as (stagehand, page):
         result = await stagehand.extract(
             (
-                f"Extract the product name, category, currency, and description. "
+                f"Extract the product name, category, currency, description and store name. "
                 f"The name should be short and descriptive, including a short sequence of words like: brand, type, specs, etc. "
                 f"For description, provide a concise summary of the product's key features and uses. "
                 f"For categories, select one from the following list, the most accurate: {', '.join(categories)} "
                 f"For currency, extract the currency code (e.g., EUR, USD, GBP) used for the product price. "
+                f"For store name, give the brand name of the online store selling the product (e.g., Amazon, Decathlon, PcComponentes), not the product brand. "
                 f"The product information should be provided in {language} language."
             ),
             ProductInfoExtraction,
             page=page,
         )
-    print(f"Extracted product info: {result.data}")
-    return result.data
+        favicon = await _fetch_favicon(page) if fetch_favicon else None
+    print(f"Extracted product info: {result.data} (favicon: {favicon is not None})")
+    return ProductInfoResult(info=result.data, favicon=favicon)
 
 
 async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtraction:
