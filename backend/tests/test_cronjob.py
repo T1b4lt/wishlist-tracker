@@ -501,3 +501,16 @@ def test_retry_checks_the_least_recently_checked_products_first(session, cron):
     _retry()
 
     assert cron.scraped == [second.url, cron.product_url]
+
+
+def test_main_evaluates_the_daily_report_after_the_run(
+    session, cron, main_calls, monkeypatch
+):
+    async def fake_report(now):
+        main_calls.append("report")
+
+    monkeypatch.setattr(cronjob, "send_daily_report_if_due", fake_report)
+
+    asyncio.run(cronjob.main(now=NOW))
+
+    assert main_calls == ["full", "report"]

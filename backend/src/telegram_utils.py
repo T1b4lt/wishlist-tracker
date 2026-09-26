@@ -331,3 +331,114 @@ if __name__ == "__main__":
     load_dotenv(override=True)
     telegram_bot_token = os.getenv("DSA_TELEGRAM")
     asyncio.run(send_test_message(telegram_bot_token, "5650836295", "english"))
+
+
+# --- Daily check report ---
+# Plain-text messages (no parse_mode), so product counts and times need no
+# MarkdownV2 escaping.
+
+_DAILY_REPORT_TEXTS = {
+    "english": {
+        "done": "✅ Daily check completed: {recorded} of {total} products recorded",
+        "failed": " ({failed} failed)",
+        "done_limit": (
+            "Gemini limit reached at {limit_time} with {pending_at_limit} products "
+            "left; finished by retrying."
+        ),
+        "unchecked": (
+            "⚠️ {pending} of {total} products could not be checked today: the Gemini "
+            "limit was reached at {limit_time} with {pending_at_limit} products left. "
+            "Tomorrow's run will check them first."
+        ),
+    },
+    "spanish": {
+        "done": (
+            "✅ Revisión diaria completada: {recorded} de {total} productos registrados"
+        ),
+        "failed": " ({failed} fallidos)",
+        "done_limit": (
+            "Límite de Gemini alcanzado a las {limit_time} con {pending_at_limit} "
+            "productos pendientes; completada con reintentos."
+        ),
+        "unchecked": (
+            "⚠️ {pending} de {total} productos no se han podido revisar hoy: el límite "
+            "de Gemini se alcanzó a las {limit_time} con {pending_at_limit} productos "
+            "pendientes. Mañana se revisarán primero."
+        ),
+    },
+}
+
+
+def _daily_report_texts(lang: str) -> dict:
+    """Return the report texts for ``lang``, falling back to English."""
+    return _DAILY_REPORT_TEXTS.get(lang.lower(), _DAILY_REPORT_TEXTS["english"])
+
+
+def build_daily_done_message(
+    lang: str,
+    recorded: int,
+    total: int,
+    failed: int,
+    limit_time: str | None,
+    pending_at_limit: int | None,
+) -> str:
+    """Build the "daily check completed" report.
+
+    Args:
+        lang (str): Language code ("english" or "spanish").
+        recorded (int): Products recorded today.
+        total (int): Products when the daily check started.
+        failed (int): Products checked without a record (not pending).
+        limit_time (str | None): Local ``HH:MM`` of the quota error, if any.
+        pending_at_limit (int | None): Products left at that quota error.
+
+    Returns:
+        str: The message text.
+    """
+    texts = _daily_report_texts(lang)
+    message = texts["done"].format(recorded=recorded, total=total)
+    if failed:
+        message += texts["failed"].format(failed=failed)
+    message += "."
+    if limit_time is not None:
+        message += "\n" + texts["done_limit"].format(
+            limit_time=limit_time, pending_at_limit=pending_at_limit
+        )
+    return message
+
+
+def build_daily_unchecked_message(
+    lang: str, pending: int, total: int, limit_time: str, pending_at_limit: int
+) -> str:
+    """Build the end-of-day "products left unchecked" report.
+
+    Args:
+        lang (str): Language code ("english" or "spanish").
+        pending (int): Products still pending at the end of the day.
+        total (int): Products when the daily check started.
+        limit_time (str): Local ``HH:MM`` of the first quota error.
+        pending_at_limit (int): Products left at that quota error.
+
+    Returns:
+        str: The message text.
+    """
+    return _daily_report_texts(lang)["unchecked"].format(
+        pending=pending,
+        total=total,
+        limit_time=limit_time,
+        pending_at_limit=pending_at_limit,
+    )
+
+
+async def send_daily_check_report(bot_token: str, chat_id: str, text: str) -> None:
+    """Send the daily check report as plain text.
+
+    Args:
+        bot_token (str): The Telegram bot token.
+        chat_id (str): The chat ID to send the message to.
+        text (str): The message built by one of the ``build_daily_*`` helpers.
+
+    Raises:
+        TelegramError: If Telegram rejects the message (the caller retries later).
+    """
+    await Bot(token=bot_token).send_message(chat_id=chat_id, text=text)

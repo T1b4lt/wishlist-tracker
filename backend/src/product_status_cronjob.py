@@ -10,6 +10,7 @@ This script should be run every 10 minutes via cron. It will:
 3. On every later run that day, retry today's pending products, stopping
    again at the next quota error, until each one gets its record for the day
 4. Send Telegram alerts if price drops or stock changes are detected (if configured)
+5. Send the Telegram daily check report once per day, per ``daily_check_report``
 
 "Today" and the analysis hour use the process local time, set with the
 ``TZ`` environment variable (the Docker image defaults to UTC).
@@ -24,9 +25,9 @@ from datetime import datetime
 from enum import Enum
 
 from sqlmodel import Session, delete, func, select
-from src.core.config import get_config_value
+from src.core.config import get_config_value, get_daily_check_report
 from src.core.database import engine
-from src.core.local_day import local_day_bounds
+from src.core.local_day import format_local_time, is_end_of_day, local_day_bounds
 from src.models.database_models import (
     DailyCheckRun,
     PendingStatusRetry,
@@ -35,7 +36,13 @@ from src.models.database_models import (
 )
 from src.services import daily_check_service
 from src.stagehand_utils import get_product_status, is_rate_limit_error
-from src.telegram_utils import send_price_drop_alert, send_stock_alert
+from src.telegram_utils import (
+    build_daily_done_message,
+    build_daily_unchecked_message,
+    send_daily_check_report,
+    send_price_drop_alert,
+    send_stock_alert,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -500,6 +507,82 @@ async def retry_rate_limited_products(now: datetime | None = None):
         session.commit()
 
 
+def _build_daily_report(
+    session: Session, run: DailyCheckRun, now: datetime
+) -> str | None:
+    """Return today's report text if it is due, else None.
+
+    "Done" is due once nothing is pending; "left unchecked" only from
+    ``END_OF_DAY`` with products still pending.
+
+    Args:
+        session (Session): Active database session.
+        run (DailyCheckRun): Today's daily check.
+        now (datetime): Naive local time of the run.
+
+    Returns:
+        str | None: The message to send, or None if nothing is due yet.
+    """
+    counts = daily_check_service.count_today(session, now)
+    lang = get_config_value(session, "selected_language", "english")
+    limit_time = (
+        format_local_time(run.limit_reached_at) if run.limit_reached_at else None
+    )
+    if counts.pending == 0:
+        # Nothing is pending, so every product without a record today failed.
+        failed = max(run.total_products - counts.recorded, 0)
+        return build_daily_done_message(
+            lang,
+            counts.recorded,
+            run.total_products,
+            failed,
+            limit_time,
+            run.pending_at_limit,
+        )
+    if is_end_of_day(now) and limit_time is not None:
+        return build_daily_unchecked_message(
+            lang, counts.pending, run.total_products, limit_time, run.pending_at_limit
+        )
+    return None
+
+
+async def send_daily_report_if_due(now: datetime) -> None:
+    """Send today's Telegram daily check report once, when it is due.
+
+    Follows the ``daily_check_report`` setting: ``off`` never sends,
+    ``limit_days`` only on days the Gemini quota ran out, ``every_day``
+    always. ``report_sent`` is set only after a successful send, so a failed
+    send is retried by the next run of the same day.
+
+    Args:
+        now (datetime): Naive local time of the run.
+    """
+    with Session(engine) as session:
+        run = daily_check_service.get_today_run(session, now)
+        if run is None or run.report_sent:
+            return
+        mode = get_daily_check_report(session)
+        if mode == "off" or (mode == "limit_days" and run.limit_reached_at is None):
+            return
+        tg = _load_telegram_settings(session)
+        if not tg["enabled"]:
+            return
+
+        text = _build_daily_report(session, run, now)
+        if text is None:
+            return
+        try:
+            await send_daily_check_report(tg["token"], tg["chat_id"], text)
+        except Exception as e:
+            logger.error(f"Failed to send the daily check report: {str(e)}")
+            return
+
+        run.report_sent = True
+        session.add(run)
+        session.commit()
+        logger.info("Daily check report sent")
+
+
 def _should_start_daily_run(now: datetime) -> bool:
     """Whether this run must start today's full check.
 
@@ -541,6 +624,7 @@ async def main(now: datetime | None = None):
         logger.info("Checking pending rate-limit retries...")
         await retry_rate_limited_products(now=now)
 
+    await send_daily_report_if_due(now)
     logger.info("=== Product Status Tracking Cronjob Completed ===")
 
 

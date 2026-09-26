@@ -606,6 +606,7 @@ crontab -e
 5. At every later run that day (every 10 minutes), it retries only today's pending products (same steps 2–3), stopping again at the next quota error, until all of them have their record:
    - A product leaves the list once it is stored, or if it fails for another reason (e.g. an invalid price or a page that does not load), so it does not keep spending quota.
    - Pending products are dropped when the local day ends; the next analysis-hour run checks everything again.
+6. After each run, sends the **daily check report** on Telegram once per day (setting `daily_check_report`): ✅ as soon as no product is pending (with how many were recorded and how many failed), or ⚠️ on the 23:50 run with the count the Gemini limit left unchecked. `limit_days` only reports days the Gemini limit was reached, `every_day` reports every day, `off` never. A failed send is retried by the next run.
 
 Example: with 10 products and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next run retries those 5, and so on until none are left.
 
