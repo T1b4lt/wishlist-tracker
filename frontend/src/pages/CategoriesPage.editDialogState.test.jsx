@@ -77,7 +77,7 @@ describe('CategoriesPage edit dialog state', () => {
       'Electronics'
     );
 
-    await user.click(screen.getByRole('button', { name: 'Add Category' }));
+    await user.click(screen.getByRole('button', { name: 'Add category' }));
 
     // Only a fresh "Add" resets it.
     expect(screen.getByTestId('open')).toHaveTextContent('true');

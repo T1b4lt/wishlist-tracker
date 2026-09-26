@@ -24,7 +24,7 @@ describe('GeneralSection', () => {
       screen.getByRole('combobox', { name: 'Language' })
     ).toBeInTheDocument();
     expect(
-      screen.getByLabelText('Google AI Studio API Key')
+      screen.getByLabelText('Google AI Studio API key')
     ).toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe('GeneralSection', () => {
       />
     );
 
-    await user.type(screen.getByLabelText('Google AI Studio API Key'), 'x');
+    await user.type(screen.getByLabelText('Google AI Studio API key'), 'x');
 
     expect(onGoogleApiKeyChange).toHaveBeenCalled();
   });

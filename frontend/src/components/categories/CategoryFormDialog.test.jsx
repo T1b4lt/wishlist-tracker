@@ -21,9 +21,9 @@ describe('CategoryFormDialog', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: 'Create New Category' })
+      screen.getByRole('heading', { name: 'Add category' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Category Name' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Category name' })).toHaveValue(
       ''
     );
     expect(getUnexpectedErrors()).toEqual([]);
@@ -40,9 +40,9 @@ describe('CategoryFormDialog', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: 'Edit Category' })
+      screen.getByRole('heading', { name: 'Edit category' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Category Name' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Category name' })).toHaveValue(
       'Kitchen'
     );
     // The live preview tag shows the current name.
@@ -62,7 +62,7 @@ describe('CategoryFormDialog', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Create Category' }));
+    await user.click(screen.getByRole('button', { name: 'Add category' }));
 
     expect(screen.getByText('Enter a category name.')).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
@@ -83,10 +83,10 @@ describe('CategoryFormDialog', () => {
     );
 
     await user.type(
-      screen.getByRole('textbox', { name: 'Category Name' }),
+      screen.getByRole('textbox', { name: 'Category name' }),
       '  Furniture  '
     );
-    await user.click(screen.getByRole('button', { name: 'Create Category' }));
+    await user.click(screen.getByRole('button', { name: 'Add category' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(
@@ -113,14 +113,14 @@ describe('CategoryFormDialog', () => {
     );
 
     await user.type(
-      screen.getByRole('textbox', { name: 'Category Name' }),
+      screen.getByRole('textbox', { name: 'Category name' }),
       'Furniture'
     );
-    await user.click(screen.getByRole('button', { name: 'Create Category' }));
+    await user.click(screen.getByRole('button', { name: 'Add category' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole('textbox', { name: 'Category Name' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Category name' })).toHaveValue(
       'Furniture'
     );
   });

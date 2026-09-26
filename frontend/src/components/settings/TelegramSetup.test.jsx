@@ -109,28 +109,28 @@ describe('TelegramSetup', () => {
     expect(await screen.findByText('Connected')).toBeInTheDocument();
   });
 
-  it('disables "Get Chat ID" when no token is saved yet', () => {
+  it('disables "Get chat ID" when no token is saved yet', () => {
     setConfig({ telegram_status: 'not_configured' });
     renderTelegramSetup();
 
-    expect(screen.getByRole('button', { name: 'Get Chat ID' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Get chat ID' })).toBeDisabled();
     expect(
       screen.getByText('Save your bot token first to continue')
     ).toBeInTheDocument();
   });
 
-  it('disables "Get Chat ID" while the token field has unsaved edits, even if a token was previously saved', () => {
+  it('disables "Get chat ID" while the token field has unsaved edits, even if a token was previously saved', () => {
     setConfig({ telegram_status: 'token_only' });
     renderTelegramSetup({ isTokenDirty: true });
 
-    expect(screen.getByRole('button', { name: 'Get Chat ID' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Get chat ID' })).toBeDisabled();
   });
 
-  it('disables "Test Bot" unless connected, and shows the reason', () => {
+  it('disables "Test bot" unless connected, and shows the reason', () => {
     setConfig({ telegram_status: 'token_only' });
     renderTelegramSetup();
 
-    expect(screen.getByRole('button', { name: 'Test Bot' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Test bot' })).toBeDisabled();
     expect(
       screen.getByText('Finish linking your chat first')
     ).toBeInTheDocument();
@@ -141,9 +141,9 @@ describe('TelegramSetup', () => {
     renderTelegramSetup();
 
     expect(
-      screen.getByRole('button', { name: 'Get Chat ID' })
+      screen.getByRole('button', { name: 'Get chat ID' })
     ).not.toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Test Bot' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Test bot' })).not.toBeDisabled();
   });
 
   it('getting the chat id refreshes the config and toasts success', async () => {
@@ -158,7 +158,7 @@ describe('TelegramSetup', () => {
 
     renderTelegramSetup();
 
-    await user.click(screen.getByRole('button', { name: 'Get Chat ID' }));
+    await user.click(screen.getByRole('button', { name: 'Get chat ID' }));
 
     expect(telegramApi.getChatId).toHaveBeenCalledTimes(1);
     const chatIdInput = await screen.findByDisplayValue('999');
@@ -182,7 +182,7 @@ describe('TelegramSetup', () => {
 
     renderTelegramSetup();
 
-    await user.click(screen.getByRole('button', { name: 'Get Chat ID' }));
+    await user.click(screen.getByRole('button', { name: 'Get chat ID' }));
 
     await vi.waitFor(() => expect(toaster.create).toHaveBeenCalled());
     const call = toaster.create.mock.calls[0][0];
@@ -202,7 +202,7 @@ describe('TelegramSetup', () => {
 
     renderTelegramSetup();
 
-    await user.click(screen.getByRole('button', { name: 'Get Chat ID' }));
+    await user.click(screen.getByRole('button', { name: 'Get chat ID' }));
 
     await vi.waitFor(() =>
       expect(toaster.create).toHaveBeenCalledWith(
@@ -219,7 +219,7 @@ describe('TelegramSetup', () => {
 
     renderTelegramSetup();
 
-    await user.click(screen.getByRole('button', { name: 'Test Bot' }));
+    await user.click(screen.getByRole('button', { name: 'Test bot' }));
 
     expect(telegramApi.sendTestMessage).toHaveBeenCalledTimes(1);
     await vi.waitFor(() =>
@@ -237,7 +237,7 @@ describe('TelegramSetup', () => {
 
     renderTelegramSetup();
 
-    await user.click(screen.getByRole('button', { name: 'Test Bot' }));
+    await user.click(screen.getByRole('button', { name: 'Test bot' }));
 
     await vi.waitFor(() => expect(toaster.create).toHaveBeenCalled());
     const call = toaster.create.mock.calls[0][0];

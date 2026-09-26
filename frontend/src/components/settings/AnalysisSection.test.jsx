@@ -21,7 +21,7 @@ describe('AnalysisSection', () => {
     renderWithProviders(<AnalysisSection {...baseProps} />);
 
     expect(
-      screen.getByRole('combobox', { name: 'Analysis Hour' })
+      screen.getByRole('combobox', { name: 'Analysis hour' })
     ).toHaveTextContent('12:00');
     // The segmented control (>= sm) and the mobile Select (< sm) both
     // render in jsdom (there is no real viewport to hide one of them), each

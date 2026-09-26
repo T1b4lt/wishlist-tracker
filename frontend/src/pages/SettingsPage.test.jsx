@@ -99,7 +99,7 @@ describe('SettingsPage', () => {
     ).not.toBeInTheDocument();
 
     await user.type(
-      screen.getByLabelText('Google AI Studio API Key'),
+      screen.getByLabelText('Google AI Studio API key'),
       'a-new-key'
     );
 
@@ -114,7 +114,7 @@ describe('SettingsPage', () => {
     renderSettingsPage();
 
     const apiKeyInput = await screen.findByLabelText(
-      'Google AI Studio API Key'
+      'Google AI Studio API key'
     );
     await user.type(apiKeyInput, 'a-new-key');
     expect(apiKeyInput).toHaveValue('a-new-key');
@@ -139,7 +139,7 @@ describe('SettingsPage', () => {
     renderSettingsPage();
 
     await user.type(
-      await screen.findByLabelText('Google AI Studio API Key'),
+      await screen.findByLabelText('Google AI Studio API key'),
       'new-key'
     );
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -278,7 +278,7 @@ describe('SettingsPage', () => {
 
     // By placeholder, not label text: the field's label also contains the
     // "Configured" badge while the saved secret is untouched, and the
-    // reveal button's own `aria-label` ("Show Google AI Studio API Key")
+    // reveal button's own `aria-label` ("Show Google AI Studio API key")
     // would otherwise ambiguously match a label-text query too.
     const apiKeyInput = await screen.findByPlaceholderText(
       'Enter your Google AI Studio API key'
@@ -317,7 +317,7 @@ describe('SettingsPage', () => {
 
     // Start an unrelated, unsaved edit.
     const apiKeyInput = await screen.findByLabelText(
-      'Google AI Studio API Key'
+      'Google AI Studio API key'
     );
     await user.type(apiKeyInput, 'in-progress-key');
     expect(
@@ -330,7 +330,7 @@ describe('SettingsPage', () => {
       telegram_status: 'connected',
       telegram_bot_chat_id: '999'
     });
-    await user.click(screen.getByRole('button', { name: 'Get Chat ID' }));
+    await user.click(screen.getByRole('button', { name: 'Get chat ID' }));
 
     // The unrelated edit survives, and the form is still (only) dirty
     // because of it, not because of anything the refresh touched.

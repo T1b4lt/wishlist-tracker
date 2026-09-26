@@ -10,18 +10,18 @@
       "delete": "Delete",
       "edit": "Edit",
       "save": "Save",
-      "generateDetails": "Generate Details",
+      "generateDetails": "Generate details",
       "generating": "Generating...",
-      "getChatId": "Get Chat ID",
-      "testBot": "Test Bot",
+      "getChatId": "Get chat ID",
+      "testBot": "Test bot",
       "gotIt": "Got it",
       "retry": "Retry",
-      "backToDashboard": "Back to Dashboard",
+      "backToWishlist": "Back to wishlist",
       "discard": "Discard"
     },
     "status": {
-      "inStock": "In Stock",
-      "outOfStock": "Out of Stock"
+      "inStock": "In stock",
+      "outOfStock": "Out of stock"
     },
     "priority": {
       "high": "High",
@@ -55,12 +55,12 @@
       "credits": "Developed by {{author}} - <link>Github</link>"
     },
     "categoryFormDialog": {
-      "titleCreate": "Create New Category",
-      "titleEdit": "Edit Category",
+      "titleCreate": "Add category",
+      "titleEdit": "Edit category",
       "descriptionCreate": "Enter a name and choose a color for your new category.",
       "descriptionEdit": "Enter a name and choose a color for your category.",
       "fields": {
-        "name": "Category Name",
+        "name": "Category name",
         "preview": "Preview"
       },
       "placeholderName": "e.g. Electronics",
@@ -69,8 +69,8 @@
         "nameRequired": "Enter a category name."
       },
       "buttons": {
-        "create": "Create Category",
-        "update": "Update Category"
+        "create": "Add category",
+        "update": "Update category"
       }
     },
     "categoryColorPicker": {
@@ -92,7 +92,7 @@
       }
     },
     "deleteProductDialog": {
-      "title": "Delete Product",
+      "title": "Delete product",
       "description": "Are you sure you want to delete <strong>{{name}}</strong>?",
       "warning": "This action cannot be undone. This will permanently delete the product and all its price history."
     },
@@ -134,7 +134,7 @@
         "nameLabel": "Name",
         "namePlaceholder": "e.g. Electronics",
         "nameRequired": "Enter a name.",
-        "submit": "Create category"
+        "submit": "Add category"
       },
       "loadError": {
         "title": "We could not load this product",
@@ -144,7 +144,7 @@
   },
   "pages": {
     "dashboard": {
-      "title": "Your Wishlist",
+      "title": "Your wishlist",
       "subtitle": "Track prices and availability of products you want to buy",
       "addButton": "Add product",
       "summary": {
@@ -155,11 +155,11 @@
       },
       "table": {
         "columns": {
-          "name": "Product Name",
+          "name": "Product name",
           "priority": "Priority",
           "trend": "Trend",
-          "currentPrice": "Current Price",
-          "priceChange": "Price Change ({{days}}D)",
+          "currentPrice": "Current price",
+          "priceChange": "Price change ({{days}}D)",
           "stock": "Stock",
           "actions": "Actions"
         },
@@ -182,9 +182,9 @@
       }
     },
     "categories": {
-      "title": "Manage Categories",
+      "title": "Manage categories",
       "subtitle": "Organize your wishlist items into custom categories.",
-      "addButton": "Add Category",
+      "addButton": "Add category",
       "existingSection": {
         "empty": "No categories yet. Create your first category to get started!"
       },
@@ -193,7 +193,7 @@
       "deleteDisabledTooltip_one": "Used by {{count}} product",
       "deleteDisabledTooltip_other": "Used by {{count}} products",
       "deleteDialog": {
-        "title": "Delete Category",
+        "title": "Delete category",
         "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
       },
       "error": {
@@ -259,32 +259,32 @@
       "fields": {
         "language": "Language",
         "googleApiKey": {
-          "label": "Google AI Studio API Key",
+          "label": "Google AI Studio API key",
           "helper": "Required for extracting product information from URLs. Get your key from <link>Google AI Studio</link>."
         },
         "analysisHour": {
-          "label": "Analysis Hour",
+          "label": "Analysis hour",
           "helper": "The hour of the day (0-23) when the daily analysis will run"
         },
         "historicalWindow": {
-          "label": "Historical Window Size",
+          "label": "Historical window size",
           "helper": "Number of days to use for calculating price change trends"
         },
         "telegramBotToken": {
-          "label": "Telegram Bot Token",
+          "label": "Telegram bot token",
           "helper": "Create a bot with @BotFather on Telegram and paste the token here"
         },
         "telegramChatId": {
-          "label": "Telegram Chat ID"
+          "label": "Telegram chat ID"
         }
       },
       "alerts": {
         "priceDrop": {
-          "title": "Price Drop Alerts",
+          "title": "Price drop alerts",
           "description": "Receive a Telegram message when a tracked product's price drops"
         },
         "stockChange": {
-          "title": "Stock Change Alerts",
+          "title": "Stock change alerts",
           "description": "Receive a Telegram message when a tracked product's stock status changes"
         },
         "reason": {
@@ -299,7 +299,7 @@
         "steps": {
           "one": "1. Open Telegram and search for your bot",
           "two": "2. Send the command <strong>/start</strong> to the bot",
-          "three": "3. Come back here and click \"Get Chat ID\" again"
+          "three": "3. Come back here and click \"Get chat ID\" again"
         }
       },
       "loading": "Loading settings...",
@@ -340,8 +340,7 @@
     },
     "notFound": {
       "title": "Page not found",
-      "message": "This page does not exist or may have been moved.",
-      "action": "Back to wishlist"
+      "message": "This page does not exist or may have been moved."
     }
   },
   "toasts": {

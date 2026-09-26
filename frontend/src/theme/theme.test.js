@@ -129,6 +129,31 @@ describe('theme system', () => {
     );
   });
 
+  it.each(['input', 'textarea'])(
+    "keeps %s disabled text at AA contrast instead of Chakra's default 50%% opacity",
+    (name) => {
+      const recipe = system.getRecipe(name);
+      expect(recipe.base._disabled).toMatchObject({
+        layerStyle: 'none',
+        opacity: 1,
+        color: 'fg.muted',
+        bg: 'bg.muted'
+      });
+    }
+  );
+
+  it('keeps the select trigger and label disabled text at AA contrast', () => {
+    const select = system.getSlotRecipe('select');
+    for (const slot of ['trigger', 'label']) {
+      expect(select.base[slot]._disabled).toMatchObject({
+        layerStyle: 'none',
+        opacity: 1,
+        color: 'fg.muted',
+        bg: 'bg.muted'
+      });
+    }
+  });
+
   it('disables motion when the user prefers reduced motion', () => {
     const globalCss = JSON.stringify(system.getGlobalCss());
     expect(globalCss).toContain('prefers-reduced-motion: reduce');

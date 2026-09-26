@@ -23,7 +23,7 @@ const NotFoundPage = () => {
         description={t('pages.notFound.message')}
         action={
           <Link href="/" asChild>
-            <Button as="a">{t('pages.notFound.action')}</Button>
+            <Button as="a">{t('common.actions.backToWishlist')}</Button>
           </Link>
         }
       />

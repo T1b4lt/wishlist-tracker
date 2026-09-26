@@ -113,7 +113,7 @@ describe('ProductPage delete action', () => {
     );
     await user.click(screen.getByRole('menuitem', { name: /delete/i }));
 
-    expect(await screen.findByText('Delete Product')).toBeInTheDocument();
+    expect(await screen.findByText('Delete product')).toBeInTheDocument();
 
     await user.click(
       screen.getAllByRole('button', { name: 'Delete' }).slice(-1)[0]

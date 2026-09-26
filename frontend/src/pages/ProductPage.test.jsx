@@ -111,7 +111,7 @@ describe('ProductPage', () => {
       await screen.findByRole('heading', { name: 'Mechanical Keyboard' })
     ).toBeInTheDocument();
     expect(screen.getByText('Electronics')).toBeInTheDocument();
-    expect(screen.getByText('In Stock')).toBeInTheDocument();
+    expect(screen.getByText('In stock')).toBeInTheDocument();
     expect(screen.getByText('$95.00')).toBeInTheDocument();
     expect(screen.getByTestId('price-history-chart-stub')).toHaveAttribute(
       'data-has-enough-history',
@@ -178,7 +178,7 @@ describe('ProductPage', () => {
         'This product may have been deleted, or the link is incorrect.'
       )
     ).toBeInTheDocument();
-    const backLink = screen.getByRole('link', { name: 'Back to Dashboard' });
+    const backLink = screen.getByRole('link', { name: 'Back to wishlist' });
     expect(backLink).toHaveAttribute('href', '/');
     // No retry action for a definitively-missing product.
     expect(

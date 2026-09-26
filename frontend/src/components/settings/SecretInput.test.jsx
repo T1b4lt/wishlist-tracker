@@ -8,7 +8,7 @@ describe('SecretInput', () => {
   it('shows a "Configured" badge when the draft matches a saved, non-empty value', () => {
     renderWithProviders(
       <SecretInput
-        label="Google AI Studio API Key"
+        label="Google AI Studio API key"
         value="saved-key"
         savedValue="saved-key"
         onChange={vi.fn()}
@@ -21,7 +21,7 @@ describe('SecretInput', () => {
   it('hides the badge once the value diverges from what is saved', () => {
     renderWithProviders(
       <SecretInput
-        label="Google AI Studio API Key"
+        label="Google AI Studio API key"
         value="saved-key-edited"
         savedValue="saved-key"
         onChange={vi.fn()}
@@ -34,7 +34,7 @@ describe('SecretInput', () => {
   it('hides the badge when there is nothing saved yet, even if the draft is empty', () => {
     renderWithProviders(
       <SecretInput
-        label="Google AI Studio API Key"
+        label="Google AI Studio API key"
         value=""
         savedValue=""
         onChange={vi.fn()}
@@ -48,7 +48,7 @@ describe('SecretInput', () => {
     const user = userEvent.setup();
     renderWithProviders(
       <SecretInput
-        label="Telegram Bot Token"
+        label="Telegram bot token"
         value="123:abc"
         savedValue="123:abc"
         onChange={vi.fn()}
@@ -59,12 +59,12 @@ describe('SecretInput', () => {
     expect(input).toHaveAttribute('type', 'password');
 
     await user.click(
-      screen.getByRole('button', { name: 'Show Telegram Bot Token' })
+      screen.getByRole('button', { name: 'Show Telegram bot token' })
     );
     expect(input).toHaveAttribute('type', 'text');
 
     await user.click(
-      screen.getByRole('button', { name: 'Hide Telegram Bot Token' })
+      screen.getByRole('button', { name: 'Hide Telegram bot token' })
     );
     expect(input).toHaveAttribute('type', 'password');
   });
@@ -74,14 +74,14 @@ describe('SecretInput', () => {
     const onChange = vi.fn();
     renderWithProviders(
       <SecretInput
-        label="Telegram Bot Token"
+        label="Telegram bot token"
         value=""
         savedValue=""
         onChange={onChange}
       />
     );
 
-    await user.type(screen.getByLabelText('Telegram Bot Token'), 'x');
+    await user.type(screen.getByLabelText('Telegram bot token'), 'x');
 
     expect(onChange).toHaveBeenCalled();
   });

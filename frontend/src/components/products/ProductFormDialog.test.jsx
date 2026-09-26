@@ -129,11 +129,11 @@ describe('ProductFormDialog', () => {
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Furniture');
-    await user.click(screen.getByRole('button', { name: 'Create category' }));
+    await user.click(screen.getByRole('button', { name: 'Add category' }));
 
     await waitFor(() =>
       expect(
-        screen.queryByRole('button', { name: 'Create category' })
+        screen.queryByRole('button', { name: 'Add category' })
       ).not.toBeInTheDocument()
     );
     await waitFor(() =>
@@ -190,7 +190,7 @@ describe('ProductFormDialog', () => {
       screen.getByRole('textbox', { name: 'Product URL' }),
       'https://example.com/desk'
     );
-    await user.click(screen.getByRole('button', { name: 'Generate Details' }));
+    await user.click(screen.getByRole('button', { name: 'Generate details' }));
 
     expect(
       await screen.findByDisplayValue('Standing Desk')
@@ -203,15 +203,15 @@ describe('ProductFormDialog', () => {
       'USD · $'
     );
     // A successful extraction clears the error, so the button still reads
-    // "Generate Details", not "Retry" (that label is reserved for a failed
+    // "Generate details", not "Retry" (that label is reserved for a failed
     // attempt; see the next test).
     expect(
-      screen.getByRole('button', { name: 'Generate Details' })
+      screen.getByRole('button', { name: 'Generate details' })
     ).toBeInTheDocument();
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
-  it('shows Retry only after a failed extraction attempt, reverting to Generate Details on the next success', async () => {
+  it('shows Retry only after a failed extraction attempt, reverting to Generate details on the next success', async () => {
     const user = userEvent.setup();
     // Extraction logs its own failure (expected here, already covered by
     // other extraction-error tests): silence it instead of asserting no
@@ -235,7 +235,7 @@ describe('ProductFormDialog', () => {
       screen.getByRole('textbox', { name: 'Product URL' }),
       'https://example.com/desk'
     );
-    await user.click(screen.getByRole('button', { name: 'Generate Details' }));
+    await user.click(screen.getByRole('button', { name: 'Generate details' }));
 
     const retryButton = await screen.findByRole('button', { name: 'Retry' });
     expect(
@@ -247,7 +247,7 @@ describe('ProductFormDialog', () => {
     await user.click(retryButton);
 
     expect(
-      await screen.findByRole('button', { name: 'Generate Details' })
+      await screen.findByRole('button', { name: 'Generate details' })
     ).toBeInTheDocument();
   });
 

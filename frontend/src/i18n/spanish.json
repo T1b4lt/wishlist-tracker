@@ -12,11 +12,11 @@
       "save": "Guardar",
       "generateDetails": "Generar detalles",
       "generating": "Generando...",
-      "getChatId": "Obtener Chat ID",
+      "getChatId": "Obtener chat ID",
       "testBot": "Probar bot",
       "gotIt": "Entendido",
       "retry": "Reintentar",
-      "backToDashboard": "Volver al panel",
+      "backToWishlist": "Volver a la lista de deseos",
       "discard": "Descartar"
     },
     "status": {
@@ -55,7 +55,7 @@
       "credits": "Desarrollado por {{author}} - <link>Github</link>"
     },
     "categoryFormDialog": {
-      "titleCreate": "Crear nueva categoría",
+      "titleCreate": "Añadir categoría",
       "titleEdit": "Editar categoría",
       "descriptionCreate": "Introduce un nombre y elige un color para tu nueva categoría.",
       "descriptionEdit": "Introduce un nombre y elige un color para tu categoría.",
@@ -69,7 +69,7 @@
         "nameRequired": "Introduce un nombre de categoría."
       },
       "buttons": {
-        "create": "Crear categoría",
+        "create": "Añadir categoría",
         "update": "Actualizar categoría"
       }
     },
@@ -134,7 +134,7 @@
         "nameLabel": "Nombre",
         "namePlaceholder": "p. ej. Electrónica",
         "nameRequired": "Introduce un nombre.",
-        "submit": "Crear categoría"
+        "submit": "Añadir categoría"
       },
       "loadError": {
         "title": "No pudimos cargar este producto",
@@ -299,7 +299,7 @@
         "steps": {
           "one": "1. Abre Telegram y busca tu bot",
           "two": "2. Envía el comando <strong>/start</strong> al bot",
-          "three": "3. Vuelve aquí y haz clic en \"Obtener Chat ID\" otra vez"
+          "three": "3. Vuelve aquí y haz clic en \"Obtener chat ID\" otra vez"
         }
       },
       "loading": "Cargando ajustes...",
@@ -340,8 +340,7 @@
     },
     "notFound": {
       "title": "Página no encontrada",
-      "message": "Esta página no existe o puede haberse movido.",
-      "action": "Volver a la lista de deseos"
+      "message": "Esta página no existe o puede haberse movido."
     }
   },
   "toasts": {
@@ -409,15 +408,15 @@
       },
       "botTokenMissing": {
         "title": "Token del bot no configurado",
-        "description": "Guarda primero el token del bot antes de obtener el Chat ID."
+        "description": "Guarda primero el token del bot antes de obtener el chat ID."
       },
       "chatIdSaved": {
         "title": "Chat ID guardado",
-        "description": "Tu Chat ID de Telegram se ha guardado correctamente."
+        "description": "Tu chat ID de Telegram se ha guardado correctamente."
       },
       "chatIdError": {
-        "title": "Error al obtener el Chat ID",
-        "description": "No se pudo recuperar el Chat ID. Inténtalo de nuevo."
+        "title": "Error al obtener el chat ID",
+        "description": "No se pudo recuperar el chat ID. Inténtalo de nuevo."
       },
       "testMessageSuccess": {
         "title": "Mensaje de prueba enviado",

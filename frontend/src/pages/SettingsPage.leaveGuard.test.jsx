@@ -74,7 +74,7 @@ describe('SettingsPage leave guard', () => {
     renderSettingsPage();
 
     await user.type(
-      await screen.findByLabelText('Google AI Studio API Key'),
+      await screen.findByLabelText('Google AI Studio API key'),
       'a-new-key'
     );
     expect(

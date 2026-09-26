@@ -3,8 +3,8 @@ import { LuPackageCheck, LuPackageX } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 
 /**
- * A stock status indicator: an icon plus the translated "In Stock" / "Out of
- * Stock" text, colored from the `stock.*` semantic tokens. Text is always
+ * A stock status indicator: an icon plus the translated "In stock" / "Out of
+ * stock" text, colored from the `stock.*` semantic tokens. Text is always
  * present alongside the icon and the color, so stock status is never read
  * from color alone.
  *

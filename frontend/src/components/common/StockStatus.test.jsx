@@ -4,19 +4,19 @@ import { spyOnConsoleError } from '@/test/consoleErrors';
 import { StockStatus } from './StockStatus';
 
 describe('StockStatus', () => {
-  it('renders "In Stock" text when in stock', () => {
+  it('renders "In stock" text when in stock', () => {
     const getUnexpectedErrors = spyOnConsoleError();
 
     renderWithProviders(<StockStatus inStock={true} />);
 
-    expect(screen.getByText('In Stock')).toBeInTheDocument();
+    expect(screen.getByText('In stock')).toBeInTheDocument();
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
-  it('renders "Out of Stock" text when out of stock', () => {
+  it('renders "Out of stock" text when out of stock', () => {
     renderWithProviders(<StockStatus inStock={false} />);
 
-    expect(screen.getByText('Out of Stock')).toBeInTheDocument();
+    expect(screen.getByText('Out of stock')).toBeInTheDocument();
   });
 
   it('renders a fallback when stock is not tracked', () => {

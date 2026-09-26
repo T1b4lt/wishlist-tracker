@@ -62,7 +62,7 @@ describe('TelegramSetup start-bot dialog', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Get Chat ID' }));
+    await user.click(screen.getByRole('button', { name: 'Get chat ID' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Start your Telegram bot' })

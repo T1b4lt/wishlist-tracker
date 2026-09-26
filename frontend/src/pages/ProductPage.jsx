@@ -204,7 +204,7 @@ const ProductPage = () => {
             <Flex justify="center" mt={2}>
               <Link href="/" asChild>
                 <Button as="a" variant="outline">
-                  {t('common.actions.backToDashboard')}
+                  {t('common.actions.backToWishlist')}
                 </Button>
               </Link>
             </Flex>
@@ -227,7 +227,7 @@ const ProductPage = () => {
             <Flex justify="center" mt={2}>
               <Link href="/" asChild>
                 <Button as="a" variant="outline">
-                  {t('common.actions.backToDashboard')}
+                  {t('common.actions.backToWishlist')}
                 </Button>
               </Link>
             </Flex>
@@ -242,7 +242,7 @@ const ProductPage = () => {
       <PageHeader
         title={product.name}
         titleLineClamp={2}
-        backLink={{ href: '/', label: t('common.actions.backToDashboard') }}
+        backLink={{ href: '/', label: t('common.actions.backToWishlist') }}
         actions={
           <HStack gap={2} wrap="wrap" justify="flex-end">
             <Button variant="outline" asChild>

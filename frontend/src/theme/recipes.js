@@ -32,9 +32,43 @@ export const badgeRecipe = defineRecipe({
   base: { borderRadius: 'full' }
 });
 
+/**
+ * Chakra's default `disabled` layer style (`opacity: 0.5` over the field's
+ * normal `fg`/`bg`) fails WCAG AA on a form field: blending near-black `fg`
+ * at 50% over `bg` measures ~3.74:1 in light mode (~5.05:1 in dark mode),
+ * both below the 4.5:1 text minimum in at least one mode. Used below by
+ * the input/textarea/select recipes instead of that layer style: an
+ * explicit `fg.muted`-on-`bg.muted` pair (already used elsewhere for muted
+ * text on a tinted surface) reaches 6.85:1 in light mode and 6.91:1 in dark
+ * mode, comfortably clearing AA in both, while still reading as "disabled"
+ * via the muted background instead of a blanket opacity.
+ */
+const disabledFieldStyle = {
+  layerStyle: 'none',
+  opacity: 1,
+  cursor: 'not-allowed',
+  bg: 'bg.muted',
+  color: 'fg.muted'
+};
+
+/**
+ * Input: disabled state keeps AA-contrast text (see `disabledFieldStyle`)
+ * instead of Chakra's default 50%-opacity look.
+ */
+export const inputRecipe = defineRecipe({
+  base: { _disabled: disabledFieldStyle }
+});
+
+/** Textarea: same disabled-contrast fix as `inputRecipe`. */
+export const textareaRecipe = defineRecipe({
+  base: { _disabled: disabledFieldStyle }
+});
+
 export const recipes = {
   button: buttonRecipe,
-  badge: badgeRecipe
+  badge: badgeRecipe,
+  input: inputRecipe,
+  textarea: textareaRecipe
 };
 
 /**
@@ -62,7 +96,19 @@ export const tagSlotRecipe = defineSlotRecipe({
   }
 });
 
+/**
+ * Select: same disabled-contrast fix as `inputRecipe`, applied to the
+ * trigger (the visible "field") and its label.
+ */
+export const selectSlotRecipe = defineSlotRecipe({
+  base: {
+    trigger: { _disabled: disabledFieldStyle },
+    label: { _disabled: disabledFieldStyle }
+  }
+});
+
 export const slotRecipes = {
   card: cardSlotRecipe,
-  tag: tagSlotRecipe
+  tag: tagSlotRecipe,
+  select: selectSlotRecipe
 };

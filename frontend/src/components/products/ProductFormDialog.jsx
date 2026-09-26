@@ -621,7 +621,7 @@ export const ProductFormDialog = ({
                         {/* "Retry" only after a failed attempt: a
                             successful extraction clears `extractionError`,
                             so a further click (e.g. after changing the URL)
-                            reads "Generate Details" again, not "Retry". */}
+                            reads "Generate details" again, not "Retry". */}
                         {extractionError
                           ? t('common.actions.retry')
                           : t('common.actions.generateDetails')}
