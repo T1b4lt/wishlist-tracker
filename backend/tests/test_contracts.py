@@ -12,6 +12,7 @@ from src.core.config import (
     HIST_WINDOW_OPTIONS,
 )
 from src.schemas.config import ConfigUpdate
+from src.schemas.daily_check import DailyCheckStatusResponse
 from src.schemas.product import (
     ProductDashboardSummary,
     ProductDetailResponse,
@@ -49,7 +50,12 @@ API_FIELDS = load_contract("api-fields.json")
 
 @pytest.mark.parametrize(
     "schema",
-    [ProductDashboardSummary, ProductDetailResponse, ProductHistResponse],
+    [
+        ProductDashboardSummary,
+        ProductDetailResponse,
+        ProductHistResponse,
+        DailyCheckStatusResponse,
+    ],
     ids=lambda schema: schema.__name__,
 )
 def test_schema_fields_match_contract(schema):

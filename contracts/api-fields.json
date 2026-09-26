@@ -38,5 +38,13 @@
     "store_has_favicon",
     "last_checked_at"
   ],
-  "ProductHistResponse": ["price", "is_in_stock", "timestamp"]
+  "ProductHistResponse": ["price", "is_in_stock", "timestamp"],
+  "DailyCheckStatusResponse": [
+    "day_start",
+    "started_at",
+    "total_products",
+    "limit_reached_at",
+    "pending_at_limit",
+    "pending_now"
+  ]
 }

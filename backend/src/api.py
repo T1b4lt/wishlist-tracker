@@ -12,6 +12,7 @@ from src.core.database import lifespan
 from src.routers import (
     category_router,
     config_router,
+    daily_check_router,
     product_router,
     store_router,
     telegram_router,
@@ -36,6 +37,7 @@ app.add_middleware(
 # --- Register routers ---
 
 app.include_router(config_router.router)
+app.include_router(daily_check_router.router)
 app.include_router(category_router.router)
 app.include_router(product_router.router)
 app.include_router(store_router.router)

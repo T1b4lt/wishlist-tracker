@@ -71,3 +71,20 @@ class PendingStatusRetry(SQLModel, table=True):
         ),
     )
     day_start: int  # Unix timestamp (seconds) of the local day's start
+
+
+class DailyCheckRun(SQLModel, table=True):
+    """Summary of one local day's price check, created by its full run.
+
+    ``limit_reached_at`` / ``pending_at_limit`` are the snapshot of the first
+    Gemini quota error of the day (null when the quota never ran out); they
+    are never overwritten by the retries. ``PendingStatusRetry`` holds the
+    live list of products still pending.
+    """
+
+    day_start: int = Field(primary_key=True)  # Unix seconds, local day start
+    started_at: int  # Unix seconds
+    total_products: int
+    limit_reached_at: int | None = None  # Unix seconds
+    pending_at_limit: int | None = None
+    report_sent: bool = False
