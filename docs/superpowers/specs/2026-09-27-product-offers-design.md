@@ -125,7 +125,7 @@ extraction when it matches the domain), as today.
 | `GET /products/{id}`                    | `ProductDetailResponse` with every offer and its full history.                                                                            |
 | `PATCH /products/{id}`                  | Shared fields only: `name, category_id, priority, description`.                                                                           |
 | `DELETE /products/{id}`                 | Deletes the product, its offers and their history (cascade).                                                                              |
-| `POST /products/{id}/merge`             | Body `{source_product_id, keep: "target" \| "source"}`. Moves every source offer (with history) into the target; if `keep == "source"`, copies the source's shared fields onto the target; deletes the source. Returns the target's detail. 400 when merging a product with itself, 404 for unknown ids, 409 when currencies differ. |
+| `POST /products/{id}/merge`             | Body `{source_product_id, keep: "target" \| "source"}`. Moves every source offer (with history) into the target; if `keep == "source"`, copies the source's shared fields onto the target; deletes the source. Returns the target's detail. 400 when merging a product with itself, 404 for unknown ids, 409 when currencies differ or a source offer URL already exists in the target. |
 
 ### 5.2 Offers (new router `offer_router.py`, service `offer_service.py`)
 
@@ -210,7 +210,8 @@ fields keep their names and now count offers.
   and remove are disabled (with tooltip) on the only offer. Remove asks for
   confirmation (`ConfirmDialog`).
 - **"Add store"** button → `AddOfferDialog`: paste URL → extraction → preview
-  of store, price and currency → confirm. Currency mismatch shows an inline error.
+  of store and currency (extraction returns no price; the first price arrives
+  with the next daily check) → confirm. Currency mismatch shows an inline error.
 - **Chart** (`PriceHistoryChart`): one stepped line per offer, each with its
   own color, and a legend with favicon + store name. Out-of-stock periods are
   drawn as a dashed segment of that store's line instead of full-width bands.
