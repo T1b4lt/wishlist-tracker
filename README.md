@@ -315,8 +315,12 @@ npm install
 # Start the development server
 npm run dev
 
-# Run the test suite
+# Run the unit test suite (Vitest)
 npm test
+
+# Run the end-to-end smoke tests (Playwright, install the browser once)
+npx playwright install chromium
+npm run test:e2e
 ```
 
 The app will be available at `http://localhost:5173`. See [`frontend/README.md`](frontend/README.md) for testing details.
@@ -374,6 +378,7 @@ just dev            # Run API (:8000) and Vite dev server (:5173) together
 just check          # Format (ruff, prettier, eslint --fix) and then lint
 just lint           # Lint and check formatting without modifying files
 just test           # Run the backend (pytest) and frontend (Vitest) test suites
+just test-e2e       # Run the frontend Playwright e2e smoke tests (mocked API)
 just db-reset --populate  # Delete and recreate the database with demo data
 just docker-build   # Build the Docker image (then: just docker-run)
 ```
@@ -382,10 +387,14 @@ just docker-build   # Build the Docker image (then: just docker-run)
 | ------- | ---------------------------------------------------------------------------- |
 | setup   | `setup`, `install`, `install-backend`, `install-frontend`, `hooks`, `update` |
 | quality | `format`, `lint`, `check`, `pre-commit`                                      |
-| test    | `test`, `test-backend`, `test-frontend`                                      |
+| test    | `test`, `test-backend`, `test-frontend`, `test-e2e`                         |
 | dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
 | db      | `db-init`, `db-seed`, `db-clean`, `db-reset`                                 |
 | docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`                   |
+
+> `just test-e2e` needs Chromium installed once: `cd frontend && npx playwright install chromium`.
+> It is not part of the default `just test` (which stays fast, unit-tests-only) since it needs
+> a browser and starts its own throwaway Vite dev server; see [`frontend/README.md`](frontend/README.md#end-to-end-tests-playwright).
 
 > Ruff is pinned as a backend dev dependency to the same version used by the pre-commit hook, so `just lint` and the hooks always agree. Keep both in sync when upgrading.
 

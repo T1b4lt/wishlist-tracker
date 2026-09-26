@@ -37,5 +37,14 @@ export default defineConfig([
     languageOptions: {
       globals: globals.vitest
     }
+  },
+  {
+    files: ['playwright.config.js', 'e2e/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser }
+    },
+    rules: {
+      'react-refresh/only-export-components': 'off'
+    }
   }
 ]);

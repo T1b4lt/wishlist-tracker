@@ -76,7 +76,7 @@ pre-commit:
 # Test
 # ---------------------------------------------------------------------------
 
-# Run the backend and frontend test suites
+# Run the backend and frontend (unit) test suites
 [group('test')]
 test: test-backend test-frontend
 
@@ -89,6 +89,11 @@ test-frontend:
 [group('test')]
 test-backend:
     cd {{ backend }} && uv run pytest
+
+# Run the frontend e2e smoke tests (Playwright, mocked API, no backend needed)
+[group('test')]
+test-e2e:
+    cd {{ frontend }} && npm run test:e2e
 
 # ---------------------------------------------------------------------------
 # Development

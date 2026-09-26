@@ -125,12 +125,20 @@ export const PriceHistoryChart = ({
           <Heading textStyle="heading.sm">
             {t('pages.product.chart.title')}
           </Heading>
-          <SegmentedControl
-            items={rangeItems}
-            value={range}
-            onValueChange={(e) => onRangeChange(e.value)}
-            size="sm"
-          />
+          {/* The 5 range options (30/60/90/180 days + All) don't wrap onto a
+              second line as a group, so their combined natural width can
+              exceed the viewport below `md` (e.g. ~432px at 390px wide):
+              `overflowX="auto"` keeps that overflow local to the control
+              (still fully reachable by scrolling/swiping it) instead of
+              widening the whole page. */}
+          <Box maxW="100%" overflowX="auto">
+            <SegmentedControl
+              items={rangeItems}
+              value={range}
+              onValueChange={(e) => onRangeChange(e.value)}
+              size="sm"
+            />
+          </Box>
         </Flex>
 
         {hasEnoughHistory ? (

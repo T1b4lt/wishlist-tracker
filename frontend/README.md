@@ -16,6 +16,7 @@ npm run build           # production build (outputs to dist/)
 npm run preview         # preview a production build locally
 npm test                # run the Vitest suite once
 npm run test:watch      # re-run on file changes
+npm run test:e2e        # run the Playwright e2e suite (see Testing below)
 npm run lint             # eslint . (--max-warnings=0 in CI/pre-commit)
 npm run format           # prettier --write .
 npm run format:check    # prettier --check .
@@ -24,6 +25,7 @@ npm run format:check    # prettier --check .
 ## Structure
 
 ```
+e2e/            Playwright end-to-end smoke tests (fixtures/, support/)
 src/
   components/   Reusable UI, grouped by feature (see "Components" below)
   hooks/        Shared hooks (useDocumentTitle, useUnsavedChangesGuard)
@@ -108,6 +110,31 @@ Shared test infrastructure lives in `src/test/`:
 - `src/test/setup.js`: global test setup (jest-dom matchers, jsdom polyfills).
 - `src/test/renderWithProviders.jsx`: renders a component wrapped in the
   Chakra UI provider and the i18n instance, for component tests.
+
+### End-to-end tests (Playwright)
+
+Smoke tests under `e2e/` drive the real app in Chromium against a Vite dev
+server, with every backend call mocked via `page.route` (`e2e/support/apiMock.js`)
+against fixtures in `e2e/fixtures/`: no backend process is started, and any
+API call the fixtures don't cover fails loudly (a `500` plus a `console.error`
+in the test output) instead of silently falling through. `playwright.config.js`
+starts its own dev server on a dedicated port, pins `timezoneId`/`locale` to
+`UTC`/`en-US` for stable date assertions, and runs two projects: `desktop`
+(1440x900) and `mobile` (390x844, touch-enabled). Motion is reduced by
+default for stability; `e2e/navigation.spec.js` opts back into real motion to
+smoke-test the route-change page transition.
+
+```bash
+npx playwright install chromium  # once, to download the browser
+npm run test:e2e                 # run the whole e2e suite (both projects)
+npx playwright test dashboard.spec.js --project=desktop  # a single file/project
+npx playwright show-report       # open the HTML report from the last run
+```
+
+Vitest ignores `e2e/**` (`vite.config.js`'s `test.exclude`), and ESLint gives
+that directory Node + browser globals (`playwright.config.js` runs in Node;
+`page.evaluate`/`page.route` callbacks run in the browser or read the
+request), since it is otherwise treated like the rest of the source tree.
 
 ## State
 
