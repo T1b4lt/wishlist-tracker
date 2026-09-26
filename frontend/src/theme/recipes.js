@@ -126,10 +126,19 @@ export const cardSlotRecipe = defineSlotRecipe({
   defaultVariants: { variant: 'outline' }
 });
 
-/** Tag: pill shaped. */
+/**
+ * Tag: pill shaped. The start element is a fixed-size box meant for icons
+ * that fill it; center its content so smaller elements (e.g. the category
+ * color dot) sit in the middle instead of the top-left corner.
+ */
 export const tagSlotRecipe = defineSlotRecipe({
   base: {
-    root: { borderRadius: 'full' }
+    root: { borderRadius: 'full' },
+    startElement: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
   }
 });
 

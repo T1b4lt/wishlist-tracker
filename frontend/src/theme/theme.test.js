@@ -129,6 +129,18 @@ describe('theme system', () => {
     );
   });
 
+  it('centers content in the tag start element (e.g. the category color dot)', () => {
+    const tag = system.getSlotRecipe('tag');
+    expect(tag.base.root).toMatchObject({ borderRadius: 'full' });
+    // Chakra sizes the start element as a fixed box for icons that fill it;
+    // smaller content must be centered rather than pinned top-left.
+    expect(tag.base.startElement).toMatchObject({
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    });
+  });
+
   it.each(['input', 'textarea'])(
     "keeps %s disabled text at AA contrast instead of Chakra's default 50%% opacity",
     (name) => {
