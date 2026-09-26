@@ -8,7 +8,7 @@ API route handlers (price change calculation, min price, etc.).
 from fastapi import HTTPException
 from sqlmodel import Session, select
 from src.core.config import get_config_value
-from src.models.database_models import Category, Product, ProductHist
+from src.models.database_models import Category, Product, ProductHist, Store
 from src.schemas.product import (
     ProductCreate,
     ProductDashboardSummary,
@@ -18,7 +18,57 @@ from src.schemas.product import (
     ProductInfoResponse,
     ProductUpdate,
 )
+from src.services import store_service
 from src.stagehand_utils import get_product_info
+
+# --- Store resolution ---
+
+
+def _resolve_store(session: Session, url: str, store_id: int | None = None) -> Store:
+    """Return the store a product URL belongs to.
+
+    ``store_id`` is reused only when it exists and matches the URL's
+    domain; otherwise the store is looked up (or created) from the URL,
+    which is always the source of truth.
+
+    Args:
+        session (Session): Active database session.
+        url (str): The product URL.
+        store_id (int | None): A candidate store (e.g. from extraction).
+
+    Returns:
+        Store: The product's store.
+
+    Raises:
+        HTTPException: 422 if the URL has no hostname.
+    """
+    domain = store_service.normalize_domain(url)
+    if store_id is not None:
+        store = session.get(Store, store_id)
+        if store and store.domain == domain:
+            return store
+    return store_service.get_or_create(session, url)
+
+
+def _store_fields(session: Session, store_id: int | None) -> dict:
+    """Return the store fields shared by the summary and detail responses.
+
+    Args:
+        session (Session): Active database session.
+        store_id (int | None): The product's store id.
+
+    Returns:
+        dict: ``store_id``, ``store_name``, ``store_domain`` and
+            ``store_has_favicon`` (empty values when there is no store).
+    """
+    store = session.get(Store, store_id) if store_id is not None else None
+    return {
+        "store_id": store.id if store else None,
+        "store_name": store.name if store else None,
+        "store_domain": store.domain if store else None,
+        "store_has_favicon": bool(store and store.favicon),
+    }
+
 
 # --- CRUD operations ---
 
@@ -32,8 +82,12 @@ def create(session: Session, payload: ProductCreate) -> Product:
 
     Returns:
         Product: The newly created product.
+
+    Raises:
+        HTTPException: 422 if the URL has no hostname.
     """
-    product = Product.model_validate(payload)
+    store = _resolve_store(session, payload.url, payload.store_id)
+    product = Product.model_validate(payload, update={"store_id": store.id})
     session.add(product)
     session.commit()
     session.refresh(product)
@@ -64,13 +118,19 @@ def update(session: Session, product_id: int, payload: ProductUpdate) -> Product
         Product: The updated product.
 
     Raises:
-        HTTPException: 404 if the product does not exist.
+        HTTPException: 404 if the product does not exist, 422 if a new
+            URL has no hostname.
     """
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     product_data = payload.model_dump(exclude_unset=True)
+    if product_data.get("url") is not None:
+        # Keeps the current store when the domain is unchanged.
+        product_data["store_id"] = _resolve_store(
+            session, product_data["url"], product.store_id
+        ).id
     product.sqlmodel_update(product_data)
     session.add(product)
     session.commit()
@@ -226,6 +286,7 @@ def get_dashboard_summary(session: Session) -> list[ProductDashboardSummary]:
                 price_change_60d=price_change_60d,
                 is_in_stock=is_in_stock,
                 currency=product.currency,
+                **_store_fields(session, product.store_id),
                 recent_prices=recent_prices,
                 last_checked_at=last_checked_at,
             )
@@ -303,6 +364,7 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
         is_in_stock=is_in_stock,
         price_history=price_history,
         currency=product.currency,
+        **_store_fields(session, product.store_id),
         last_checked_at=last_checked_at,
     )
 

@@ -12,6 +12,7 @@ class ProductCreate(BaseModel):
     category_id: int
     description: str
     currency: str
+    store_id: int | None = None
 
 
 class ProductUpdate(BaseModel):
@@ -58,6 +59,10 @@ class ProductDashboardSummary(BaseModel):
     price_change_60d: float | None
     is_in_stock: bool | None
     currency: str
+    store_id: int | None
+    store_name: str | None
+    store_domain: str | None
+    store_has_favicon: bool
     recent_prices: list[float]
     last_checked_at: int | None
 
@@ -86,4 +91,8 @@ class ProductDetailResponse(BaseModel):
     is_in_stock: bool | None
     price_history: list[ProductHistResponse]
     currency: str
+    store_id: int | None
+    store_name: str | None
+    store_domain: str | None
+    store_has_favicon: bool
     last_checked_at: int | None
