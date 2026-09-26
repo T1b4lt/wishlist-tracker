@@ -124,7 +124,7 @@ export const ProductFilterPanel = ({ filters, options, onChange }) => {
             value={filters.minPrice}
             onChange={(minPrice) => onChange({ minPrice })}
           />
-          <Text color="fg.muted">–</Text>
+          <Text color="fg.muted">-</Text>
           <PriceInput
             label={t('pages.dashboard.filters.price.max')}
             value={filters.maxPrice}

@@ -216,7 +216,7 @@ describe('ProductFilterBar', () => {
         'Audio',
         'Low',
         'In stock',
-        '10 – 50',
+        '10 to 50',
         'Price dropped'
       ]) {
         expect(

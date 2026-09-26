@@ -187,7 +187,7 @@
         "clearSearch": "Clear search",
         "sortLabel": "Sort by",
         "sort": {
-          "name_asc": "Name (A–Z)",
+          "name_asc": "Name (A-Z)",
           "price_asc": "Price: low to high",
           "price_desc": "Price: high to low",
           "change_asc": "Biggest price drops",
@@ -209,7 +209,7 @@
           "max": "Max",
           "atLeast": "≥ {{value}}",
           "atMost": "≤ {{value}}",
-          "range": "{{min}} – {{max}}"
+          "range": "{{min}} to {{max}}"
         },
         "deals": {
           "label": "Deals",

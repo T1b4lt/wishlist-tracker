@@ -187,7 +187,7 @@
         "clearSearch": "Borrar búsqueda",
         "sortLabel": "Ordenar por",
         "sort": {
-          "name_asc": "Nombre (A–Z)",
+          "name_asc": "Nombre (A-Z)",
           "price_asc": "Precio: de menor a mayor",
           "price_desc": "Precio: de mayor a menor",
           "change_asc": "Mayores bajadas de precio",
@@ -209,7 +209,7 @@
           "max": "Máx.",
           "atLeast": "≥ {{value}}",
           "atMost": "≤ {{value}}",
-          "range": "{{min}} – {{max}}"
+          "range": "{{min}} a {{max}}"
         },
         "deals": {
           "label": "Ofertas",

@@ -6,13 +6,16 @@ import { ProductFormDialog } from '@/components/products';
 import { EmptyState, ErrorState, ConfirmDialog } from '@/components/common';
 import {
   DashboardSummary,
+  ProductFilterBar,
   ProductTable,
   ProductCardList
 } from '@/components/dashboard';
-import { LuPackagePlus, LuPlus } from 'react-icons/lu';
+import { LuPackagePlus, LuPlus, LuSearchX } from 'react-icons/lu';
 import { getLocale } from '@/lib/format';
+import { applyProductFilters, getFilterOptions } from '@/lib/productFilters';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { toaster } from '@/components/ui/toaster';
 import { useConfigStore } from '@/stores/configStore';
 import { useProductsStore } from '@/stores/productsStore';
@@ -46,6 +49,17 @@ const DashboardPage = () => {
   const status = useProductsStore((state) => state.status);
   const fetchSummary = useProductsStore((state) => state.fetchSummary);
   const removeProduct = useProductsStore((state) => state.remove);
+
+  // Search, filters and sort live in the URL (see `useDashboardFilters`);
+  // the summary strip keeps showing every product, only the list is
+  // narrowed down.
+  const { filters, setFilters, resetFilters } = useDashboardFilters();
+  const filterOptions = useMemo(() => getFilterOptions(products), [products]);
+  const visibleProducts = useMemo(
+    () => applyProductFilters(products, filters),
+    [products, filters]
+  );
+  const hasNoMatches = products.length > 0 && visibleProducts.length === 0;
 
   useEffect(() => {
     fetchConfig();
@@ -154,21 +168,47 @@ const DashboardPage = () => {
       ) : (
         <>
           <DashboardSummary products={products} locale={locale} />
-          <ProductTable
-            products={products}
-            isLoading={isLoading}
-            locale={locale}
-            histWindowSize={histWindowSize}
-            onEdit={handleEditProduct}
-            onDelete={handleDeleteRequest}
-          />
-          <ProductCardList
-            products={products}
-            isLoading={isLoading}
-            locale={locale}
-            onEdit={handleEditProduct}
-            onDelete={handleDeleteRequest}
-          />
+          {!isLoading && (
+            <ProductFilterBar
+              filters={filters}
+              options={filterOptions}
+              shownCount={visibleProducts.length}
+              totalCount={products.length}
+              locale={locale}
+              onChange={setFilters}
+              onReset={resetFilters}
+            />
+          )}
+          {hasNoMatches ? (
+            <EmptyState
+              icon={LuSearchX}
+              title={t('pages.dashboard.filters.noResults.title')}
+              description={t('pages.dashboard.filters.noResults.subtitle')}
+              action={
+                <Button variant="outline" onClick={resetFilters}>
+                  {t('pages.dashboard.filters.noResults.action')}
+                </Button>
+              }
+            />
+          ) : (
+            <>
+              <ProductTable
+                products={visibleProducts}
+                isLoading={isLoading}
+                locale={locale}
+                histWindowSize={histWindowSize}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteRequest}
+              />
+              <ProductCardList
+                products={visibleProducts}
+                isLoading={isLoading}
+                locale={locale}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteRequest}
+              />
+            </>
+          )}
         </>
       )}
 

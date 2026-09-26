@@ -48,6 +48,7 @@ vi.mock('@/components/products', () => ({
 // `onEdit` directly, without going through a Chakra `Menu`.
 vi.mock('@/components/dashboard', () => ({
   DashboardSummary: () => null,
+  ProductFilterBar: () => null,
   ProductTable: ({ products, onEdit }) => (
     <button type="button" onClick={() => onEdit(products[0], null)}>
       Edit first product
