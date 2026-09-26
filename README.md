@@ -43,10 +43,10 @@ Key highlights:
 | **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                                                                                                                                                     |
 | **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini.                                                                                                                                                                              |
 | **Store Detection**        | Each product records its store (AI-extracted name + favicon downloaded from the page), shown on the dashboard and detail page, so the same item tracked in several stores is easy to tell apart.                                                                                                                           |
-| **Price Tracking**         | Historical price records stored daily, with configurable tracking window (30–180 days).                                                                                                                                                                                                                                    |
-| **Interactive Dashboard**  | Overview of all products with current price, price change trend (%), stock status, and category indicators.                                                                                                                                                                                                                |
+| **Price Tracking**         | One price check per product per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                      |
+| **Interactive Dashboard**  | Overview of all products with current price, price change vs. the window's average (%), sparkline, stock status, and category indicators.                                                                                                                                                                                  |
 | **Search & Filters**       | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops and lowest price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading. |
-| **Product Detail View**    | Detailed product page with full price history chart (Recharts), minimum price in window, and stock timeline.                                                                                                                                                                                                               |
+| **Product Detail View**    | Detailed product page with a stepped price history chart (Recharts), lowest and average price in the selected range, and out-of-stock bands.                                                                                                                                                                               |
 | **Category System**        | User-defined categories with custom colors for visual organization.                                                                                                                                                                                                                                                        |
 | **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                                                                                                                                                                                                            |
 | **Configurable Settings**  | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                                                                                                                                                                                                              |
@@ -99,6 +99,7 @@ wishlist-tracker/
 ├── .dockerignore                     # Files excluded from the Docker build context
 ├── entrypoint.sh                     # Container entrypoint (DB init, cron, API, Nginx)
 ├── nginx.conf                        # Nginx config (serves frontend, proxies /api)
+├── contracts/                        # Shared frontend/backend test contracts (formulas, window options, API fields)
 ├── .gitignore
 │
 ├── backend/                          # Python backend (FastAPI)
@@ -123,6 +124,7 @@ wishlist-tracker/
 │       ├── services/                 # Business logic layer
 │       │   ├── config_service.py     # Configuration read/update logic
 │       │   ├── category_service.py   # Category CRUD operations
+│       │   ├── price_stats.py        # Pure price statistics (window, average, change, lowest)
 │       │   ├── product_service.py    # Product CRUD, dashboard, detail & AI extraction
 │       │   ├── store_service.py      # Store lookup/creation by domain & favicon access
 │       │   └── telegram_service.py   # Telegram chat ID & test message orchestration
@@ -228,16 +230,31 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 5 tables:
 
 **Config keys** stored in the `Config` table:
 
-| Key                     | Default   | Description                                                       |
-| ----------------------- | --------- | ----------------------------------------------------------------- |
-| `analysis_hour`         | `12`      | Hour of the day (0–23) when the cronjob runs price analysis       |
-| `hist_window_size`      | `60`      | Number of historical records used for trend calculations (30–180) |
-| `is_price_drop_alert`   | `false`   | Enable Telegram alerts on price drops                             |
-| `is_stock_change_alert` | `false`   | Enable Telegram alerts on stock changes                           |
-| `telegram_bot_token`    | `""`      | Telegram Bot API token                                            |
-| `telegram_bot_chat_id`  | `""`      | Telegram chat ID for notifications                                |
-| `selected_language`     | `english` | UI language (`english` / `spanish`)                               |
-| `google_api_key`        | `""`      | Google API key for Gemini (used by Stagehand)                     |
+| Key                     | Default   | Description                                                                           |
+| ----------------------- | --------- | ------------------------------------------------------------------------------------- |
+| `analysis_hour`         | `12`      | Hour of the day (0–23) when the cronjob runs price analysis                           |
+| `hist_window_size`      | `60`      | Days of history used for price trends, averages and lowest prices (30, 60, 90 or 180) |
+| `is_price_drop_alert`   | `false`   | Enable Telegram alerts on price drops                                                 |
+| `is_stock_change_alert` | `false`   | Enable Telegram alerts on stock changes                                               |
+| `telegram_bot_token`    | `""`      | Telegram Bot API token                                                                |
+| `telegram_bot_chat_id`  | `""`      | Telegram chat ID for notifications                                                    |
+| `selected_language`     | `english` | UI language (`english` / `spanish`)                                                   |
+| `google_api_key`        | `""`      | Google API key for Gemini (used by Stagehand)                                         |
+
+**How price statistics are computed** (dashboard and product detail):
+
+- The window covers the last *N* calendar days (`hist_window_size` on the
+  dashboard, the selected range on the detail page).
+- Only in-stock checks count for averages, lowest prices, price changes,
+  "at lowest" and price-drop alerts; out-of-stock checks are still drawn on
+  the charts.
+- The price change compares the current price with the average of the
+  previous in-stock checks in the window.
+- The daily job stores at most one check per product per day and discards
+  invalid prices (zero, negative or not a number).
+
+The same rules are implemented in the backend and the frontend and pinned
+by the shared fixtures in [`contracts/`](contracts/README.md).
 
 ---
 
@@ -268,7 +285,7 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 | -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `POST`   | `/products/`                  | Create a new product                                                                                                                                   |
 | `GET`    | `/products/`                  | List all products                                                                                                                                      |
-| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view (`url`, current price, change, stock, `recent_prices` for the sparkline, `last_checked_at`, store fields) |
+| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view (`url`, current price, `price_change_pct`, stock, `is_at_lowest`, `recent_prices` for the sparkline, `last_checked_at`, store fields) |
 | `GET`    | `/products/{id}`              | Get full product detail with price history, `last_checked_at` and store fields                                                                         |
 | `PATCH`  | `/products/{id}`              | Update a product (name, URL, priority, category, description, currency)                                                                                |
 | `DELETE` | `/products/{id}`              | Delete a product (cascades to price history)                                                                                                           |
@@ -370,6 +387,7 @@ docker build -t wishlist-tracker:latest .
 # Run the container (exposes the app on port 7755 and persists the database)
 docker run -d \
   -p 7755:7755 \
+  -e TZ=Europe/Madrid \
   -v wishlist-tracker-db:/app/backend/db \
   --restart unless-stopped \
   --name wishlist-tracker-app \
@@ -385,6 +403,7 @@ Inside the container:
 - **Cron** runs the price tracking job every hour; its output appears in `docker logs wishlist-tracker-app`.
 - The **SQLite database** lives in `/app/backend/db`. It is created on first start and reused afterwards, so mount a volume there (as above) to keep your data across container upgrades.
 - If the API or Nginx process dies, the container exits so Docker can restart it.
+- **`TZ`** (default `UTC`) sets the local time used for the analysis hour and for "one check per product per day"; set it to your own time zone. `just docker-run` forwards your shell's `TZ`.
 
 ### 5. Environment Variables
 
@@ -485,7 +504,7 @@ All application settings can be managed through the **Settings** page (`/setting
 | ----------------------- | ------------------------------------------------------------------------ |
 | **Google API Key**      | Required for AI-powered product extraction (Gemini).                     |
 | **Analysis Hour**       | Hour of the day (0–23) when the cronjob should run.                      |
-| **History Window**      | Number of days used for price trend calculations (30–180).               |
+| **History Window**      | Days used for price trends, averages and lowest prices (30, 60, 90 or 180). |
 | **Language**            | Switch between English and Spanish.                                      |
 | **Telegram Bot Token**  | Your Telegram Bot API token (from [@BotFather](https://t.me/BotFather)). |
 | **Telegram Chat ID**    | Auto-detected when you send a message to the bot.                        |
@@ -515,9 +534,9 @@ All application settings can be managed through the **Settings** page (`/setting
 ### Monitoring Prices
 
 - The **Dashboard** shows all products with:
-  - Current price, price trend (% change vs. historical average), and stock status.
+  - Current price, price trend (% change vs. the average of the previous in-stock checks in the window), and stock status.
 - Click on any product to see its **detail page** with a full price history chart.
-- The trend is calculated using the configurable history window size.
+- The trend is calculated over the configurable history window (in days); see "How price statistics are computed" below the config keys.
 
 ### Searching and Filtering
 
