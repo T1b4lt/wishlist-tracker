@@ -28,13 +28,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     cron \
     chromium \
+    tzdata \
     && rm -f /etc/nginx/sites-enabled/default \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv to install the backend dependencies from the lockfile
 COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
 
-ENV CHROME_PATH=/usr/bin/chromium \
+# TZ sets the local time used for the analysis hour and "one record per day"
+# (override with -e TZ=Europe/Madrid).
+ENV TZ=UTC \
+    CHROME_PATH=/usr/bin/chromium \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \

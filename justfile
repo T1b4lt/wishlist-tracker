@@ -9,6 +9,7 @@ db_path := "backend/db/database.db"
 image := "wishlist-tracker:latest"
 container := "wishlist-tracker-app"
 port := "7755"
+tz := env("TZ", "UTC")
 
 # List all available recipes
 default:
@@ -175,6 +176,7 @@ docker-build:
 docker-run:
     docker run -d \
       -p {{ port }}:7755 \
+      -e TZ={{ tz }} \
       -v wishlist-tracker-db:/app/backend/db \
       --restart unless-stopped \
       --name {{ container }} \
