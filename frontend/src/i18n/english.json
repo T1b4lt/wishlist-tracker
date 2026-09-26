@@ -180,6 +180,54 @@
       "aria": {
         "rowActions": "Actions for {{name}}",
         "openProduct": "Open {{name}}"
+      },
+      "filters": {
+        "searchPlaceholder": "Search by product or store…",
+        "searchLabel": "Search products",
+        "clearSearch": "Clear search",
+        "sortLabel": "Sort by",
+        "sort": {
+          "name_asc": "Name (A–Z)",
+          "price_asc": "Price: low to high",
+          "price_desc": "Price: high to low",
+          "change_asc": "Biggest price drops",
+          "priority_desc": "Priority",
+          "stock": "Availability",
+          "checked_desc": "Recently checked"
+        },
+        "button": "Filters",
+        "panelTitle": "Filter products",
+        "stock": {
+          "label": "Stock",
+          "all": "All",
+          "in": "In stock",
+          "out": "Out of stock"
+        },
+        "price": {
+          "label": "Current price",
+          "min": "Min",
+          "max": "Max",
+          "atLeast": "≥ {{value}}",
+          "atMost": "≤ {{value}}",
+          "range": "{{min}} – {{max}}"
+        },
+        "deals": {
+          "label": "Deals",
+          "priceDrop": "Price dropped",
+          "atLowest": "At lowest price"
+        },
+        "stores": "Store",
+        "categories": "Category",
+        "priority": "Priority",
+        "removeFilter": "Remove filter: {{label}}",
+        "clearAll": "Clear all",
+        "resultCount_one": "Showing {{shown}} of {{count}} product",
+        "resultCount_other": "Showing {{shown}} of {{count}} products",
+        "noResults": {
+          "title": "No products match your search",
+          "subtitle": "Try a different search or clear the filters.",
+          "action": "Clear filters"
+        }
       }
     },
     "categories": {

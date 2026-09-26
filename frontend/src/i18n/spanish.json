@@ -180,6 +180,54 @@
       "aria": {
         "rowActions": "Acciones para {{name}}",
         "openProduct": "Abrir {{name}}"
+      },
+      "filters": {
+        "searchPlaceholder": "Buscar por producto o tienda…",
+        "searchLabel": "Buscar productos",
+        "clearSearch": "Borrar búsqueda",
+        "sortLabel": "Ordenar por",
+        "sort": {
+          "name_asc": "Nombre (A–Z)",
+          "price_asc": "Precio: de menor a mayor",
+          "price_desc": "Precio: de mayor a menor",
+          "change_asc": "Mayores bajadas de precio",
+          "priority_desc": "Prioridad",
+          "stock": "Disponibilidad",
+          "checked_desc": "Comprobados recientemente"
+        },
+        "button": "Filtros",
+        "panelTitle": "Filtrar productos",
+        "stock": {
+          "label": "Stock",
+          "all": "Todos",
+          "in": "En stock",
+          "out": "Sin stock"
+        },
+        "price": {
+          "label": "Precio actual",
+          "min": "Mín.",
+          "max": "Máx.",
+          "atLeast": "≥ {{value}}",
+          "atMost": "≤ {{value}}",
+          "range": "{{min}} – {{max}}"
+        },
+        "deals": {
+          "label": "Ofertas",
+          "priceDrop": "Ha bajado de precio",
+          "atLowest": "En su precio mínimo"
+        },
+        "stores": "Tienda",
+        "categories": "Categoría",
+        "priority": "Prioridad",
+        "removeFilter": "Quitar filtro: {{label}}",
+        "clearAll": "Limpiar todo",
+        "resultCount_one": "Mostrando {{shown}} de {{count}} producto",
+        "resultCount_other": "Mostrando {{shown}} de {{count}} productos",
+        "noResults": {
+          "title": "Ningún producto coincide con tu búsqueda",
+          "subtitle": "Prueba con otra búsqueda o limpia los filtros.",
+          "action": "Limpiar filtros"
+        }
       }
     },
     "categories": {
