@@ -86,4 +86,31 @@ describe('DashboardSummary', () => {
 
     expect(screen.queryByText('Total value')).not.toBeInTheDocument();
   });
+
+  it('shows how many products have an outdated price', () => {
+    const now = Math.floor(Date.now() / 1000);
+    renderWithProviders(
+      <DashboardSummary
+        products={[
+          product({ last_checked_at: now - 4 * 86400 }),
+          product({ last_checked_at: now })
+        ]}
+        locale="en-US"
+      />
+    );
+
+    expect(screen.getByText('Outdated')).toBeInTheDocument();
+    expect(screen.getByTestId('summary-stale-count')).toHaveTextContent('1');
+  });
+
+  it('hides the outdated stat when every price is up to date', () => {
+    renderWithProviders(
+      <DashboardSummary
+        products={[product({ last_checked_at: Math.floor(Date.now() / 1000) })]}
+        locale="en-US"
+      />
+    );
+
+    expect(screen.queryByText('Outdated')).not.toBeInTheDocument();
+  });
 });

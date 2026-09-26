@@ -152,6 +152,33 @@ describe('ProductPage', () => {
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
+  it('warns that the price has not been updated for days, with a link to the store page', async () => {
+    const now = Date.now() / 1000;
+    productsApi.get.mockResolvedValue(
+      buildProduct({ last_checked_at: now - 4 * DAY - 60 })
+    );
+
+    renderProductPage();
+
+    expect(
+      await screen.findByText('Price not updated for 4 days')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Check the store page/ })
+    ).toHaveAttribute('href', 'https://example.com/keyboard');
+  });
+
+  it('shows no outdated-price warning for a recently checked product', async () => {
+    productsApi.get.mockResolvedValue(buildProduct());
+
+    renderProductPage();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Mechanical Keyboard' })
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Price not updated/)).not.toBeInTheDocument();
+  });
+
   it('treats a range with fewer than 2 filtered points as "not enough history", even with plenty of lifetime history outside that range', async () => {
     productsApi.get.mockResolvedValue(
       buildProduct({

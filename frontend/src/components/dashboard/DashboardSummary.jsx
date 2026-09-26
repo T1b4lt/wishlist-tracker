@@ -28,7 +28,9 @@ const Stat = ({ label, children }) => (
 /**
  * The dashboard's summary strip: plain stats (no per-stat card) computed
  * from the dashboard-summary product list. Each stat hides itself when it
- * cannot be computed (see `computeDashboardSummary`); renders nothing at
+ * cannot be computed (see `computeDashboardSummary`), and the "outdated"
+ * count (products whose price has not been updated for a while) only shows
+ * when it is not zero; renders nothing at
  * all for an empty product list (the page shows `EmptyState` instead).
  *
  * @param {object} props
@@ -37,8 +39,13 @@ const Stat = ({ label, children }) => (
  */
 export const DashboardSummary = ({ products, locale }) => {
   const { t } = useTranslation();
-  const { itemCount, totalsByCurrency, priceDropCount, atLowestCount } =
-    computeDashboardSummary(products);
+  const {
+    itemCount,
+    totalsByCurrency,
+    priceDropCount,
+    atLowestCount,
+    staleCount
+  } = computeDashboardSummary(products);
 
   if (itemCount === 0) return null;
 
@@ -80,6 +87,20 @@ export const DashboardSummary = ({ products, locale }) => {
           <Stat label={t('pages.dashboard.summary.atLowest')}>
             <Text textStyle="numeric" fontSize="xl" fontWeight="semibold">
               {atLowestCount}
+            </Text>
+          </Stat>
+        )}
+
+        {staleCount > 0 && (
+          <Stat label={t('pages.dashboard.summary.stale')}>
+            <Text
+              data-testid="summary-stale-count"
+              textStyle="numeric"
+              fontSize="xl"
+              fontWeight="semibold"
+              color="fg.warning"
+            >
+              {staleCount}
             </Text>
           </Stat>
         )}

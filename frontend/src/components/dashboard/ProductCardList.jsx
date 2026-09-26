@@ -6,6 +6,7 @@ import {
   SkeletonCards,
   CategoryTag,
   PriceChange,
+  StaleBadge,
   StockStatus,
   StoreFavicon
 } from '@/components/common';
@@ -61,7 +62,10 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
               </Text>
               <PriceChange value={product.price_change_pct} locale={locale} />
             </Flex>
-            <StockStatus inStock={product.is_in_stock} />
+            <HStack gap={2} wrap="wrap">
+              <StockStatus inStock={product.is_in_stock} />
+              <StaleBadge lastCheckedAt={product.last_checked_at} />
+            </HStack>
           </VStack>
           <ProductRowActions
             product={product}
@@ -76,9 +80,10 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
 
 /**
  * The `<md` product list: a card per product (name + category, price with
- * change, stock, actions menu). Tapping/clicking a card, or pressing Enter
- * while it is focused, opens the product's detail page; clicks inside the
- * actions menu do not (see `ProductRowActions`).
+ * change, stock with an outdated-price badge when needed, actions menu).
+ * Tapping/clicking a card, or pressing Enter while it is focused, opens the
+ * product's detail page; clicks inside the actions menu do not (see
+ * `ProductRowActions`).
  *
  * @param {object} props
  * @param {object[]} props.products - Dashboard summary rows.

@@ -18,8 +18,11 @@
  * @property {number|null} maxPrice - Inclusive upper bound on `current_price`.
  * @property {boolean} priceDrop - Only products whose `price_change_pct` is negative.
  * @property {boolean} atLowest - Only products the backend flags as at their lowest price (`is_at_lowest`).
+ * @property {boolean} stale - Only products whose price has not been updated for a while (see `staleness.js`).
  * @property {SortKey} sort
  */
+
+import { isStale, nowInSeconds } from './staleness';
 
 export const STOCK_FILTERS = ['all', 'in', 'out'];
 export const PRIORITIES = ['high', 'medium', 'low'];
@@ -44,6 +47,7 @@ export const DEFAULT_FILTERS = Object.freeze({
   maxPrice: null,
   priceDrop: false,
   atLowest: false,
+  stale: false,
   sort: 'name_asc'
 });
 
@@ -66,10 +70,12 @@ const normalizePriority = (priority) => (priority ?? '').toLowerCase();
 /**
  * @param {object[]} products - Dashboard-summary rows.
  * @param {ProductFilters} filters
+ * @param {number} [now] - Reference Unix time in seconds for the stale
+ *   filter; defaults to now.
  * @returns {object[]} The products matching every active filter (AND), in
  *   their original order.
  */
-export function filterProducts(products, filters) {
+export function filterProducts(products, filters, now = nowInSeconds()) {
   const query = normalizeText(filters.query.trim());
 
   return products.filter((product) => {
@@ -117,6 +123,7 @@ export function filterProducts(products, filters) {
       return false;
     }
     if (filters.atLowest && product.is_at_lowest !== true) return false;
+    if (filters.stale && !isStale(product, now)) return false;
 
     return true;
   });
@@ -195,7 +202,8 @@ export function countActiveFilters(filters) {
     filters.stock !== 'all',
     filters.minPrice !== null || filters.maxPrice !== null,
     filters.priceDrop,
-    filters.atLowest
+    filters.atLowest,
+    filters.stale
   ].filter(Boolean).length;
 }
 
@@ -265,6 +273,7 @@ export function parseFilters(params) {
     maxPrice: parsePrice(params.get('max')),
     priceDrop: params.get('drop') === '1',
     atLowest: params.get('lowest') === '1',
+    stale: params.get('stale') === '1',
     sort: SORT_KEYS.includes(sort) ? sort : DEFAULT_FILTERS.sort
   };
 }
@@ -289,6 +298,7 @@ export function serializeFilters(filters) {
   if (filters.maxPrice !== null) params.set('max', String(filters.maxPrice));
   if (filters.priceDrop) params.set('drop', '1');
   if (filters.atLowest) params.set('lowest', '1');
+  if (filters.stale) params.set('stale', '1');
   if (filters.sort !== DEFAULT_FILTERS.sort) params.set('sort', filters.sort);
   return params.toString();
 }

@@ -33,7 +33,8 @@ import { ProductFormDialog } from '@/components/products';
 import {
   PriceHistoryChart,
   ProductDescription,
-  ProductStatsRow
+  ProductStatsRow,
+  StaleProductNotice
 } from '@/components/product';
 import { toaster } from '@/components/ui/toaster';
 import { formatRelative, getLocale } from '@/lib/format';
@@ -324,6 +325,12 @@ const ProductPage = () => {
                 : t('pages.product.metadata.lastCheckedUnknown')}
             </Text>
           </HStack>
+
+          <StaleProductNotice
+            lastCheckedAt={product.last_checked_at}
+            url={product.url}
+            locale={locale}
+          />
 
           <ProductStatsRow
             currentPrice={product.current_price}

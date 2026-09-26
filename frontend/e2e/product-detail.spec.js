@@ -168,4 +168,31 @@ test.describe('Product detail', () => {
     // usable.
     await expect(page.getByRole('radio', { name: '30 days' })).toBeVisible();
   });
+
+  test('warns when the price has not been updated for days', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    const lastCheckedAt = nowSeconds() - 4 * DAY_SECONDS - 60;
+    apiMock.setProducts([
+      buildDashboardProduct({ id: 3, last_checked_at: lastCheckedAt })
+    ]);
+    apiMock.setDetail(
+      3,
+      buildProductDetail({
+        id: 3,
+        url: 'https://shop.example.com/discontinued',
+        last_checked_at: lastCheckedAt
+      })
+    );
+
+    await page.goto('/product/3');
+
+    await expect(page.getByText('Price not updated for 4 days')).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Check the store page' })
+    ).toHaveAttribute('href', 'https://shop.example.com/discontinued');
+  });
 });

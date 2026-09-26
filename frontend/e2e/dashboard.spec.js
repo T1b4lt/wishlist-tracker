@@ -3,6 +3,7 @@ import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
 import { buildDashboardProduct, buildManyProducts } from './fixtures/products';
 import { buildDailyCheck } from './fixtures/dailyCheck';
+import { DAY_SECONDS, nowSeconds } from './fixtures/time';
 
 test.describe('Dashboard', () => {
   test('shows the Gemini limit notice with the pending products', async ({
@@ -30,6 +31,56 @@ test.describe('Dashboard', () => {
     ).toBeVisible();
     await expect(
       page.getByText('12 still pending, retrying every 10 minutes.')
+    ).toBeVisible();
+  });
+
+  test('flags products whose price has not been updated for days', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts([
+      buildDashboardProduct({ id: 1, name: 'Wireless Headphones' }),
+      buildDashboardProduct({
+        id: 2,
+        name: 'Discontinued Drone',
+        last_checked_at: nowSeconds() - 5 * DAY_SECONDS - 60
+      })
+    ]);
+
+    await page.goto('/');
+
+    // The table (md+) and the card list (<md) are both in the DOM; only the
+    // one for the current viewport is visible.
+    const staleBadges = page
+      .getByText('No updates for 5 days')
+      .filter({ visible: true });
+    await expect(staleBadges).toHaveCount(1);
+    await expect(page.getByText('Outdated', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('summary-stale-count')).toHaveText('1');
+
+    // The badge's tooltip must not get in the way of the row actions menu.
+    await page
+      .getByRole('button', { name: 'Actions for Discontinued Drone' })
+      .filter({ visible: true })
+      .click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Delete product' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+
+    // The "outdated" filter, read from the URL, keeps only the stale one.
+    await page.goto('/?stale=1');
+    await expect(
+      page.getByText('Discontinued Drone').filter({ visible: true })
+    ).toHaveCount(1);
+    await expect(
+      page.getByText('Wireless Headphones').filter({ visible: true })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Remove filter: Outdated' })
     ).toBeVisible();
   });
 

@@ -106,6 +106,13 @@ const buildChips = (filters, options, t, locale) => {
       patch: { atLowest: false }
     });
   }
+  if (filters.stale) {
+    chips.push({
+      key: 'stale',
+      label: t('pages.dashboard.filters.updates.chip'),
+      patch: { stale: false }
+    });
+  }
   return chips;
 };
 

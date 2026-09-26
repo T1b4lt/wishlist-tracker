@@ -180,6 +180,18 @@ describe('filterProducts', () => {
     ]);
   });
 
+  it('keeps only outdated products when stale is on', () => {
+    const now = 10 * 86400;
+    const products = [
+      product({ id: 1, last_checked_at: now - 3 * 86400 }),
+      product({ id: 2, last_checked_at: now - 86400 }),
+      product({ id: 3, last_checked_at: null })
+    ];
+    expect(
+      ids(filterProducts(products, filters({ stale: true }), now))
+    ).toEqual([1]);
+  });
+
   it('combines every filter with AND', () => {
     const products = [
       product({ id: 1, name: 'DJI Mini', store_id: 1, is_in_stock: true }),
@@ -325,10 +337,11 @@ describe('countActiveFilters', () => {
           minPrice: 10,
           maxPrice: null,
           priceDrop: true,
-          atLowest: true
+          atLowest: true,
+          stale: true
         })
       )
-    ).toBe(7);
+    ).toBe(8);
   });
 
   it('counts a price range with both bounds once', () => {
@@ -394,6 +407,7 @@ describe('URL round trip', () => {
       maxPrice: 200,
       priceDrop: true,
       atLowest: true,
+      stale: true,
       sort: 'price_desc'
     });
     expect(parseFilters(new URLSearchParams(serializeFilters(full)))).toEqual(
@@ -409,11 +423,15 @@ describe('URL round trip', () => {
     ).toBe('q=dji&store=3%2C5&sort=price_asc');
   });
 
+  it('writes the stale filter as stale=1', () => {
+    expect(serializeFilters(filters({ stale: true }))).toBe('stale=1');
+  });
+
   it('ignores invalid values instead of failing', () => {
     expect(
       parseFilters(
         new URLSearchParams(
-          'store=a,2&stock=maybe&min=abc&max=-&priority=urgent,high&sort=bogus&drop=yes'
+          'store=a,2&stock=maybe&min=abc&max=-&priority=urgent,high&sort=bogus&drop=yes&stale=true'
         )
       )
     ).toEqual(filters({ stores: [2], priorities: ['high'] }));

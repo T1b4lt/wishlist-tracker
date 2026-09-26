@@ -48,8 +48,9 @@ src/
 - `components/common/`: shared, page-agnostic pieces used across features:
   `EmptyState`, `ErrorState`, `LoadingState`, `SkeletonRows`/`SkeletonCards`,
   `ConfirmDialog`, `CategoryTag`, `CategoryColorPicker`, `PriorityBadge`,
-  `PriceChange`, `StockStatus`, `StoreBadge`/`StoreFavicon` (store favicon +
-  name, with a Lucide fallback).
+  `PriceChange`, `StockStatus`, `StaleBadge` (the "No updates for N days"
+  warning), `StoreBadge`/`StoreFavicon` (store favicon + name, with a Lucide
+  fallback).
 - `components/dashboard/`, `components/product/`, `components/products/`,
   `components/categories/`, `components/settings/`: page-specific pieces
   (e.g. `ProductTable`/`ProductCardList`, `ProductFormDialog`,
@@ -76,6 +77,10 @@ Framework-free helpers under `src/lib/`:
 - `lib/dashboardSummary.js`, `lib/productHistory.js`: pure functions the
   dashboard and product pages use to derive totals, chart points and stats
   from store data.
+- `lib/staleness.js`: when a product's price counts as outdated (no new
+  price record for `STALE_AFTER_DAYS` = 3 days, based on `last_checked_at`),
+  shared by the dashboard badge, summary count, filter and the product
+  page's `StaleProductNotice`.
 - `lib/settingsDraft.js`: the Settings page's dirty/merge logic (draft vs.
   saved config).
 - `lib/productFilters.js`: the dashboard's search, filter and sort logic

@@ -8,6 +8,7 @@ import {
   CategoryTag,
   PriorityBadge,
   PriceChange,
+  StaleBadge,
   StockStatus,
   StoreFavicon
 } from '@/components/common';
@@ -82,7 +83,10 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
         />
       </Table.Cell>
       <Table.Cell textAlign="center">
-        <StockStatus inStock={product.is_in_stock} justify="center" />
+        <VStack gap={1}>
+          <StockStatus inStock={product.is_in_stock} justify="center" />
+          <StaleBadge lastCheckedAt={product.last_checked_at} />
+        </VStack>
       </Table.Cell>
       <Table.Cell textAlign="center">
         <ProductRowActions
@@ -97,7 +101,8 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
 
 /**
  * The `md+` product list: a table with name (+ category tag), priority,
- * trend sparkline, price, change, stock and a row actions menu. The
+ * trend sparkline, price, change, stock (with an outdated-price badge when
+ * needed) and a row actions menu. The
  * product name is a real link to the detail page (the keyboard and
  * screen-reader path, keeping the row's/cell's native table semantics
  * intact); clicking anywhere else on the row also navigates there, and

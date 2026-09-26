@@ -10,3 +10,4 @@ export { CategoryTag } from './CategoryTag';
 export { PriceChange } from './PriceChange';
 export { StockStatus } from './StockStatus';
 export { StoreBadge, StoreFavicon } from './StoreBadge';
+export { StaleBadge } from './StaleBadge';

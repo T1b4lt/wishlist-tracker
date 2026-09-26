@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { PRIORITIES, STOCK_FILTERS } from '@/lib/productFilters';
+import { STALE_AFTER_DAYS } from '@/lib/staleness';
 
 /**
  * Parses a user-typed price, accepting a comma as the decimal separator.
@@ -154,6 +155,17 @@ export const ProductFilterPanel = ({ filters, options, onChange }) => {
           onCheckedChange={(atLowest) => onChange({ atLowest })}
         >
           {t('pages.dashboard.filters.deals.atLowest')}
+        </FilterCheckbox>
+      </Section>
+
+      <Section label={t('pages.dashboard.filters.updates.label')}>
+        <FilterCheckbox
+          checked={filters.stale}
+          onCheckedChange={(stale) => onChange({ stale })}
+        >
+          {t('pages.dashboard.filters.updates.stale', {
+            days: STALE_AFTER_DAYS
+          })}
         </FilterCheckbox>
       </Section>
 

@@ -21,7 +21,10 @@
     },
     "status": {
       "inStock": "In stock",
-      "outOfStock": "Out of stock"
+      "outOfStock": "Out of stock",
+      "stale_one": "No updates for {{count}} day",
+      "stale_other": "No updates for {{count}} days",
+      "staleHint": "The price could not be checked lately. The store page may be down, the product may have been removed, or the page may be blocking the agent."
     },
     "priority": {
       "high": "High",
@@ -153,7 +156,8 @@
         "items": "Items",
         "totalValue": "Total value",
         "priceDrops": "Price drops",
-        "atLowest": "At lowest price"
+        "atLowest": "At lowest price",
+        "stale": "Outdated"
       },
       "table": {
         "columns": {
@@ -228,6 +232,11 @@
           "title": "No products match your search",
           "subtitle": "Try a different search or clear the filters.",
           "action": "Clear filters"
+        },
+        "updates": {
+          "label": "Price updates",
+          "stale": "Not updated for {{days}}+ days",
+          "chip": "Outdated"
         }
       },
       "dailyCheck": {
@@ -305,6 +314,12 @@
         "title": "Description",
         "showMore": "Show more",
         "showLess": "Show less"
+      },
+      "stale": {
+        "title_one": "Price not updated for {{count}} day",
+        "title_other": "Price not updated for {{count}} days",
+        "description": "The last price was recorded on {{date}}. Since then the daily check could not read this product: the store may be down, the product may have been removed, or the page may be blocking the agent.",
+        "action": "Check the store page"
       }
     },
     "settings": {

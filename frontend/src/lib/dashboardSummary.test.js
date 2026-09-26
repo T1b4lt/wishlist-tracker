@@ -16,7 +16,8 @@ describe('computeDashboardSummary', () => {
       itemCount: 0,
       totalsByCurrency: [],
       priceDropCount: null,
-      atLowestCount: null
+      atLowestCount: null,
+      staleCount: 0
     });
   });
 
@@ -98,5 +99,19 @@ describe('computeDashboardSummary', () => {
       product({ current_price: undefined, is_at_lowest: false })
     ]);
     expect(summary.atLowestCount).toBeNull();
+  });
+
+  it('counts the products whose price has not been updated for a while', () => {
+    const now = 10 * 86400;
+    const summary = computeDashboardSummary(
+      [
+        product({ last_checked_at: now - 5 * 86400 }),
+        product({ last_checked_at: now - 3 * 86400 }),
+        product({ last_checked_at: now - 86400 }),
+        product({ last_checked_at: null })
+      ],
+      now
+    );
+    expect(summary.staleCount).toBe(2);
   });
 });

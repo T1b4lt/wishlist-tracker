@@ -21,7 +21,10 @@
     },
     "status": {
       "inStock": "En stock",
-      "outOfStock": "Sin stock"
+      "outOfStock": "Sin stock",
+      "stale_one": "Sin actualizar desde hace {{count}} día",
+      "stale_other": "Sin actualizar desde hace {{count}} días",
+      "staleHint": "No se ha podido comprobar el precio últimamente. Puede que la tienda esté caída, que el producto se haya retirado o que la página esté bloqueando al agente."
     },
     "priority": {
       "high": "Alta",
@@ -153,7 +156,8 @@
         "items": "Artículos",
         "totalValue": "Valor total",
         "priceDrops": "Bajadas de precio",
-        "atLowest": "En su precio mínimo"
+        "atLowest": "En su precio mínimo",
+        "stale": "Desactualizados"
       },
       "table": {
         "columns": {
@@ -228,6 +232,11 @@
           "title": "Ningún producto coincide con tu búsqueda",
           "subtitle": "Prueba con otra búsqueda o limpia los filtros.",
           "action": "Limpiar filtros"
+        },
+        "updates": {
+          "label": "Actualización de precio",
+          "stale": "Sin actualizar desde hace {{days}}+ días",
+          "chip": "Desactualizado"
         }
       },
       "dailyCheck": {
@@ -305,6 +314,12 @@
         "title": "Descripción",
         "showMore": "Mostrar más",
         "showLess": "Mostrar menos"
+      },
+      "stale": {
+        "title_one": "Precio sin actualizar desde hace {{count}} día",
+        "title_other": "Precio sin actualizar desde hace {{count}} días",
+        "description": "El último precio se registró el {{date}}. Desde entonces la comprobación diaria no ha podido leer este producto: puede que la tienda esté caída, que el producto se haya retirado o que la página esté bloqueando al agente.",
+        "action": "Revisar la página de la tienda"
       }
     },
     "settings": {

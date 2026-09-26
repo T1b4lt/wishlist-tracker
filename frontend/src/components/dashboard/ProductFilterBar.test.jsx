@@ -168,6 +168,18 @@ describe('ProductFilterBar', () => {
       expect(onChange).toHaveBeenLastCalledWith({ atLowest: true });
     });
 
+    it('toggles the outdated price filter', async () => {
+      const { onChange, user } = renderBar();
+      const panel = await openPanel(user);
+
+      await user.click(
+        within(panel).getByRole('checkbox', {
+          name: 'Not updated for 3+ days'
+        })
+      );
+      expect(onChange).toHaveBeenLastCalledWith({ stale: true });
+    });
+
     it('sets a price range, keeping partial decimal input editable', async () => {
       const { onChange, user } = renderBar();
       const panel = await openPanel(user);
@@ -211,11 +223,13 @@ describe('ProductFilterBar', () => {
           stock: 'in',
           minPrice: 10,
           maxPrice: 50,
-          priceDrop: true
+          priceDrop: true,
+          stale: true
         }
       });
 
       for (const label of [
+        'Outdated',
         'Amazon',
         'Audio',
         'Low',

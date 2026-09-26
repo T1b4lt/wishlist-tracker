@@ -30,7 +30,10 @@ const PRODUCT = {
   is_in_stock: true,
   currency: 'EUR',
   recent_prices: [140, 130, 125, 120],
-  last_checked_at: 1700000000,
+  // Checked just now: an outdated product also renders `StaleBadge`'s
+  // tooltip, whose extra Ark UI machine makes the menu test below flaky in
+  // jsdom (see the note above that test).
+  last_checked_at: Math.floor(Date.now() / 1000),
   store_id: 7,
   store_name: 'Amazon',
   store_domain: 'amazon.es',
@@ -157,5 +160,22 @@ describe('ProductTable', () => {
       'src',
       faviconUrl(7)
     );
+  });
+
+  it('flags a product whose price has not been updated for days', () => {
+    const now = Math.floor(Date.now() / 1000);
+    renderTable({
+      products: [{ ...PRODUCT, last_checked_at: now - 5 * 86400 - 60 }]
+    });
+
+    expect(screen.getByText('No updates for 5 days')).toBeInTheDocument();
+  });
+
+  it('shows no outdated badge for a recently checked product', () => {
+    renderTable({
+      products: [{ ...PRODUCT, last_checked_at: Math.floor(Date.now() / 1000) }]
+    });
+
+    expect(screen.queryByText(/No updates for/)).not.toBeInTheDocument();
   });
 });
