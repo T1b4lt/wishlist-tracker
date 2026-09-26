@@ -16,8 +16,9 @@ import {
  * @returns {{
  *   filters: import('@/lib/productFilters').ProductFilters,
  *   setFilters: (patch: Partial<import('@/lib/productFilters').ProductFilters>) => void,
- *   resetFilters: () => void
- * }}
+ *   resetFilters: (options?: { keepQuery?: boolean }) => void
+ * }} `resetFilters` clears every filter (and, unless `keepQuery`, the search
+ *   query too) but always keeps the sort order.
  */
 export function useDashboardFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,13 +36,16 @@ export function useDashboardFilters() {
   );
 
   const resetFilters = useCallback(
-    () =>
+    ({ keepQuery = false } = {}) =>
       setSearchParams(
-        (current) =>
-          serializeFilters({
+        (current) => {
+          const { sort, query } = parseFilters(current);
+          return serializeFilters({
             ...DEFAULT_FILTERS,
-            sort: parseFilters(current).sort
-          }),
+            sort,
+            query: keepQuery ? query : DEFAULT_FILTERS.query
+          });
+        },
         { replace: true }
       ),
     [setSearchParams]

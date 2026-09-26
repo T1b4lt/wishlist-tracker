@@ -46,9 +46,13 @@ const renderBar = ({
           onChange(patch);
           setFilters((current) => ({ ...current, ...patch }));
         }}
-        onReset={() => {
-          onReset();
-          setFilters((current) => ({ ...DEFAULT_FILTERS, sort: current.sort }));
+        onReset={(options) => {
+          onReset(options);
+          setFilters((current) => ({
+            ...DEFAULT_FILTERS,
+            sort: current.sort,
+            query: options?.keepQuery ? current.query : ''
+          }));
         }}
       />
     );
@@ -240,14 +244,15 @@ describe('ProductFilterBar', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('clears every filter with "Clear all"', async () => {
+    it('clears every filter but keeps the search with "Clear all"', async () => {
       const { onReset, user } = renderBar({
-        initialFilters: { stores: [1], priceDrop: true }
+        initialFilters: { query: 'dji', stores: [1], priceDrop: true }
       });
 
       await user.click(screen.getByRole('button', { name: 'Clear all' }));
 
-      expect(onReset).toHaveBeenCalledTimes(1);
+      expect(onReset).toHaveBeenCalledExactlyOnceWith({ keepQuery: true });
+      expect(screen.getByRole('searchbox')).toHaveValue('dji');
       expect(
         screen.queryByRole('button', { name: /Remove filter/ })
       ).not.toBeInTheDocument();

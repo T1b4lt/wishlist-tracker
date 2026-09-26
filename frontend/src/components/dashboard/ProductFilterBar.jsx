@@ -122,7 +122,9 @@ const buildChips = (filters, options, t, locale) => {
  * @param {number} props.totalCount - All products.
  * @param {string} props.locale - An `Intl` locale tag, see `getLocale`.
  * @param {(patch: Partial<import('@/lib/productFilters').ProductFilters>) => void} props.onChange
- * @param {() => void} props.onReset - Clears every filter (and the query).
+ * @param {(options: { keepQuery: boolean }) => void} props.onReset - Clears
+ *   every panel filter; called with `keepQuery: true` since the chips'
+ *   "Clear all" never touches the search box.
  */
 export const ProductFilterBar = ({
   filters,
@@ -234,7 +236,12 @@ export const ProductFilterBar = ({
                   />
                 </Popover.Body>
                 <Popover.CloseTrigger asChild>
-                  <CloseButton size="sm" position="absolute" top={2} end={2} />
+                  <CloseButton
+                    size="sm"
+                    position="absolute"
+                    top={2}
+                    insetEnd={2}
+                  />
                 </Popover.CloseTrigger>
               </Popover.Content>
             </Popover.Positioner>
@@ -263,7 +270,11 @@ export const ProductFilterBar = ({
             </Tag.Root>
           ))}
           {chips.length > 0 && (
-            <Button variant="ghost" size="xs" onClick={onReset}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => onReset({ keepQuery: true })}
+            >
               {t('pages.dashboard.filters.clearAll')}
             </Button>
           )}

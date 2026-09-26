@@ -185,7 +185,7 @@ const DashboardPage = () => {
               title={t('pages.dashboard.filters.noResults.title')}
               description={t('pages.dashboard.filters.noResults.subtitle')}
               action={
-                <Button variant="outline" onClick={resetFilters}>
+                <Button variant="outline" onClick={() => resetFilters()}>
                   {t('pages.dashboard.filters.noResults.action')}
                 </Button>
               }

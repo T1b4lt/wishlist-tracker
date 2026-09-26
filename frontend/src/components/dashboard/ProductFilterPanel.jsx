@@ -108,6 +108,15 @@ export const ProductFilterPanel = ({ filters, options, onChange }) => {
       <Section label={t('pages.dashboard.filters.stock.label')}>
         <SegmentedControl
           size="sm"
+          w="full"
+          // Spread the three options across the panel's width, never wrapping.
+          css={{
+            '& [data-part=item]': {
+              flex: '1 1 auto',
+              justifyContent: 'center',
+              whiteSpace: 'nowrap'
+            }
+          }}
           items={STOCK_FILTERS.map((value) => ({
             value,
             label: t(`pages.dashboard.filters.stock.${value}`)

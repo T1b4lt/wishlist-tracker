@@ -66,4 +66,16 @@ describe('useDashboardFilters', () => {
     });
     expect(location.history.at(-1)).toBe('/?sort=price_desc');
   });
+
+  it('can keep the search query when clearing the filters', () => {
+    const { result } = renderWithLocation('/?q=dji&stock=in&sort=price_desc');
+
+    act(() => result.current.resetFilters({ keepQuery: true }));
+
+    expect(result.current.filters).toEqual({
+      ...DEFAULT_FILTERS,
+      query: 'dji',
+      sort: 'price_desc'
+    });
+  });
 });
