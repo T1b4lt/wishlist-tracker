@@ -13,7 +13,9 @@ This script should be run every 10 minutes via cron. It will:
    again at the next provider-wide stop, until each one gets its record for
    the day
 4. Send Telegram alerts if price drops or stock changes are detected (if configured)
-5. Send the Telegram daily check report once per day, per ``daily_check_report``
+5. Send a Telegram alert when the AI provider cannot be reached, and another
+   once it is back and nothing is pending (at most once each per day)
+6. Send the Telegram daily check report once per day, per ``daily_check_report``
 
 "Today" and the analysis hour use the process local time, set with the
 ``TZ`` environment variable (the Docker image defaults to UTC).
@@ -42,6 +44,7 @@ from src.models.database_models import (
 )
 from src.services import daily_check_service
 from src.services.offer_check_service import (
+    LIMIT_REASON_QUOTA,
     LIMIT_REASON_UNAVAILABLE,
     CheckOutcome,
     check_offer,
@@ -51,6 +54,8 @@ from src.services.offer_check_service import (
 from src.telegram_utils import (
     build_daily_done_message,
     build_daily_unchecked_message,
+    build_provider_recovered_message,
+    build_provider_unavailable_message,
     send_daily_check_report,
 )
 
@@ -350,6 +355,8 @@ def _build_daily_report(
     """
     counts = daily_check_service.count_today(session, now)
     lang = get_config_value(session, "selected_language", "english")
+    provider_label = load_ai_provider(session).label
+    reason = run.limit_reason or LIMIT_REASON_QUOTA
     limit_time = (
         format_local_time(run.limit_reached_at) if run.limit_reached_at else None
     )
@@ -363,12 +370,70 @@ def _build_daily_report(
             failed,
             limit_time,
             run.pending_at_limit,
+            limit_reason=reason,
+            provider_label=provider_label,
         )
     if is_end_of_day(now) and limit_time is not None:
         return build_daily_unchecked_message(
-            lang, counts.pending, run.total_offers, limit_time, run.pending_at_limit
+            lang,
+            counts.pending,
+            run.total_offers,
+            limit_time,
+            run.pending_at_limit,
+            limit_reason=reason,
+            provider_label=provider_label,
         )
     return None
+
+
+async def send_provider_alerts_if_due(now: datetime) -> None:
+    """Send the Telegram "provider unavailable" / "back online" alerts.
+
+    At most one of each per local day, whenever Telegram is configured
+    (independently of the alert switches and of ``daily_check_report``):
+    the first when today's run stopped because the provider was unavailable
+    and offers are still pending; the second once nothing is pending after
+    the first was sent. A flag is set only after a successful send, so a
+    failed send is retried by the next run.
+
+    Args:
+        now (datetime): Naive local time of the run.
+    """
+    with Session(engine) as session:
+        run = daily_check_service.get_today_run(session, now)
+        if run is None or run.recovered_alert_sent:
+            return
+        tg = load_telegram_settings(session)
+        if not tg["enabled"]:
+            return
+        counts = daily_check_service.count_today(session, now)
+        provider = load_ai_provider(session)
+        lang = get_config_value(session, "selected_language", "english")
+
+        if not run.unavailable_alert_sent:
+            if run.limit_reason != LIMIT_REASON_UNAVAILABLE or counts.pending == 0:
+                return
+            text = build_provider_unavailable_message(
+                lang, provider.describe(), counts.pending
+            )
+            flag = "unavailable_alert_sent"
+        elif counts.pending == 0:
+            text = build_provider_recovered_message(
+                lang, provider.label, counts.recorded
+            )
+            flag = "recovered_alert_sent"
+        else:
+            return
+
+        try:
+            await send_daily_check_report(tg["token"], tg["chat_id"], text)
+        except Exception as e:
+            logger.error(f"Failed to send the provider alert: {str(e)}")
+            return
+        setattr(run, flag, True)
+        session.add(run)
+        session.commit()
+        logger.info(f"Provider alert sent ({flag})")
 
 
 async def send_daily_report_if_due(now: datetime) -> None:
@@ -454,6 +519,7 @@ async def main(now: datetime | None = None):
             logger.info("Checking pending rate-limit retries...")
             await retry_rate_limited_products(now=now)
 
+        await send_provider_alerts_if_due(now)
         await send_daily_report_if_due(now)
 
     logger.info("=== Product Status Tracking Cronjob Completed ===")

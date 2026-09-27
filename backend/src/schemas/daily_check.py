@@ -11,4 +11,5 @@ class DailyCheckStatusResponse(BaseModel):
     total_offers: int | None
     limit_reached_at: int | None
     pending_at_limit: int | None
+    limit_reason: str | None
     pending_now: int

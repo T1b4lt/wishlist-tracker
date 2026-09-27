@@ -53,6 +53,7 @@ def test_status_before_todays_run_has_no_snapshot(session):
         "total_offers": None,
         "limit_reached_at": None,
         "pending_at_limit": None,
+        "limit_reason": None,
         "pending_now": 0,
     }
 
@@ -122,3 +123,19 @@ def test_endpoint_returns_todays_status(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["day_start"] == DAY_START
     assert response.json()["pending_now"] == 0
+
+
+def test_status_exposes_the_limit_reason(session, products):
+    session.add(
+        DailyCheckRun(
+            day_start=DAY_START,
+            started_at=DAY_START,
+            total_offers=3,
+            limit_reached_at=DAY_START + 60,
+            pending_at_limit=1,
+            limit_reason="unavailable",
+        )
+    )
+    session.commit()
+
+    assert daily_check_service.get_status(session, NOW).limit_reason == "unavailable"

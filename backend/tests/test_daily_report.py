@@ -16,7 +16,12 @@ from src.models.database_models import (
     PendingStatusRetry,
     Product,
 )
-from src.telegram_utils import build_daily_done_message, build_daily_unchecked_message
+from src.telegram_utils import (
+    build_daily_done_message,
+    build_daily_unchecked_message,
+    build_provider_recovered_message,
+    build_provider_unavailable_message,
+)
 
 NOW = datetime(2026, 9, 26, 12, 30)
 DAY_START, _ = local_day_bounds(NOW)
@@ -261,3 +266,70 @@ def test_report_counts_never_go_negative_when_products_are_deleted(session, repo
     _send()
 
     assert report["sent"] == [build_daily_done_message("english", 2, 1, 0, None, None)]
+
+
+def test_quota_texts_are_unchanged():
+    assert "Gemini limit reached at 12:03" in build_daily_done_message(
+        "english", 3, 3, 0, "12:03", 2
+    )
+
+
+def test_done_message_on_an_unavailable_day():
+    message = build_daily_done_message(
+        "english",
+        3,
+        3,
+        0,
+        "12:03",
+        2,
+        limit_reason="unavailable",
+        provider_label="Ollama",
+    )
+    assert message == (
+        "✅ Daily check completed: 3 of 3 prices recorded.\n"
+        "Ollama was unavailable at 12:03 with 2 prices left; finished by retrying."
+    )
+
+
+def test_unchecked_message_on_an_unavailable_day_in_spanish():
+    message = build_daily_unchecked_message(
+        "spanish",
+        2,
+        3,
+        "12:03",
+        2,
+        limit_reason="unavailable",
+        provider_label="Ollama",
+    )
+    assert message == (
+        "⚠️ 2 de 3 precios no se han podido revisar hoy: Ollama no estaba "
+        "disponible a las 12:03 con 2 precios pendientes. Mañana se revisarán "
+        "primero."
+    )
+
+
+def test_provider_alert_messages():
+    assert build_provider_unavailable_message(
+        "english", "Ollama at http://h:11434 (model qwen3.8:latest)", 5
+    ) == (
+        "⚠️ I can't reach Ollama at http://h:11434 (model qwen3.8:latest). "
+        "Please switch the instance on or check what is going on. 5 prices are "
+        "pending; I'll retry every 10 minutes."
+    )
+    assert build_provider_recovered_message("spanish", "Ollama", 7) == (
+        "✅ Ollama vuelve a estar disponible: 7 precios revisados."
+    )
+
+
+def test_unavailable_day_report_names_the_provider(session, report):
+    _add_run(session)
+    run = session.get(DailyCheckRun, DAY_START)
+    run.limit_reason = "unavailable"
+    session.add(Config(key="ai_provider", value="ollama"))
+    session.commit()
+    for product_id in report["ids"]:
+        _record(session, product_id)
+
+    _send()
+
+    assert "Ollama was unavailable at" in report["sent"][0]

@@ -189,3 +189,141 @@ def test_google_quota_still_records_a_quota_limit(session, ollama, monkeypatch):
 
     assert _run_row(session).limit_reason == "quota"
     assert ollama.preflights == 0
+
+
+@pytest.fixture
+def alerts(session, ollama, monkeypatch):
+    """Configure Telegram and record the provider alerts sent."""
+    for key, value in {"telegram_bot_token": "t", "telegram_bot_chat_id": "c"}.items():
+        session.add(Config(key=key, value=value))
+    session.commit()
+    sent = []
+    state = {"fail": False}
+
+    async def fake_send(bot_token, chat_id, text):
+        if state["fail"]:
+            raise RuntimeError("telegram down")
+        sent.append(text)
+
+    monkeypatch.setattr(cronjob, "send_daily_check_report", fake_send)
+    return SimpleNamespace(sent=sent, state=state)
+
+
+def _alert(now=NOW):
+    asyncio.run(cronjob.send_provider_alerts_if_due(now))
+
+
+def test_down_alert_is_sent_once(session, ollama, alerts):
+    ollama.up = False
+    _run()
+    _alert()
+    _retry()
+    _alert(NOW + timedelta(minutes=10))
+
+    assert len(alerts.sent) == 1
+    assert alerts.sent[0].startswith(
+        "⚠️ I can't reach Ollama at http://ollama.local:11434 (model qwen3.8:latest)"
+    )
+    assert "2 prices are pending" in alerts.sent[0]
+    assert _run_row(session).unavailable_alert_sent
+
+
+def test_recovery_alert_once_nothing_is_pending(session, ollama, alerts):
+    ollama.up = False
+    _run()
+    _alert()
+    ollama.up = True
+    _retry()
+    _alert(NOW + timedelta(minutes=10))
+    _alert(NOW + timedelta(minutes=20))
+
+    assert len(alerts.sent) == 2
+    assert alerts.sent[1] == "✅ Ollama is available again: 2 prices checked."
+    assert _run_row(session).recovered_alert_sent
+
+
+def test_second_outage_the_same_day_sends_nothing(session, ollama, alerts):
+    ollama.up = False
+    _run()
+    _alert()
+    ollama.up = True
+    _retry()
+    _alert()
+    run = _run_row(session)
+    session.add(PendingStatusRetry(offer_id=ollama.offer_ids[0], day_start=DAY_START))
+    session.commit()
+    ollama.up = False
+    _retry(NOW + timedelta(minutes=30))
+    _alert(NOW + timedelta(minutes=30))
+
+    assert len(alerts.sent) == 2
+    assert run.unavailable_alert_sent
+
+
+def test_failed_down_alert_is_retried(session, ollama, alerts):
+    ollama.up = False
+    _run()
+    alerts.state["fail"] = True
+    _alert()
+    assert not _run_row(session).unavailable_alert_sent
+    alerts.state["fail"] = False
+    _alert()
+    assert len(alerts.sent) == 1
+
+
+def test_no_alerts_without_telegram(session, ollama, monkeypatch):
+    sent = []
+
+    async def fake_send(bot_token, chat_id, text):
+        sent.append(text)
+
+    monkeypatch.setattr(cronjob, "send_daily_check_report", fake_send)
+    ollama.up = False
+    _run()
+    _alert()
+
+    assert sent == []
+    assert not _run_row(session).unavailable_alert_sent
+
+
+def test_no_down_alert_when_the_limit_is_a_quota(session, ollama, alerts):
+    session.add(
+        DailyCheckRun(
+            day_start=DAY_START,
+            started_at=DAY_START,
+            total_offers=2,
+            limit_reached_at=DAY_START + 60,
+            pending_at_limit=2,
+            limit_reason="quota",
+        )
+    )
+    session.add(PendingStatusRetry(offer_id=ollama.offer_ids[0], day_start=DAY_START))
+    session.commit()
+
+    _alert()
+
+    assert alerts.sent == []
+
+
+def test_recovery_alert_after_switching_back_to_google(session, ollama, alerts):
+    ollama.up = False
+    _run()
+    _alert()
+    session.exec(
+        select(Config).where(Config.key == "ai_provider")
+    ).one().value = "google_ai_studio"
+    session.exec(PendingStatusRetry.__table__.delete())
+    session.commit()
+
+    _alert(NOW + timedelta(minutes=10))
+
+    assert (
+        alerts.sent[-1] == "✅ Google AI Studio is available again: 0 prices checked."
+    )
+
+
+def test_main_sends_the_provider_alert(session, ollama, alerts):
+    ollama.up = False
+    asyncio.run(cronjob.main(now=NOW))
+
+    assert any(text.startswith("⚠️ I can't reach Ollama") for text in alerts.sent)

@@ -366,6 +366,21 @@ _DAILY_REPORT_TEXTS = {
             "limit was reached at {limit_time} with {pending_at_limit} prices left. "
             "Tomorrow's run will check them first."
         ),
+        "done_unavailable": (
+            "{provider} was unavailable at {limit_time} with {pending_at_limit} "
+            "prices left; finished by retrying."
+        ),
+        "unchecked_unavailable": (
+            "⚠️ {pending} of {total} prices could not be checked today: {provider} "
+            "was unavailable at {limit_time} with {pending_at_limit} prices left. "
+            "Tomorrow's run will check them first."
+        ),
+        "provider_down": (
+            "⚠️ I can't reach {provider}. Please switch the instance on or check "
+            "what is going on. {pending} prices are pending; I'll retry every 10 "
+            "minutes."
+        ),
+        "provider_up": "✅ {provider} is available again: {recorded} prices checked.",
     },
     "spanish": {
         "done": (
@@ -380,6 +395,23 @@ _DAILY_REPORT_TEXTS = {
             "⚠️ {pending} de {total} precios no se han podido revisar hoy: el límite "
             "de Gemini se alcanzó a las {limit_time} con {pending_at_limit} precios "
             "pendientes. Mañana se revisarán primero."
+        ),
+        "done_unavailable": (
+            "{provider} no estaba disponible a las {limit_time} con "
+            "{pending_at_limit} precios pendientes; completada con reintentos."
+        ),
+        "unchecked_unavailable": (
+            "⚠️ {pending} de {total} precios no se han podido revisar hoy: "
+            "{provider} no estaba disponible a las {limit_time} con "
+            "{pending_at_limit} precios pendientes. Mañana se revisarán primero."
+        ),
+        "provider_down": (
+            "⚠️ No puedo conectar con {provider}. Enciende la instancia o revisa "
+            "qué está pasando. Hay {pending} precios pendientes; reintentaré cada "
+            "10 minutos."
+        ),
+        "provider_up": (
+            "✅ {provider} vuelve a estar disponible: {recorded} precios revisados."
         ),
     },
 }
@@ -397,6 +429,8 @@ def build_daily_done_message(
     failed: int,
     limit_time: str | None,
     pending_at_limit: int | None,
+    limit_reason: str = "quota",
+    provider_label: str = "Ollama",
 ) -> str:
     """Build the "daily check completed" report.
 
@@ -407,6 +441,8 @@ def build_daily_done_message(
         failed (int): Offers checked without a record (not pending).
         limit_time (str | None): Local ``HH:MM`` of the quota error, if any.
         pending_at_limit (int | None): Offers left at that quota error.
+        limit_reason (str): ``"quota"`` or ``"unavailable"``: picks the text.
+        provider_label (str): Provider named by the "unavailable" text.
 
     Returns:
         str: The message text.
@@ -417,14 +453,23 @@ def build_daily_done_message(
         message += texts["failed"].format(failed=failed)
     message += "."
     if limit_time is not None:
-        message += "\n" + texts["done_limit"].format(
-            limit_time=limit_time, pending_at_limit=pending_at_limit
+        key = "done_unavailable" if limit_reason == "unavailable" else "done_limit"
+        message += "\n" + texts[key].format(
+            limit_time=limit_time,
+            pending_at_limit=pending_at_limit,
+            provider=provider_label,
         )
     return message
 
 
 def build_daily_unchecked_message(
-    lang: str, pending: int, total: int, limit_time: str, pending_at_limit: int
+    lang: str,
+    pending: int,
+    total: int,
+    limit_time: str,
+    pending_at_limit: int,
+    limit_reason: str = "quota",
+    provider_label: str = "Ollama",
 ) -> str:
     """Build the end-of-day "prices left unchecked" report.
 
@@ -434,15 +479,55 @@ def build_daily_unchecked_message(
         total (int): Offers when the daily check started.
         limit_time (str): Local ``HH:MM`` of the first quota error.
         pending_at_limit (int): Offers left at that quota error.
+        limit_reason (str): ``"quota"`` or ``"unavailable"``: picks the text.
+        provider_label (str): Provider named by the "unavailable" text.
 
     Returns:
         str: The message text.
     """
-    return _daily_report_texts(lang)["unchecked"].format(
+    key = "unchecked_unavailable" if limit_reason == "unavailable" else "unchecked"
+    return _daily_report_texts(lang)[key].format(
         pending=pending,
         total=total,
         limit_time=limit_time,
         pending_at_limit=pending_at_limit,
+        provider=provider_label,
+    )
+
+
+def build_provider_unavailable_message(
+    lang: str, provider_description: str, pending: int
+) -> str:
+    """Build the alert sent when the AI provider cannot be reached.
+
+    Args:
+        lang (str): Language code ("english" or "spanish").
+        provider_description (str): ``AIProvider.describe()`` (URL and model).
+        pending (int): Offers pending a retry.
+
+    Returns:
+        str: The message text.
+    """
+    return _daily_report_texts(lang)["provider_down"].format(
+        provider=provider_description, pending=pending
+    )
+
+
+def build_provider_recovered_message(
+    lang: str, provider_label: str, recorded: int
+) -> str:
+    """Build the alert sent once the provider answers again and nothing is pending.
+
+    Args:
+        lang (str): Language code ("english" or "spanish").
+        provider_label (str): ``AIProvider.label``.
+        recorded (int): Offers (prices) recorded today.
+
+    Returns:
+        str: The message text.
+    """
+    return _daily_report_texts(lang)["provider_up"].format(
+        provider=provider_label, recorded=recorded
     )
 
 

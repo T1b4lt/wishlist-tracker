@@ -87,5 +87,6 @@ def get_status(
         total_offers=run.total_offers if run else None,
         limit_reached_at=run.limit_reached_at if run else None,
         pending_at_limit=run.pending_at_limit if run else None,
+        limit_reason=run.limit_reason if run else None,
         pending_now=count_today(session, now).pending,
     )
