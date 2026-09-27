@@ -156,6 +156,18 @@
     "removeOfferDialog": {
       "title": "Quitar tienda",
       "description": "¿Quitar <strong>{{store}}</strong> y su historial de precios de este producto?"
+    },
+    "addOfferDialog": {
+      "title": "Añadir tienda",
+      "description": "Sigue {{name}} en otra tienda.",
+      "urlLabel": "URL de la tienda",
+      "fetch": "Obtener datos de la tienda",
+      "store": "Tienda",
+      "currency": "Moneda",
+      "currencyMismatch": "Esta tienda usa {{found}}, pero {{name}} se sigue en {{expected}}.",
+      "firstPriceHint": "Su primer precio llegará con la próxima revisión diaria.",
+      "extractionError": "No hemos podido leer esta página. Revisa la URL e inténtalo de nuevo.",
+      "submit": "Añadir tienda"
     }
   },
   "pages": {
@@ -569,7 +581,8 @@
       "unlinkAction": "Abrir",
       "removeSuccess": "{{store}} quitada",
       "error": "Algo ha ido mal. Inténtalo de nuevo.",
-      "duplicateUrl": "Esta URL ya se sigue en este producto."
+      "duplicateUrl": "Esta URL ya se sigue en este producto.",
+      "addSuccess": "{{store}} añadida"
     }
   }
 }

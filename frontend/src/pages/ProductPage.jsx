@@ -16,7 +16,13 @@ import {
   VStack
 } from '@chakra-ui/react';
 import { useTranslation, Trans } from 'react-i18next';
-import { LuEllipsis, LuExternalLink, LuPencil, LuTrash2 } from 'react-icons/lu';
+import {
+  LuEllipsis,
+  LuExternalLink,
+  LuPencil,
+  LuPlus,
+  LuTrash2
+} from 'react-icons/lu';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -30,6 +36,7 @@ import {
 } from '@/components/common';
 import { ProductFormDialog } from '@/components/products';
 import {
+  AddOfferDialog,
   EditOfferDialog,
   OfferList,
   PriceHistoryChart,
@@ -97,6 +104,7 @@ const ProductPage = () => {
   const [editingOffer, setEditingOffer] = useState(null);
   const [removingOffer, setRemovingOffer] = useState(null);
   const [isRemovingOffer, setIsRemovingOffer] = useState(false);
+  const [isAddOfferOpen, setIsAddOfferOpen] = useState(false);
 
   // The range selector defaults to the configured `hist_window_size`
   // (or the default window when it is not an offered option) until the user picks one
@@ -419,6 +427,16 @@ const ProductPage = () => {
             setEditingOffer(offer);
           }}
           onUnlink={handleUnlink}
+          actions={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsAddOfferOpen(true)}
+            >
+              <Icon as={LuPlus} />
+              {t('pages.product.offers.addStore')}
+            </Button>
+          }
           onRemove={(offer, triggerEl) => {
             offerMenuTriggerRef.current = triggerEl;
             setRemovingOffer(offer);
@@ -448,6 +466,12 @@ const ProductPage = () => {
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         mode="edit"
+        product={product}
+      />
+
+      <AddOfferDialog
+        open={isAddOfferOpen}
+        onClose={() => setIsAddOfferOpen(false)}
         product={product}
       />
 

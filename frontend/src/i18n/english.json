@@ -156,6 +156,18 @@
     "removeOfferDialog": {
       "title": "Remove store",
       "description": "Remove <strong>{{store}}</strong> and its price history from this product?"
+    },
+    "addOfferDialog": {
+      "title": "Add store",
+      "description": "Track {{name}} in another store.",
+      "urlLabel": "Store URL",
+      "fetch": "Fetch store details",
+      "store": "Store",
+      "currency": "Currency",
+      "currencyMismatch": "This store uses {{found}}, but {{name}} is tracked in {{expected}}.",
+      "firstPriceHint": "Its first price arrives with the next daily check.",
+      "extractionError": "We couldn't read this page. Check the URL and try again.",
+      "submit": "Add store"
     }
   },
   "pages": {
@@ -569,7 +581,8 @@
       "unlinkAction": "Open",
       "removeSuccess": "{{store}} removed",
       "error": "Something went wrong. Please try again.",
-      "duplicateUrl": "This store URL is already tracked for this product."
+      "duplicateUrl": "This store URL is already tracked for this product.",
+      "addSuccess": "{{store}} added"
     }
   }
 }

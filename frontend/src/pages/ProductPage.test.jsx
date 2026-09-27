@@ -318,4 +318,18 @@ describe('ProductPage', () => {
       screen.queryByText(/^Amazon: price not updated/)
     ).not.toBeInTheDocument();
   });
+
+  it('opens the "Add store" dialog from the stores card', async () => {
+    productsApi.get.mockResolvedValue(buildProduct());
+
+    renderProductPage();
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'Add store' }));
+
+    expect(
+      await screen.findByText('Track Mechanical Keyboard in another store.')
+    ).toBeInTheDocument();
+  });
 });
