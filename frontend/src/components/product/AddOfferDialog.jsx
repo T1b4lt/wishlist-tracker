@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Button,
   Flex,
@@ -46,6 +46,9 @@ export const AddOfferDialog = ({ open, onClose, product }) => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wasOpen, setWasOpen] = useState(open);
+  // Bumped whenever the dialog opens or a new extraction starts, so a slow
+  // extraction from an earlier opening never lands in the current form.
+  const extractionRunRef = useRef(0);
 
   // Start clean every time the dialog opens (render-time sync).
   if (open !== wasOpen) {
@@ -54,23 +57,33 @@ export const AddOfferDialog = ({ open, onClose, product }) => {
       setUrl('');
       setExtracted(null);
       setError(null);
+      setIsExtracting(false);
     }
   }
+
+  useEffect(() => {
+    extractionRunRef.current += 1;
+  }, [open]);
 
   const trimmedUrl = url.trim();
   const currency = extracted?.currency?.trim().toUpperCase() ?? null;
   const currencyMismatch = currency !== null && currency !== product.currency;
 
   const handleFetch = async () => {
+    const run = ++extractionRunRef.current;
+    const isCurrent = () => run === extractionRunRef.current;
     setIsExtracting(true);
     setError(null);
     setExtracted(null);
     try {
-      setExtracted(await productsApi.extractInfo(trimmedUrl));
+      const data = await productsApi.extractInfo(trimmedUrl);
+      if (isCurrent()) setExtracted(data);
     } catch {
-      setError(t('components.addOfferDialog.extractionError'));
+      if (isCurrent()) {
+        setError(t('components.addOfferDialog.extractionError'));
+      }
     } finally {
-      setIsExtracting(false);
+      if (isCurrent()) setIsExtracting(false);
     }
   };
 

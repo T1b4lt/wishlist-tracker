@@ -28,6 +28,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from enum import Enum
 
+from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlmodel import Session, delete, func, select
 from src.core.config import get_config_value, get_daily_check_report
 from src.core.database import engine
@@ -283,7 +284,15 @@ async def _check_offer(
     Returns:
         _CheckOutcome: What happened to the offer.
     """
-    product = session.get(Product, offer.product_id)
+    # The user may remove a store (or its product) while a long run is in
+    # progress: skip it instead of stopping the whole run.
+    try:
+        product = session.get(Product, offer.product_id)
+    except ObjectDeletedError:
+        product = None
+    if product is None:
+        logger.warning("Skipping an offer that was deleted during the run")
+        return _CheckOutcome.SKIPPED
     store = session.get(Store, offer.store_id) if offer.store_id is not None else None
     store_name = store.name if store else None
     label = f"{product.name} @ {store_name or offer.url} (offer ID: {offer.id})"

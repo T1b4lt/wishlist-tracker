@@ -601,3 +601,24 @@ def test_daily_run_counts_offers(session, cron):
     session.expire_all()
     (run,) = session.exec(select(DailyCheckRun)).all()
     assert run.total_offers == 2
+
+
+def test_an_offer_removed_during_the_run_does_not_stop_it(session, cron, monkeypatch):
+    doomed = _add_product(session, cron, "Doomed")
+    doomed_product_id = session.get(Offer, doomed.id).product_id
+    session.commit()
+    real_status = cronjob.get_product_status
+
+    async def status_then_delete(api_key, url):
+        # While the first offer is checked, the user deletes the other product.
+        if url == cron.offer_url:
+            session.delete(session.get(Product, doomed_product_id))
+            session.commit()
+        return await real_status(api_key, url)
+
+    monkeypatch.setattr(cronjob, "get_product_status", status_then_delete)
+
+    _run()
+
+    assert len(_history(session, cron.offer_id)) == 1
+    assert session.get(DailyCheckRun, _day_start(NOW)) is not None

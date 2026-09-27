@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nextProvider } from 'react-i18next';
+import { Provider } from '@/components/ui/provider';
+import i18n from '@/i18n/index.js';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { products as productsApi } from '@/lib/api';
 import { useProductsStore } from '@/stores/productsStore';
@@ -79,5 +82,34 @@ describe('AddOfferDialog', () => {
     expect(
       await screen.findByText(/couldn't read this page/)
     ).toBeInTheDocument();
+  });
+
+  it('ignores an extraction that finishes after the dialog was reopened', async () => {
+    let resolveExtraction;
+    productsApi.extractInfo.mockReturnValue(
+      new Promise((resolve) => {
+        resolveExtraction = resolve;
+      })
+    );
+    const { rerender } = renderWithProviders(
+      <AddOfferDialog open onClose={vi.fn()} product={product} />
+    );
+    await fetchDetails('https://www.amazon.es/dp/KIT');
+
+    const wrapped = (open) => (
+      <Provider>
+        <I18nextProvider i18n={i18n}>
+          <AddOfferDialog open={open} onClose={vi.fn()} product={product} />
+        </I18nextProvider>
+      </Provider>
+    );
+    rerender(wrapped(false));
+    rerender(wrapped(true));
+    await act(async () => {
+      resolveExtraction({ currency: 'EUR', store });
+    });
+
+    expect(screen.queryByText('Amazon')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add store' })).toBeDisabled();
   });
 });
