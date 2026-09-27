@@ -14,8 +14,10 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import {
   products as productsApi,
+  offers as offersApi,
   categories as categoriesApi
 } from '@/lib/api';
+import { buildDashboardProduct } from '../../../e2e/fixtures/products';
 import { useProductsStore, initialProductsState } from '@/stores/productsStore';
 import {
   useCategoriesStore,
@@ -40,6 +42,9 @@ vi.mock('@/lib/api', () => ({
     update: vi.fn(),
     get: vi.fn(),
     dashboardSummary: vi.fn()
+  },
+  offers: {
+    add: vi.fn()
   },
   categories: {
     list: vi.fn(),
@@ -115,7 +120,9 @@ describe('ProductFormDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Add product' }));
 
     await waitFor(() => expect(productsApi.create).toHaveBeenCalled());
-    expect(productsApi.create.mock.calls[0][0]).toMatchObject({ store_id: 7 });
+    expect(productsApi.create.mock.calls[0][0]).toMatchObject({
+      offer: { store_id: 7 }
+    });
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
@@ -141,30 +148,6 @@ describe('ProductFormDialog', () => {
     await user.type(urlInput, 'x');
 
     expect(screen.queryByText('Amazon')).not.toBeInTheDocument();
-  });
-
-  it('shows the product store read-only in edit mode', async () => {
-    renderWithProviders(
-      <ProductFormDialog
-        open
-        mode="edit"
-        onClose={vi.fn()}
-        product={{
-          id: 3,
-          name: 'Desk',
-          url: 'https://amazon.es/desk',
-          description: 'A desk',
-          category_id: 5,
-          priority: 'Medium',
-          currency: 'EUR',
-          store_id: 7,
-          store_name: 'Amazon',
-          store_has_favicon: true
-        }}
-      />
-    );
-
-    expect(await screen.findByText('Amazon')).toBeInTheDocument();
   });
 
   it('shows inline validation errors when the form is submitted empty', async () => {
@@ -246,11 +229,10 @@ describe('ProductFormDialog', () => {
     await waitFor(() => expect(productsApi.create).toHaveBeenCalledTimes(1));
     expect(productsApi.create).toHaveBeenCalledWith({
       name: 'Standing Desk',
-      url: 'https://example.com/desk',
       priority: 'Medium',
       category_id: 9,
       description: '',
-      currency: 'EUR'
+      offer: { url: 'https://example.com/desk', currency: 'EUR' }
     });
     expect(onClose).toHaveBeenCalledTimes(1);
     // Its own key, not borrowed from `pages.dashboard.menu.open`, even
@@ -407,9 +389,13 @@ describe('ProductFormDialog', () => {
       />
     );
 
-    expect(screen.getByRole('textbox', { name: 'Product URL' })).toHaveValue(
-      'https://example.com/keyboard'
-    );
+    // URLs and currency belong to the stores, edited on the product page.
+    expect(
+      screen.queryByRole('textbox', { name: 'Product URL' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: 'Currency' })
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue(
       'Mechanical Keyboard'
     );
@@ -421,9 +407,6 @@ describe('ProductFormDialog', () => {
         screen.getByRole('combobox', { name: 'Category' })
       ).toHaveTextContent('Electronics')
     );
-    expect(screen.getByRole('combobox', { name: 'Currency' })).toHaveValue(
-      'EUR · €'
-    );
     expect(screen.getByRole('radio', { name: 'High' })).toBeChecked();
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -431,11 +414,9 @@ describe('ProductFormDialog', () => {
     await waitFor(() => expect(productsApi.update).toHaveBeenCalledTimes(1));
     expect(productsApi.update).toHaveBeenCalledWith(7, {
       name: 'Mechanical Keyboard',
-      url: 'https://example.com/keyboard',
       priority: 'High',
       category_id: 5,
-      description: 'A nice keyboard',
-      currency: 'EUR'
+      description: 'A nice keyboard'
     });
     // The cached product detail (Task 12's product page) is refreshed after
     // a successful edit so it does not keep showing stale data.
@@ -654,5 +635,100 @@ describe('ProductFormDialog', () => {
       'A warm desk lamp'
     );
     expect(productsApi.get).not.toHaveBeenCalled();
+  });
+
+  describe('same product as…', () => {
+    const DRUM_KIT = buildDashboardProduct({
+      id: 70,
+      name: 'Drum kit',
+      currency: 'EUR'
+    });
+
+    const extractAndPickDrumKit = async (user, url) => {
+      renderWithProviders(
+        <ProductFormDialog
+          open
+          mode="create"
+          onClose={vi.fn()}
+          product={null}
+        />
+      );
+      await user.type(
+        screen.getByRole('textbox', { name: 'Product URL' }),
+        url
+      );
+      await user.click(
+        screen.getByRole('button', { name: 'Generate details' })
+      );
+      await user.click(
+        await screen.findByRole('combobox', { name: 'Same product as…' })
+      );
+      await user.click(await screen.findByRole('option', { name: 'Drum kit' }));
+    };
+
+    beforeEach(() => {
+      productsApi.dashboardSummary.mockResolvedValue([DRUM_KIT]);
+      offersApi.add.mockResolvedValue({ id: 9 });
+    });
+
+    it('adds the URL as another store of the chosen product', async () => {
+      const user = userEvent.setup();
+      productsApi.extractInfo.mockResolvedValue({
+        name: 'Drum kit (Amazon)',
+        category: 'Electronics',
+        description: '',
+        currency: 'EUR',
+        store: {
+          id: 2,
+          name: 'Amazon',
+          domain: 'amazon.es',
+          has_favicon: false
+        }
+      });
+
+      await extractAndPickDrumKit(user, 'https://www.amazon.es/dp/KIT');
+
+      expect(
+        screen.getByText('It will be added as another store of Drum kit.')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Item name' })
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+
+      await waitFor(() => expect(offersApi.add).toHaveBeenCalledTimes(1));
+      expect(offersApi.add).toHaveBeenCalledWith(70, {
+        url: 'https://www.amazon.es/dp/KIT',
+        currency: 'EUR',
+        store_id: 2
+      });
+      expect(productsApi.create).not.toHaveBeenCalled();
+    });
+
+    it('blocks a store in another currency', async () => {
+      const user = userEvent.setup();
+      productsApi.extractInfo.mockResolvedValue({
+        name: 'Drum kit',
+        category: '',
+        description: '',
+        currency: 'USD',
+        store: {
+          id: 3,
+          name: 'Amazon US',
+          domain: 'amazon.com',
+          has_favicon: false
+        }
+      });
+
+      await extractAndPickDrumKit(user, 'https://www.amazon.com/dp/KIT');
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+
+      expect(
+        await screen.findByText(
+          'Drum kit is tracked in EUR; this store uses USD.'
+        )
+      ).toBeInTheDocument();
+      expect(offersApi.add).not.toHaveBeenCalled();
+    });
   });
 });

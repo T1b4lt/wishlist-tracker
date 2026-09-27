@@ -79,7 +79,13 @@ const CURRENCY_ITEMS = CURRENCY_CODES.map((code) => ({
  *   without one). A successful extraction also fills a read-only "Store"
  *   row (favicon + name), whose id is sent as `store_id`; editing the URL
  *   clears it.
- * - `mode="edit"`: no extraction. If `product` already carries every field
+ *   Optionally, "Same product as…" picks a product already tracked: the
+ *   shared fields (name, description, category, priority) are hidden and
+ *   the URL is added as another store (offer) of that product instead of
+ *   creating a new one; its currency must match.
+ * - `mode="edit"`: no extraction, and only the shared fields (URLs and
+ *   currency belong to the stores, edited on the product page). If
+ *   `product` already carries every field
  *   the form needs (e.g. a full detail record) or one is already cached in
  *   `productsStore`'s `details[id]`, it is used directly; otherwise the
  *   full product is loaded on open (`productsStore.fetchDetail`) and a
@@ -116,6 +122,10 @@ export const ProductFormDialog = ({
   const createCategory = useCategoriesStore((state) => state.create);
 
   const createProduct = useProductsStore((state) => state.create);
+  const addOffer = useProductsStore((state) => state.addOffer);
+  const summaryItems = useProductsStore((state) => state.items);
+  const summaryStatus = useProductsStore((state) => state.status);
+  const fetchSummary = useProductsStore((state) => state.fetchSummary);
   const updateProduct = useProductsStore((state) => state.update);
   const fetchDetail = useProductsStore((state) => state.fetchDetail);
   const detailEntry = useProductsStore((state) =>
@@ -148,6 +158,11 @@ export const ProductFormDialog = ({
   // Currency combobox filter text.
   const [currencyQuery, setCurrencyQuery] = useState('');
 
+  // "Same product as…" (create mode): the product this URL is another
+  // store of, or null to create a new product.
+  const [sameAsId, setSameAsId] = useState(null);
+  const [sameAsQuery, setSameAsQuery] = useState('');
+
   // "New category" popover state.
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -160,6 +175,10 @@ export const ProductFormDialog = ({
   useEffect(() => {
     if (open) fetchCategories();
   }, [open, fetchCategories]);
+
+  useEffect(() => {
+    if (open && mode === 'create' && summaryStatus === 'idle') fetchSummary();
+  }, [open, mode, summaryStatus, fetchSummary]);
 
   useEffect(() => () => extractionAbortRef.current?.abort(), []);
 
@@ -240,6 +259,8 @@ export const ProductFormDialog = ({
     setNewCategoryOpen(false);
     setNewCategoryError(null);
     if (mode === 'create') {
+      setSameAsId(null);
+      setSameAsQuery('');
       setUrl('');
       setName('');
       setDescription('');
@@ -248,7 +269,6 @@ export const ProductFormDialog = ({
       setCurrency('EUR');
       setStore(null);
     } else if (sourceProduct) {
-      setUrl(sourceProduct.url ?? '');
       setName(sourceProduct.name ?? '');
       setDescription(sourceProduct.description ?? '');
       setCategoryId(
@@ -257,16 +277,6 @@ export const ProductFormDialog = ({
           : ''
       );
       setPriority(sourceProduct.priority ?? 'Medium');
-      setCurrency(sourceProduct.currency ?? 'EUR');
-      setStore(
-        sourceProduct.store_name
-          ? {
-              id: sourceProduct.store_id,
-              name: sourceProduct.store_name,
-              has_favicon: Boolean(sourceProduct.store_has_favicon)
-            }
-          : null
-      );
     }
   }
 
@@ -308,6 +318,17 @@ export const ProductFormDialog = ({
     () => createListCollection({ items: categoryItems }),
     [categoryItems]
   );
+
+  const sameAsProduct =
+    summaryItems.find((item) => item.id === sameAsId) ?? null;
+  const sameAsCollection = useMemo(() => {
+    const needle = sameAsQuery.trim().toLowerCase();
+    return createListCollection({
+      items: summaryItems
+        .filter((item) => item.name.toLowerCase().includes(needle))
+        .map((item) => ({ value: String(item.id), label: item.name }))
+    });
+  }, [summaryItems, sameAsQuery]);
 
   const filteredCurrencyItems = useMemo(() => {
     const query = currencyQuery.trim().toUpperCase();
@@ -412,24 +433,42 @@ export const ProductFormDialog = ({
 
   const validate = () => {
     const nextErrors = {};
-    const trimmedUrl = url.trim();
-    if (!trimmedUrl) {
-      nextErrors.url = t('components.productFormDialog.errors.urlRequired');
-    } else if (!isValidProductUrl(trimmedUrl)) {
-      nextErrors.url = t('components.productFormDialog.errors.urlInvalid');
+    if (mode === 'create') {
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl) {
+        nextErrors.url = t('components.productFormDialog.errors.urlRequired');
+      } else if (!isValidProductUrl(trimmedUrl)) {
+        nextErrors.url = t('components.productFormDialog.errors.urlInvalid');
+      }
+      const normalizedCurrency = currency.trim().toUpperCase();
+      if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
+        nextErrors.currency = t(
+          'components.productFormDialog.errors.currencyInvalid'
+        );
+      } else if (
+        sameAsProduct &&
+        normalizedCurrency !== sameAsProduct.currency
+      ) {
+        nextErrors.currency = t(
+          'components.productFormDialog.errors.currencyMismatch',
+          {
+            name: sameAsProduct.name,
+            expected: sameAsProduct.currency,
+            found: normalizedCurrency
+          }
+        );
+      }
     }
-    if (!name.trim()) {
-      nextErrors.name = t('components.productFormDialog.errors.nameRequired');
-    }
-    if (!categoryId) {
-      nextErrors.category = t(
-        'components.productFormDialog.errors.categoryRequired'
-      );
-    }
-    if (!/^[A-Z]{3}$/.test(currency.trim().toUpperCase())) {
-      nextErrors.currency = t(
-        'components.productFormDialog.errors.currencyInvalid'
-      );
+    // A new store of an existing product keeps that product's fields.
+    if (!sameAsProduct) {
+      if (!name.trim()) {
+        nextErrors.name = t('components.productFormDialog.errors.nameRequired');
+      }
+      if (!categoryId) {
+        nextErrors.category = t(
+          'components.productFormDialog.errors.categoryRequired'
+        );
+      }
     }
     return nextErrors;
   };
@@ -441,19 +480,31 @@ export const ProductFormDialog = ({
     if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
+    const offer = {
+      url: url.trim(),
+      currency: currency.trim().toUpperCase(),
+      ...(store ? { store_id: store.id } : {})
+    };
     const payload = {
       name: name.trim(),
-      url: url.trim(),
       priority,
       category_id: Number(categoryId),
-      description: description.trim(),
-      currency: currency.trim().toUpperCase(),
-      ...(mode === 'create' && store ? { store_id: store.id } : {})
+      description: description.trim()
     };
 
     try {
-      if (mode === 'create') {
-        const created = await createProduct(payload);
+      if (mode === 'create' && sameAsProduct) {
+        await addOffer(sameAsProduct.id, offer);
+        toaster.create({
+          title: t('toasts.offers.addSuccess', { store: store?.name ?? '' }),
+          type: 'success',
+          action: {
+            label: t('toasts.products.createSuccess.action'),
+            onClick: () => navigate(`/product/${sameAsProduct.id}`)
+          }
+        });
+      } else if (mode === 'create') {
+        const created = await createProduct({ ...payload, offer });
         toaster.create({
           title: t('toasts.products.createSuccess.title'),
           description: t('toasts.products.createSuccess.description', {
@@ -488,6 +539,13 @@ export const ProductFormDialog = ({
           : 'Error updating product:',
         err
       );
+      if (mode === 'create' && sameAsProduct && err?.status === 409) {
+        toaster.create({
+          title: t('toasts.offers.duplicateUrl'),
+          type: 'error'
+        });
+        return;
+      }
       toaster.create({
         title: t(
           mode === 'create'
@@ -599,29 +657,31 @@ export const ProductFormDialog = ({
             </VStack>
           ) : (
             <VStack gap={4} align="stretch">
-              <Field
-                label={t('components.productFormDialog.fields.url.label')}
-                helperText={
-                  mode === 'create'
-                    ? t('components.productFormDialog.fields.url.helper')
-                    : undefined
-                }
-                errorText={errors.url}
-                invalid={Boolean(errors.url)}
-                required
-              >
-                <Input
-                  placeholder={t('common.placeholders.productUrl')}
-                  value={url}
-                  onChange={(e) => {
-                    setUrl(e.target.value);
-                    // An extracted store belongs to the URL it came from.
-                    if (mode === 'create') setStore(null);
-                  }}
-                  disabled={isSubmitting}
-                  autoComplete="off"
-                />
-              </Field>
+              {mode === 'create' && (
+                <Field
+                  label={t('components.productFormDialog.fields.url.label')}
+                  helperText={
+                    mode === 'create'
+                      ? t('components.productFormDialog.fields.url.helper')
+                      : undefined
+                  }
+                  errorText={errors.url}
+                  invalid={Boolean(errors.url)}
+                  required
+                >
+                  <Input
+                    placeholder={t('common.placeholders.productUrl')}
+                    value={url}
+                    onChange={(e) => {
+                      setUrl(e.target.value);
+                      // An extracted store belongs to the URL it came from.
+                      if (mode === 'create') setStore(null);
+                    }}
+                    disabled={isSubmitting}
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
 
               {mode === 'create' && extractionError && (
                 <Text fontSize="sm" color="fg.error">
@@ -643,18 +703,20 @@ export const ProductFormDialog = ({
                 </HStack>
               )}
 
-              <Field
-                label={t('components.productFormDialog.fields.priority')}
-                required
-              >
-                <SegmentedControl
-                  items={priorityOptions}
-                  value={priority}
-                  onValueChange={(e) => setPriority(e.value)}
-                  disabled={isSubmitting}
-                  size="md"
-                />
-              </Field>
+              {!sameAsProduct && (
+                <Field
+                  label={t('components.productFormDialog.fields.priority')}
+                  required
+                >
+                  <SegmentedControl
+                    items={priorityOptions}
+                    value={priority}
+                    onValueChange={(e) => setPriority(e.value)}
+                    disabled={isSubmitting}
+                    size="md"
+                  />
+                </Field>
+              )}
 
               {mode === 'create' && (
                 <Button
@@ -697,178 +759,262 @@ export const ProductFormDialog = ({
                       </>
                     ) : (
                       <>
-                        <Field
-                          label={t('components.productFormDialog.fields.name')}
-                          errorText={errors.name}
-                          invalid={Boolean(errors.name)}
-                          required
-                        >
-                          <Input
-                            value={name}
-                            onChange={(e) => {
-                              setName(e.target.value);
-                              clearFieldError('name');
-                            }}
-                            disabled={isSubmitting}
-                            autoComplete="off"
-                          />
-                        </Field>
-
-                        <Field
-                          label={t(
-                            'components.productFormDialog.fields.description'
-                          )}
-                        >
-                          <Textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            disabled={isSubmitting}
-                            rows={3}
-                          />
-                        </Field>
-
-                        <Field
-                          label={t(
-                            'components.productFormDialog.fields.category.label'
-                          )}
-                          errorText={errors.category}
-                          invalid={Boolean(errors.category)}
-                          required
-                        >
-                          <Popover.Root
-                            open={newCategoryOpen}
-                            onOpenChange={(e) => setNewCategoryOpen(e.open)}
-                            positioning={{ placement: 'bottom-start' }}
-                          >
-                            <Popover.Anchor>
-                              <SelectRoot
-                                collection={categoryCollection}
-                                value={[categoryId]}
-                                onValueChange={handleCategoryValueChange}
-                                disabled={isSubmitting}
-                              >
-                                <SelectTrigger>
-                                  <SelectValueText
-                                    placeholder={t(
-                                      'components.productFormDialog.fields.category.placeholder'
-                                    )}
-                                  />
-                                </SelectTrigger>
-                                <SelectContent portalled={false}>
-                                  {categoryCollection.items.map((item) => (
-                                    <SelectItem key={item.value} item={item}>
-                                      {item.value === NEW_CATEGORY_VALUE ? (
-                                        <HStack gap={2}>
-                                          <Icon as={LuPlus} size="sm" />
-                                          <Text>{item.label}</Text>
-                                        </HStack>
-                                      ) : (
-                                        item.label
-                                      )}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </SelectRoot>
-                            </Popover.Anchor>
-                            <Popover.Positioner>
-                              <Popover.Content w="280px">
-                                <Popover.Body>
-                                  <VStack gap={3} align="stretch">
-                                    <Field
-                                      label={t(
-                                        'components.productFormDialog.newCategory.nameLabel'
-                                      )}
-                                      errorText={newCategoryError}
-                                      invalid={Boolean(newCategoryError)}
-                                      required
-                                    >
-                                      <Input
-                                        value={newCategoryName}
-                                        onChange={(e) =>
-                                          setNewCategoryName(e.target.value)
-                                        }
-                                        placeholder={t(
-                                          'components.productFormDialog.newCategory.namePlaceholder'
-                                        )}
-                                        disabled={isCreatingCategory}
-                                        autoComplete="off"
-                                      />
-                                    </Field>
-                                    <CategoryColorPicker
-                                      value={newCategoryColor}
-                                      onChange={setNewCategoryColor}
-                                      disabled={isCreatingCategory}
-                                    />
-                                    <Flex justify="flex-end" gap={2}>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                          setNewCategoryOpen(false)
-                                        }
-                                        disabled={isCreatingCategory}
-                                      >
-                                        {t('common.actions.cancel')}
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        onClick={handleCreateCategory}
-                                        loading={isCreatingCategory}
-                                      >
-                                        {t(
-                                          'components.productFormDialog.newCategory.submit'
-                                        )}
-                                      </Button>
-                                    </Flex>
-                                  </VStack>
-                                </Popover.Body>
-                              </Popover.Content>
-                            </Popover.Positioner>
-                          </Popover.Root>
-                        </Field>
-
-                        <Field
-                          label={t(
-                            'components.productFormDialog.fields.currency.label'
-                          )}
-                          errorText={errors.currency}
-                          invalid={Boolean(errors.currency)}
-                          required
-                        >
-                          <ComboboxRoot
-                            collection={currencyCollection}
-                            value={currency ? [currency] : []}
-                            onValueChange={(details) => {
-                              setCurrency(details.value[0] ?? '');
-                              clearFieldError('currency');
-                            }}
-                            onInputValueChange={(details) =>
-                              setCurrencyQuery(details.inputValue)
+                        {mode === 'create' && (
+                          <Field
+                            label={t(
+                              'components.productFormDialog.sameAs.label'
+                            )}
+                            helperText={
+                              sameAsProduct
+                                ? t(
+                                    'components.productFormDialog.sameAs.note',
+                                    {
+                                      name: sameAsProduct.name
+                                    }
+                                  )
+                                : t(
+                                    'components.productFormDialog.sameAs.helper'
+                                  )
                             }
-                            disabled={isSubmitting}
-                            openOnClick
                           >
-                            <ComboboxControl>
-                              <ComboboxInput
-                                placeholder={t(
-                                  'components.productFormDialog.fields.currency.placeholder'
-                                )}
+                            <ComboboxRoot
+                              collection={sameAsCollection}
+                              value={
+                                sameAsId === null ? [] : [String(sameAsId)]
+                              }
+                              onValueChange={(details) => {
+                                setSameAsId(
+                                  details.value[0]
+                                    ? Number(details.value[0])
+                                    : null
+                                );
+                                clearFieldError('currency');
+                              }}
+                              onInputValueChange={(details) =>
+                                setSameAsQuery(details.inputValue)
+                              }
+                              disabled={isSubmitting}
+                              openOnClick
+                            >
+                              <ComboboxControl>
+                                <ComboboxInput
+                                  aria-label={t(
+                                    'components.productFormDialog.sameAs.label'
+                                  )}
+                                  placeholder={t(
+                                    'components.productFormDialog.sameAs.placeholder'
+                                  )}
+                                />
+                              </ComboboxControl>
+                              <ComboboxContent portalled={false}>
+                                <ComboboxEmpty>
+                                  {t(
+                                    'components.productFormDialog.sameAs.empty'
+                                  )}
+                                </ComboboxEmpty>
+                                {sameAsCollection.items.map((item) => (
+                                  <ComboboxItem key={item.value} item={item}>
+                                    {item.label}
+                                  </ComboboxItem>
+                                ))}
+                              </ComboboxContent>
+                            </ComboboxRoot>
+                            {sameAsProduct && (
+                              <Button
+                                variant="plain"
+                                size="xs"
+                                alignSelf="flex-start"
+                                onClick={() => setSameAsId(null)}
+                              >
+                                {t('components.productFormDialog.sameAs.clear')}
+                              </Button>
+                            )}
+                          </Field>
+                        )}
+
+                        {!sameAsProduct && (
+                          <>
+                            <Field
+                              label={t(
+                                'components.productFormDialog.fields.name'
+                              )}
+                              errorText={errors.name}
+                              invalid={Boolean(errors.name)}
+                              required
+                            >
+                              <Input
+                                value={name}
+                                onChange={(e) => {
+                                  setName(e.target.value);
+                                  clearFieldError('name');
+                                }}
+                                disabled={isSubmitting}
+                                autoComplete="off"
                               />
-                            </ComboboxControl>
-                            <ComboboxContent portalled={false}>
-                              <ComboboxEmpty>
-                                {t(
-                                  'components.productFormDialog.fields.currency.empty'
-                                )}
-                              </ComboboxEmpty>
-                              {currencyCollection.items.map((item) => (
-                                <ComboboxItem key={item.value} item={item}>
-                                  {item.label}
-                                </ComboboxItem>
-                              ))}
-                            </ComboboxContent>
-                          </ComboboxRoot>
-                        </Field>
+                            </Field>
+
+                            <Field
+                              label={t(
+                                'components.productFormDialog.fields.description'
+                              )}
+                            >
+                              <Textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                disabled={isSubmitting}
+                                rows={3}
+                              />
+                            </Field>
+
+                            <Field
+                              label={t(
+                                'components.productFormDialog.fields.category.label'
+                              )}
+                              errorText={errors.category}
+                              invalid={Boolean(errors.category)}
+                              required
+                            >
+                              <Popover.Root
+                                open={newCategoryOpen}
+                                onOpenChange={(e) => setNewCategoryOpen(e.open)}
+                                positioning={{ placement: 'bottom-start' }}
+                              >
+                                <Popover.Anchor>
+                                  <SelectRoot
+                                    collection={categoryCollection}
+                                    value={[categoryId]}
+                                    onValueChange={handleCategoryValueChange}
+                                    disabled={isSubmitting}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValueText
+                                        placeholder={t(
+                                          'components.productFormDialog.fields.category.placeholder'
+                                        )}
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent portalled={false}>
+                                      {categoryCollection.items.map((item) => (
+                                        <SelectItem
+                                          key={item.value}
+                                          item={item}
+                                        >
+                                          {item.value === NEW_CATEGORY_VALUE ? (
+                                            <HStack gap={2}>
+                                              <Icon as={LuPlus} size="sm" />
+                                              <Text>{item.label}</Text>
+                                            </HStack>
+                                          ) : (
+                                            item.label
+                                          )}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </SelectRoot>
+                                </Popover.Anchor>
+                                <Popover.Positioner>
+                                  <Popover.Content w="280px">
+                                    <Popover.Body>
+                                      <VStack gap={3} align="stretch">
+                                        <Field
+                                          label={t(
+                                            'components.productFormDialog.newCategory.nameLabel'
+                                          )}
+                                          errorText={newCategoryError}
+                                          invalid={Boolean(newCategoryError)}
+                                          required
+                                        >
+                                          <Input
+                                            value={newCategoryName}
+                                            onChange={(e) =>
+                                              setNewCategoryName(e.target.value)
+                                            }
+                                            placeholder={t(
+                                              'components.productFormDialog.newCategory.namePlaceholder'
+                                            )}
+                                            disabled={isCreatingCategory}
+                                            autoComplete="off"
+                                          />
+                                        </Field>
+                                        <CategoryColorPicker
+                                          value={newCategoryColor}
+                                          onChange={setNewCategoryColor}
+                                          disabled={isCreatingCategory}
+                                        />
+                                        <Flex justify="flex-end" gap={2}>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                              setNewCategoryOpen(false)
+                                            }
+                                            disabled={isCreatingCategory}
+                                          >
+                                            {t('common.actions.cancel')}
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            onClick={handleCreateCategory}
+                                            loading={isCreatingCategory}
+                                          >
+                                            {t(
+                                              'components.productFormDialog.newCategory.submit'
+                                            )}
+                                          </Button>
+                                        </Flex>
+                                      </VStack>
+                                    </Popover.Body>
+                                  </Popover.Content>
+                                </Popover.Positioner>
+                              </Popover.Root>
+                            </Field>
+                          </>
+                        )}
+
+                        {mode === 'create' && (
+                          <Field
+                            label={t(
+                              'components.productFormDialog.fields.currency.label'
+                            )}
+                            errorText={errors.currency}
+                            invalid={Boolean(errors.currency)}
+                            required
+                          >
+                            <ComboboxRoot
+                              collection={currencyCollection}
+                              value={currency ? [currency] : []}
+                              onValueChange={(details) => {
+                                setCurrency(details.value[0] ?? '');
+                                clearFieldError('currency');
+                              }}
+                              onInputValueChange={(details) =>
+                                setCurrencyQuery(details.inputValue)
+                              }
+                              disabled={isSubmitting}
+                              openOnClick
+                            >
+                              <ComboboxControl>
+                                <ComboboxInput
+                                  placeholder={t(
+                                    'components.productFormDialog.fields.currency.placeholder'
+                                  )}
+                                />
+                              </ComboboxControl>
+                              <ComboboxContent portalled={false}>
+                                <ComboboxEmpty>
+                                  {t(
+                                    'components.productFormDialog.fields.currency.empty'
+                                  )}
+                                </ComboboxEmpty>
+                                {currencyCollection.items.map((item) => (
+                                  <ComboboxItem key={item.value} item={item}>
+                                    {item.label}
+                                  </ComboboxItem>
+                                ))}
+                              </ComboboxContent>
+                            </ComboboxRoot>
+                          </Field>
+                        )}
                       </>
                     )}
                   </VStack>

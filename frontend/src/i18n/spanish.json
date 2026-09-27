@@ -134,7 +134,8 @@
         "categoryRequired": "Selecciona una categoría.",
         "currencyInvalid": "Introduce un código de moneda de 3 letras válido.",
         "extraction": "No pudimos extraer los detalles de esa URL. Puedes rellenarlos manualmente o volver a intentarlo.",
-        "extractionNoCategories": "Necesitas al menos una categoría para poder extraer los detalles. Añade una desde el campo Categoría de abajo y vuelve a intentarlo."
+        "extractionNoCategories": "Necesitas al menos una categoría para poder extraer los detalles. Añade una desde el campo Categoría de abajo y vuelve a intentarlo.",
+        "currencyMismatch": "{{name}} se sigue en {{expected}}; esta tienda usa {{found}}."
       },
       "newCategory": {
         "nameLabel": "Nombre",
@@ -145,6 +146,14 @@
       "loadError": {
         "title": "No pudimos cargar este producto",
         "message": "Ocurrió un problema al cargar los detalles del producto. Inténtalo de nuevo."
+      },
+      "sameAs": {
+        "label": "Mismo producto que…",
+        "helper": "Opcional. Elige un producto que ya sigues para añadir esta URL como otra tienda.",
+        "placeholder": "Busca en tus productos",
+        "empty": "No se han encontrado productos.",
+        "note": "Se añadirá como otra tienda de {{name}}.",
+        "clear": "Seguir como producto nuevo"
       }
     },
     "editOfferDialog": {
