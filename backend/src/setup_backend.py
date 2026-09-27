@@ -15,7 +15,14 @@ from datetime import datetime, timedelta
 
 from sqlmodel import Session, SQLModel, create_engine, select
 from src.core.config import CONFIG_DEFAULTS
-from src.models.database_models import Category, Config, Product, ProductHist, Store
+from src.models.database_models import (
+    Category,
+    Config,
+    Offer,
+    OfferHist,
+    Product,
+    Store,
+)
 
 
 def check_database_exists(db_path: str) -> bool:
@@ -118,48 +125,45 @@ def populate_test_data(engine):
         session.refresh(amazon)
         print(f"  ✓ Created stores: {thomann.name}, {amazon.name}")
 
-        # Create product
+        # Create product, tracked in two stores
         print("Creating product...")
         producto = Product(
             name="Millenium MPS-850 E-Drum Set Bundle",
-            url="https://www.thomann.es/millenium_mps_850_e_drum_set_bundle.htm",
             category_id=electronica.id,
             priority="high",
             description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar.",
-            currency="EUR",
-            store_id=thomann.id,
         )
-
         session.add(producto)
         session.commit()
         session.refresh(producto)
 
+        offer_thomann = Offer(
+            product_id=producto.id,
+            url="https://www.thomann.es/millenium_mps_850_e_drum_set_bundle.htm",
+            store_id=thomann.id,
+            currency="EUR",
+        )
+        offer_amazon = Offer(
+            product_id=producto.id,
+            url="https://www.amazon.es/dp/B07MPS850",
+            store_id=amazon.id,
+            currency="EUR",
+        )
+        session.add(offer_thomann)
+        session.add(offer_amazon)
+        session.commit()
+        session.refresh(offer_thomann)
+        session.refresh(offer_amazon)
         print(f"  ✓ Created product: {producto.name} (ID: {producto.id})")
         print(f"    Category: {electronica.name}")
         print(f"    Priority: {producto.priority}")
+        print(f"    Stores: {thomann.name}, {amazon.name}")
 
-        # Same product in a second store, with its own prices
-        producto_amazon = Product(
-            name="Millenium MPS-850 E-Drum Set Bundle",
-            url="https://www.amazon.es/dp/B07MPS850",
-            category_id=electronica.id,
-            priority="high",
-            description="Set de batería electrónica Millenium MPS-850 con todo lo necesario para empezar a tocar.",
-            currency="EUR",
-            store_id=amazon.id,
-        )
-        session.add(producto_amazon)
-        session.commit()
-        session.refresh(producto_amazon)
-        print(
-            f"  ✓ Created product: {producto_amazon.name} (ID: {producto_amazon.id}, store: {amazon.name})"
-        )
-
-        # Create 60 days of price history for each product
+        # Create 60 days of price history for each store
         print("Creating price history (60 days)...")
         current_date = datetime.now()
 
-        for product, base_price in ((producto, 599.99), (producto_amazon, 629.99)):
+        for offer, base_price in ((offer_thomann, 599.99), (offer_amazon, 629.99)):
             for days_ago in range(59, -1, -1):  # From 59 days ago to today
                 record_date = current_date - timedelta(days=days_ago)
                 timestamp = int(record_date.timestamp())
@@ -171,8 +175,8 @@ def populate_test_data(engine):
                 # 80% chance of being in stock
                 is_in_stock = random.random() < 0.8
 
-                price_hist = ProductHist(
-                    product_id=product.id,
+                price_hist = OfferHist(
+                    offer_id=offer.id,
                     price=price,
                     is_in_stock=is_in_stock,
                     timestamp=timestamp,
@@ -180,7 +184,7 @@ def populate_test_data(engine):
                 session.add(price_hist)
 
         session.commit()
-        print("  ✓ Created 60 price history records per product")
+        print("  ✓ Created 60 price history records per store")
 
     print("✓ Test data populated successfully")
 
