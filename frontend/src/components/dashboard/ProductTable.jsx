@@ -15,7 +15,6 @@ import {
 import { formatPrice } from '@/lib/format';
 import { Sparkline } from './Sparkline';
 import { findBestOfferSummary } from '@/lib/bestOffer';
-import { oldestCheckedAt, staleOffers } from '@/lib/staleness';
 import { OfferStores } from './OfferStores';
 import { ProductRowActions } from './ProductRowActions';
 import { useTableRowActivation } from './useRowActivation';
@@ -23,7 +22,7 @@ import { useTableRowActivation } from './useRowActivation';
 const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
   const activation = useTableRowActivation(`/product/${product.id}`);
   const best = findBestOfferSummary(product);
-  const stale = staleOffers(product);
+  const staleStores = product.offers.filter((offer) => offer.is_stale);
 
   return (
     <AnimatedListItem
@@ -87,10 +86,10 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
         <VStack gap={1}>
           <StockStatus inStock={product.is_in_stock} justify="center" />
           <StaleBadge
-            lastCheckedAt={oldestCheckedAt(stale)}
+            days={product.stale_days}
             storeNames={
               product.offers.length > 1
-                ? stale.map((offer) => offer.store_name)
+                ? staleStores.map((offer) => offer.store_name)
                 : undefined
             }
           />

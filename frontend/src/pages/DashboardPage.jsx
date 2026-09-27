@@ -179,6 +179,7 @@ const DashboardPage = () => {
               locale={locale}
               onChange={setFilters}
               onReset={resetFilters}
+              staleAfterDays={config?.stale_after_days ?? null}
             />
           )}
           {hasNoMatches ? (

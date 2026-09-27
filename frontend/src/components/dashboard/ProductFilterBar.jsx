@@ -129,6 +129,8 @@ const buildChips = (filters, options, t, locale) => {
  * @param {number} props.totalCount - All products.
  * @param {string} props.locale - An `Intl` locale tag, see `getLocale`.
  * @param {(patch: Partial<import('@/lib/productFilters').ProductFilters>) => void} props.onChange
+ * @param {number|null} [props.staleAfterDays] - `config.stale_after_days`,
+ *   for the stale filter's label; `null` while the config loads.
  * @param {(options: { keepQuery: boolean }) => void} props.onReset - Clears
  *   every panel filter; called with `keepQuery: true` since the chips'
  *   "Clear all" never touches the search box.
@@ -140,7 +142,8 @@ export const ProductFilterBar = ({
   totalCount,
   locale,
   onChange,
-  onReset
+  onReset,
+  staleAfterDays = null
 }) => {
   const { t } = useTranslation();
 
@@ -240,6 +243,7 @@ export const ProductFilterBar = ({
                     filters={filters}
                     options={options}
                     onChange={onChange}
+                    staleAfterDays={staleAfterDays}
                   />
                 </Popover.Body>
                 <Popover.CloseTrigger asChild>

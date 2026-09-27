@@ -306,7 +306,12 @@ describe('ProductPage', () => {
   it('shows one outdated warning per stale store, naming it', async () => {
     const now = Date.now() / 1000;
     const detail = buildMultiStoreDetail();
-    detail.offers[1].last_checked_at = now - 5 * DAY;
+    detail.offers[1] = {
+      ...detail.offers[1],
+      last_checked_at: now - 5 * DAY,
+      days_since_check: 5,
+      is_stale: true
+    };
     productsApi.get.mockResolvedValue(detail);
 
     renderProductPage(3);

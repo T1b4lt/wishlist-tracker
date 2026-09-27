@@ -1,5 +1,3 @@
-import { isProductStale, nowInSeconds } from './staleness';
-
 /**
  * Pure computations for the dashboard's summary strip. Kept separate from
  * `DashboardSummary.jsx` so the numbers can be unit tested without
@@ -10,8 +8,8 @@ import { isProductStale, nowInSeconds } from './staleness';
  * @property {string|null|undefined} currency
  * @property {number|null|undefined} price_change_pct
  * @property {boolean|undefined} is_at_lowest
- * @property {Array<{last_checked_at?: number|null}>} offers - The product's
- *   stores; the product is stale when any of them is.
+ * @property {boolean|undefined} is_stale - Decided by the backend (any of
+ *   the product's stores is stale).
  */
 
 /**
@@ -31,7 +29,6 @@ const isFiniteNumber = (value) =>
  * healthy dashboard stays uncluttered.
  *
  * @param {DashboardSummaryProduct[]} products
- * @param {number} [now] - Reference Unix time in seconds; defaults to now.
  * @returns {{
  *   itemCount: number,
  *   totalsByCurrency: Array<{ currency: string, total: number }>,
@@ -40,7 +37,7 @@ const isFiniteNumber = (value) =>
  *   staleCount: number
  * }}
  */
-export function computeDashboardSummary(products, now = nowInSeconds()) {
+export function computeDashboardSummary(products) {
   const itemCount = products.length;
 
   const totalsByCurrency = new Map();
@@ -83,7 +80,6 @@ export function computeDashboardSummary(products, now = nowInSeconds()) {
     })).sort((a, b) => a.currency.localeCompare(b.currency)),
     priceDropCount,
     atLowestCount,
-    staleCount: products.filter((product) => isProductStale(product, now))
-      .length
+    staleCount: products.filter((product) => product.is_stale === true).length
   };
 }

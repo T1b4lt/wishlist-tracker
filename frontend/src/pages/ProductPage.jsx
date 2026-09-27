@@ -53,7 +53,6 @@ import {
   computeProductOfferStats,
   selectBestOffer
 } from '@/lib/bestOffer';
-import { staleOffers } from '@/lib/staleness';
 import { buildOfferSeries, seriesYDomain } from '@/lib/offerChart';
 import {
   computeRangeStats,
@@ -400,15 +399,18 @@ const ProductPage = () => {
             <StockStatus inStock={productStock} />
           </HStack>
 
-          {staleOffers(product).map((offer) => (
-            <StaleProductNotice
-              key={offer.id}
-              lastCheckedAt={offer.last_checked_at}
-              url={offer.url}
-              storeName={isMultiStore ? offer.store_name : undefined}
-              locale={locale}
-            />
-          ))}
+          {offers
+            .filter((offer) => offer.is_stale)
+            .map((offer) => (
+              <StaleProductNotice
+                key={offer.id}
+                days={offer.days_since_check}
+                lastCheckedAt={offer.last_checked_at}
+                url={offer.url}
+                storeName={isMultiStore ? offer.store_name : undefined}
+                locale={locale}
+              />
+            ))}
 
           <ProductStatsRow
             currentPrice={bestOffer?.current_price ?? null}

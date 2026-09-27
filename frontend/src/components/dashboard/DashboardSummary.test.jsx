@@ -88,13 +88,9 @@ describe('DashboardSummary', () => {
   });
 
   it('shows how many products have an outdated price', () => {
-    const now = Math.floor(Date.now() / 1000);
     renderWithProviders(
       <DashboardSummary
-        products={[
-          product({ offers: [{ last_checked_at: now - 4 * 86400 }] }),
-          product({ offers: [{ last_checked_at: now }] })
-        ]}
+        products={[product({ is_stale: true }), product({ is_stale: false })]}
         locale="en-US"
       />
     );
@@ -106,11 +102,7 @@ describe('DashboardSummary', () => {
   it('hides the outdated stat when every price is up to date', () => {
     renderWithProviders(
       <DashboardSummary
-        products={[
-          product({
-            offers: [{ last_checked_at: Math.floor(Date.now() / 1000) }]
-          })
-        ]}
+        products={[product({ is_stale: false })]}
         locale="en-US"
       />
     );

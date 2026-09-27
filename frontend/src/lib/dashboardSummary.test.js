@@ -101,34 +101,13 @@ describe('computeDashboardSummary', () => {
     expect(summary.atLowestCount).toBeNull();
   });
 
-  it('counts the products whose price has not been updated for a while', () => {
-    const now = 10 * 86400;
-    const summary = computeDashboardSummary(
-      [
-        product({ offers: [{ last_checked_at: now - 5 * 86400 }] }),
-        product({ offers: [{ last_checked_at: now - 3 * 86400 }] }),
-        product({ offers: [{ last_checked_at: now - 86400 }] }),
-        product({ offers: [{ last_checked_at: null }] })
-      ],
-      now
-    );
+  it('counts the products the backend reports as stale', () => {
+    const summary = computeDashboardSummary([
+      product({ is_stale: true }),
+      product({ is_stale: true }),
+      product({ is_stale: false }),
+      product({ is_stale: undefined })
+    ]);
     expect(summary.staleCount).toBe(2);
-  });
-});
-
-describe('computeDashboardSummary with several stores', () => {
-  it('counts a product once when two of its stores are stale', () => {
-    const now = 100 * 86400;
-    const old = now - 5 * 86400;
-    const { staleCount, itemCount } = computeDashboardSummary(
-      [
-        product({
-          offers: [{ last_checked_at: old }, { last_checked_at: old }]
-        })
-      ],
-      now
-    );
-    expect(itemCount).toBe(1);
-    expect(staleCount).toBe(1);
   });
 });

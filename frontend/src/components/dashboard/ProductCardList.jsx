@@ -12,7 +12,6 @@ import {
 } from '@/components/common';
 import { formatPrice } from '@/lib/format';
 import { findBestOfferSummary } from '@/lib/bestOffer';
-import { oldestCheckedAt, staleOffers } from '@/lib/staleness';
 import { OfferStores } from './OfferStores';
 import { ProductRowActions } from './ProductRowActions';
 import { useRowActivation } from './useRowActivation';
@@ -21,7 +20,7 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
   const { t } = useTranslation();
   const activation = useRowActivation(`/product/${product.id}`);
   const best = findBestOfferSummary(product);
-  const stale = staleOffers(product);
+  const staleStores = product.offers.filter((offer) => offer.is_stale);
 
   return (
     <AnimatedListItem as="li" delay={index * staggerStepSeconds}>
@@ -66,10 +65,10 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
             <HStack gap={2} wrap="wrap">
               <StockStatus inStock={product.is_in_stock} />
               <StaleBadge
-                lastCheckedAt={oldestCheckedAt(stale)}
+                days={product.stale_days}
                 storeNames={
                   product.offers.length > 1
-                    ? stale.map((offer) => offer.store_name)
+                    ? staleStores.map((offer) => offer.store_name)
                     : undefined
                 }
               />

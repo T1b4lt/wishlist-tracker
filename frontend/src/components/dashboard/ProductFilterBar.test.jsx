@@ -42,6 +42,7 @@ const renderBar = ({
         shownCount={shownCount}
         totalCount={totalCount}
         locale="en-US"
+        staleAfterDays={3}
         onChange={(patch) => {
           onChange(patch);
           setFilters((current) => ({ ...current, ...patch }));

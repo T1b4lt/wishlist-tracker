@@ -19,11 +19,9 @@
  * @property {number|null} maxPrice - Inclusive upper bound on `current_price`.
  * @property {boolean} priceDrop - Only products whose `price_change_pct` is negative.
  * @property {boolean} atLowest - Only products the backend flags as at their lowest price (`is_at_lowest`).
- * @property {boolean} stale - Only products with a store whose price has not been updated for a while (see `staleness.js`).
+ * @property {boolean} stale - Only products the backend reports as stale (`is_stale`).
  * @property {SortKey} sort
  */
-
-import { isProductStale, nowInSeconds, oldestCheckedAt } from './staleness';
 
 export const STOCK_FILTERS = ['all', 'in', 'out'];
 export const PRIORITIES = ['high', 'medium', 'low'];
@@ -71,12 +69,10 @@ const normalizePriority = (priority) => (priority ?? '').toLowerCase();
 /**
  * @param {object[]} products - Dashboard-summary rows.
  * @param {ProductFilters} filters
- * @param {number} [now] - Reference Unix time in seconds for the stale
- *   filter; defaults to now.
  * @returns {object[]} The products matching every active filter (AND), in
  *   their original order.
  */
-export function filterProducts(products, filters, now = nowInSeconds()) {
+export function filterProducts(products, filters) {
   const query = normalizeText(filters.query.trim());
 
   return products.filter((product) => {
@@ -125,7 +121,7 @@ export function filterProducts(products, filters, now = nowInSeconds()) {
       return false;
     }
     if (filters.atLowest && product.is_at_lowest !== true) return false;
-    if (filters.stale && !isProductStale(product, now)) return false;
+    if (filters.stale && product.is_stale !== true) return false;
 
     return true;
   });
@@ -147,6 +143,14 @@ const compareNullable = (a, b, direction) => {
 const stockRank = (inStock) =>
   inStock === true ? 0 : inStock === false ? 1 : 2;
 
+/** The oldest `last_checked_at` of a product's stores, or `null` if none was checked. */
+const oldestCheck = (product) => {
+  const checks = (product.offers ?? [])
+    .map((offer) => offer.last_checked_at)
+    .filter(isFiniteNumber);
+  return checks.length === 0 ? null : Math.min(...checks);
+};
+
 /** @type {Record<SortKey, (a: object, b: object) => number>} */
 const COMPARATORS = {
   name_asc: () => 0,
@@ -162,8 +166,7 @@ const COMPARATORS = {
     ),
   stock: (a, b) => stockRank(a.is_in_stock) - stockRank(b.is_in_stock),
   // A product is as fresh as its least recently checked store.
-  checked_desc: (a, b) =>
-    compareNullable(oldestCheckedAt(a.offers), oldestCheckedAt(b.offers), -1)
+  checked_desc: (a, b) => compareNullable(oldestCheck(a), oldestCheck(b), -1)
 };
 
 const compareNames = (a, b) =>

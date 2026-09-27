@@ -186,16 +186,15 @@ describe('filterProducts', () => {
     ]);
   });
 
-  it('keeps only outdated products when stale is on', () => {
-    const now = 10 * 86400;
+  it('keeps only the products the backend reports as stale', () => {
     const products = [
-      product({ id: 1, last_checked_at: now - 3 * 86400 }),
-      product({ id: 2, last_checked_at: now - 86400 }),
-      product({ id: 3, last_checked_at: null })
+      product({ id: 1, is_stale: true }),
+      product({ id: 2, is_stale: false }),
+      product({ id: 3, is_stale: undefined })
     ];
-    expect(
-      ids(filterProducts(products, filters({ stale: true }), now))
-    ).toEqual([1]);
+    expect(ids(filterProducts(products, filters({ stale: true })))).toEqual([
+      1
+    ]);
   });
 
   it('combines every filter with AND', () => {
@@ -465,22 +464,23 @@ describe('multi-store products', () => {
         store_name: 'Amazon',
         last_checked_at: now - 5 * 86400
       }
-    ]
+    ],
+    is_stale: true
   };
 
   it('matches the store filter on any offer', () => {
     const filters = { ...DEFAULT_FILTERS, stores: [20] };
-    expect(filterProducts([product], filters, now)).toEqual([product]);
+    expect(filterProducts([product], filters)).toEqual([product]);
   });
 
   it('matches the search on any store name', () => {
     const filters = { ...DEFAULT_FILTERS, query: 'amazon' };
-    expect(filterProducts([product], filters, now)).toEqual([product]);
+    expect(filterProducts([product], filters)).toEqual([product]);
   });
 
-  it('is outdated when any store is outdated', () => {
+  it('is outdated when the backend reports it stale', () => {
     const filters = { ...DEFAULT_FILTERS, stale: true };
-    expect(filterProducts([product], filters, now)).toEqual([product]);
+    expect(filterProducts([product], filters)).toEqual([product]);
   });
 
   it('sorts by the oldest check among stores', () => {

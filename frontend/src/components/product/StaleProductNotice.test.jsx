@@ -13,10 +13,10 @@ describe('StaleProductNotice', () => {
 
     renderWithProviders(
       <StaleProductNotice
+        days={5}
         lastCheckedAt={NOW - 5 * DAY}
         url={URL}
         locale="en-US"
-        now={NOW}
       />
     );
 
@@ -30,26 +30,13 @@ describe('StaleProductNotice', () => {
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
-  it('renders nothing while the price is up to date', () => {
+  it('renders nothing without days', () => {
     renderWithProviders(
       <StaleProductNotice
+        days={null}
         lastCheckedAt={NOW - DAY}
         url={URL}
         locale="en-US"
-        now={NOW}
-      />
-    );
-
-    expect(screen.queryByText(/Price not updated/)).not.toBeInTheDocument();
-  });
-
-  it('renders nothing for a product that was never checked', () => {
-    renderWithProviders(
-      <StaleProductNotice
-        lastCheckedAt={null}
-        url={URL}
-        locale="en-US"
-        now={NOW}
       />
     );
 
@@ -59,11 +46,11 @@ describe('StaleProductNotice', () => {
   it('names the store for a product tracked in several stores', () => {
     renderWithProviders(
       <StaleProductNotice
+        days={5}
         lastCheckedAt={NOW - 5 * DAY}
         url={URL}
         storeName="Amazon"
         locale="en-US"
-        now={NOW}
       />
     );
 

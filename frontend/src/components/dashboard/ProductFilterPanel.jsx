@@ -11,7 +11,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { PRIORITIES, STOCK_FILTERS } from '@/lib/productFilters';
-import { STALE_AFTER_DAYS } from '@/lib/staleness';
 
 /**
  * Parses a user-typed price, accepting a comma as the decimal separator.
@@ -100,8 +99,15 @@ const toggle = (list, value) =>
  * @param {import('@/lib/productFilters').ProductFilters} props.filters
  * @param {ReturnType<typeof import('@/lib/productFilters').getFilterOptions>} props.options
  * @param {(patch: Partial<import('@/lib/productFilters').ProductFilters>) => void} props.onChange
+ * @param {number|null} props.staleAfterDays - `config.stale_after_days`;
+ *   `null` while the config loads.
  */
-export const ProductFilterPanel = ({ filters, options, onChange }) => {
+export const ProductFilterPanel = ({
+  filters,
+  options,
+  onChange,
+  staleAfterDays
+}) => {
   const { t } = useTranslation();
 
   return (
@@ -163,9 +169,11 @@ export const ProductFilterPanel = ({ filters, options, onChange }) => {
           checked={filters.stale}
           onCheckedChange={(stale) => onChange({ stale })}
         >
-          {t('pages.dashboard.filters.updates.stale', {
-            days: STALE_AFTER_DAYS
-          })}
+          {staleAfterDays === null
+            ? t('pages.dashboard.filters.updates.chip')
+            : t('pages.dashboard.filters.updates.stale', {
+                days: staleAfterDays
+              })}
         </FilterCheckbox>
       </Section>
 
