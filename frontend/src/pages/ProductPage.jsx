@@ -19,6 +19,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import {
   LuEllipsis,
   LuExternalLink,
+  LuMerge,
   LuPencil,
   LuPlus,
   LuTrash2
@@ -38,6 +39,7 @@ import { ProductFormDialog } from '@/components/products';
 import {
   AddOfferDialog,
   EditOfferDialog,
+  MergeProductDialog,
   OfferList,
   PriceHistoryChart,
   ProductDescription,
@@ -105,6 +107,7 @@ const ProductPage = () => {
   const [removingOffer, setRemovingOffer] = useState(null);
   const [isRemovingOffer, setIsRemovingOffer] = useState(false);
   const [isAddOfferOpen, setIsAddOfferOpen] = useState(false);
+  const [isMergeOpen, setIsMergeOpen] = useState(false);
 
   // The range selector defaults to the configured `hist_window_size`
   // (or the default window when it is not an offered option) until the user picks one
@@ -360,6 +363,16 @@ const ProductPage = () => {
                 <Menu.Positioner>
                   <Menu.Content>
                     <Menu.Item
+                      value="merge"
+                      onSelect={() => setIsMergeOpen(true)}
+                    >
+                      <HStack gap={2}>
+                        <Icon as={LuMerge} size="md" />
+                        {t('pages.product.actions.merge')}
+                      </HStack>
+                    </Menu.Item>
+                    <Menu.Separator />
+                    <Menu.Item
                       value="delete"
                       onSelect={() => setDeleteDialogOpen(true)}
                     >
@@ -467,6 +480,13 @@ const ProductPage = () => {
         onClose={() => setIsFormOpen(false)}
         mode="edit"
         product={product}
+      />
+
+      <MergeProductDialog
+        open={isMergeOpen}
+        onClose={() => setIsMergeOpen(false)}
+        product={product}
+        finalFocusEl={() => deleteMenuTriggerRef.current}
       />
 
       <AddOfferDialog

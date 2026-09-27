@@ -111,6 +111,10 @@ describe('ProductPage delete action', () => {
         name: 'More actions for Mechanical Keyboard'
       })
     );
+    // The same menu also offers merging with another product.
+    expect(
+      screen.getByRole('menuitem', { name: 'Merge with…' })
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     expect(await screen.findByText('Delete product')).toBeInTheDocument();

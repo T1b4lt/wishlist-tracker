@@ -5,3 +5,4 @@ export { StaleProductNotice } from './StaleProductNotice';
 export { OfferList } from './OfferList';
 export { EditOfferDialog } from './EditOfferDialog';
 export { AddOfferDialog } from './AddOfferDialog';
+export { MergeProductDialog } from './MergeProductDialog';

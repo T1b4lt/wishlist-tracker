@@ -168,6 +168,19 @@
       "firstPriceHint": "Its first price arrives with the next daily check.",
       "extractionError": "We couldn't read this page. Check the URL and try again.",
       "submit": "Add store"
+    },
+    "mergeProductDialog": {
+      "title": "Merge with another product",
+      "description": "Use this when {{name}} and another product are the same item in different stores. Their stores and price histories are combined into one product.",
+      "productLabel": "Other product",
+      "productPlaceholder": "Search your products",
+      "empty": "No other product uses {{currency}}.",
+      "keepLabel": "Keep name, category, priority and description from",
+      "keepTarget": "This product",
+      "keepSource": "The other product",
+      "preview_one": "Result: {{name}}, tracked in {{count}} store.",
+      "preview_other": "Result: {{name}}, tracked in {{count}} stores.",
+      "submit": "Merge"
     }
   },
   "pages": {
@@ -317,7 +330,8 @@
       "actions": {
         "openStorePage": "Open store page",
         "moreActions": "More actions for {{name}}",
-        "openInStore": "Open in {{store}}"
+        "openInStore": "Open in {{store}}",
+        "merge": "Merge with…"
       },
       "stats": {
         "currentPrice": "Current price",
@@ -501,7 +515,9 @@
       "deleteError": {
         "title": "Error deleting product",
         "description": "Failed to delete the product. Please try again."
-      }
+      },
+      "mergeSuccess": "Products merged",
+      "mergeError": "The products could not be merged."
     },
     "categories": {
       "createSuccess": {

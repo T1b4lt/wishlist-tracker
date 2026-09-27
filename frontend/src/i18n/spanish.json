@@ -168,6 +168,19 @@
       "firstPriceHint": "Su primer precio llegará con la próxima revisión diaria.",
       "extractionError": "No hemos podido leer esta página. Revisa la URL e inténtalo de nuevo.",
       "submit": "Añadir tienda"
+    },
+    "mergeProductDialog": {
+      "title": "Fusionar con otro producto",
+      "description": "Úsalo cuando {{name}} y otro producto sean el mismo artículo en tiendas distintas. Sus tiendas e historiales de precios se combinan en un único producto.",
+      "productLabel": "Otro producto",
+      "productPlaceholder": "Busca en tus productos",
+      "empty": "Ningún otro producto usa {{currency}}.",
+      "keepLabel": "Conservar nombre, categoría, prioridad y descripción de",
+      "keepTarget": "Este producto",
+      "keepSource": "El otro producto",
+      "preview_one": "Resultado: {{name}}, seguido en {{count}} tienda.",
+      "preview_other": "Resultado: {{name}}, seguido en {{count}} tiendas.",
+      "submit": "Fusionar"
     }
   },
   "pages": {
@@ -317,7 +330,8 @@
       "actions": {
         "openStorePage": "Abrir página de la tienda",
         "moreActions": "Más acciones para {{name}}",
-        "openInStore": "Abrir en {{store}}"
+        "openInStore": "Abrir en {{store}}",
+        "merge": "Fusionar con…"
       },
       "stats": {
         "currentPrice": "Precio actual",
@@ -501,7 +515,9 @@
       "deleteError": {
         "title": "Error al eliminar el producto",
         "description": "No se pudo eliminar el producto. Inténtalo de nuevo."
-      }
+      },
+      "mergeSuccess": "Productos fusionados",
+      "mergeError": "No se han podido fusionar los productos."
     },
     "categories": {
       "createSuccess": {
