@@ -398,6 +398,7 @@
       "subtitle": "Configure your application preferences",
       "sections": {
         "general": "General",
+        "aiProvider": "AI provider",
         "analysis": "Analysis",
         "notifications": "Notifications"
       },
@@ -405,7 +406,7 @@
         "language": "Language",
         "googleApiKey": {
           "label": "Google AI Studio API key",
-          "helper": "Required for extracting product information from URLs. Get your key from <link>Google AI Studio</link>."
+          "helper": "Required to use Google AI Studio. Get your key from <link>Google AI Studio</link>."
         },
         "analysisHour": {
           "label": "Analysis hour",
@@ -421,6 +422,30 @@
         },
         "telegramChatId": {
           "label": "Telegram chat ID"
+        },
+        "aiProvider": {
+          "label": "Provider",
+          "helper": "Service that extracts product information and checks prices every day.",
+          "options": {
+            "google_ai_studio": "Google AI Studio",
+            "ollama": "Ollama"
+          }
+        },
+        "ollamaUrl": {
+          "label": "Ollama URL",
+          "helper": "Address of your Ollama instance, usually ip:11434.",
+          "placeholder": "http://192.168.1.20:11434"
+        },
+        "ollamaModel": {
+          "label": "Model",
+          "helper": "Models installed on your Ollama instance.",
+          "placeholder": "Select a model",
+          "enterUrl": "Enter the Ollama URL to list its models",
+          "loading": "Loading models…",
+          "loadError": "Could not load the models: {{detail}}",
+          "refresh": "Reload models",
+          "notAvailable": "{{model}} (not available)",
+          "smallWarning": "Models under {{threshold}}B parameters don't guarantee good results. Bigger models such as qwen3.8 work reliably."
         }
       },
       "alerts": {

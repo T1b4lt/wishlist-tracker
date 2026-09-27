@@ -6,3 +6,4 @@ export * as telegram from './telegram';
 export * as stores from './stores';
 export * as dailyCheck from './dailyCheck';
 export * as offers from './offers';
+export * as ai from './ai';

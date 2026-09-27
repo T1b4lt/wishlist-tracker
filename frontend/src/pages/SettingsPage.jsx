@@ -7,6 +7,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { ConfirmDialog, ErrorState, LoadingState } from '@/components/common';
 import {
+  AIProviderSection,
   AnalysisSection,
   GeneralSection,
   NotificationsSection,
@@ -29,6 +30,9 @@ const DEFAULT_DRAFT = {
   analysis_hour: 12,
   hist_window_size: 60,
   google_api_key: '',
+  ai_provider: 'google_ai_studio',
+  ollama_url: '',
+  ollama_model: '',
   telegram_bot_token: '',
   is_price_drop_alert: false,
   is_stock_change_alert: false,
@@ -183,9 +187,18 @@ const SettingsPage = () => {
           <GeneralSection
             language={draft.selected_language}
             onLanguageChange={setField('selected_language')}
+          />
+          <AIProviderSection
+            provider={draft.ai_provider}
+            onProviderChange={setField('ai_provider')}
+            providerOptions={config.ai_provider_options}
             googleApiKey={draft.google_api_key}
             onGoogleApiKeyChange={setField('google_api_key')}
             savedGoogleApiKey={config.google_api_key || ''}
+            ollamaUrl={draft.ollama_url}
+            onOllamaUrlChange={setField('ollama_url')}
+            ollamaModel={draft.ollama_model}
+            onOllamaModelChange={setField('ollama_model')}
           />
           <AnalysisSection
             analysisHour={draft.analysis_hour}

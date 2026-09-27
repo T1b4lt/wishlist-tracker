@@ -17,7 +17,10 @@ const CONFIG = {
   is_price_drop_alert: true,
   is_stock_change_alert: false,
   daily_check_report: 'limit_days',
-  telegram_status: 'connected'
+  telegram_status: 'connected',
+  ai_provider: 'google_ai_studio',
+  ollama_url: null,
+  ollama_model: null
 };
 
 describe('draftFromConfig', () => {
@@ -33,6 +36,9 @@ describe('draftFromConfig', () => {
       analysis_hour: 12,
       hist_window_size: 60,
       google_api_key: '',
+      ai_provider: 'google_ai_studio',
+      ollama_url: '',
+      ollama_model: '',
       telegram_bot_token: '',
       is_price_drop_alert: true,
       is_stock_change_alert: false,
@@ -146,6 +152,9 @@ describe('buildConfigPatch', () => {
       analysis_hour: 12,
       hist_window_size: 60,
       google_api_key: 'AIza-key',
+      ai_provider: 'google_ai_studio',
+      ollama_url: '',
+      ollama_model: '',
       telegram_bot_token: 'bot-token',
       is_price_drop_alert: true,
       is_stock_change_alert: false,
@@ -156,5 +165,33 @@ describe('buildConfigPatch', () => {
   it('sends every editable field', () => {
     const patch = buildConfigPatch(draftFromConfig(CONFIG));
     expect(Object.keys(patch).sort()).toEqual([...EDITABLE_FIELDS].sort());
+  });
+});
+
+describe('AI provider fields', () => {
+  it('drafts the AI provider settings, with blank strings for unset values', () => {
+    const draft = draftFromConfig({
+      ...CONFIG,
+      ai_provider: 'ollama',
+      ollama_url: 'http://h:11434',
+      ollama_model: null
+    });
+    expect(draft.ai_provider).toBe('ollama');
+    expect(draft.ollama_url).toBe('http://h:11434');
+    expect(draft.ollama_model).toBe('');
+  });
+
+  it('sends the AI provider settings in the patch', () => {
+    const patch = buildConfigPatch({
+      ...draftFromConfig(CONFIG),
+      ai_provider: 'ollama',
+      ollama_url: '192.168.1.20:11434',
+      ollama_model: 'qwen3.8:latest'
+    });
+    expect(patch).toMatchObject({
+      ai_provider: 'ollama',
+      ollama_url: '192.168.1.20:11434',
+      ollama_model: 'qwen3.8:latest'
+    });
   });
 });

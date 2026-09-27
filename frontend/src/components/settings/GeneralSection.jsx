@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Link, createListCollection } from '@chakra-ui/react';
-import { Trans, useTranslation } from 'react-i18next';
+import { createListCollection } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import {
   SelectRoot,
   SelectTrigger,
@@ -10,29 +10,18 @@ import {
 } from '@/components/ui/select';
 import { Field } from '@/components/ui/field';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
-import { SecretInput } from './SecretInput';
 import { SettingsSection } from './SettingsSection';
 
 /**
- * The "General" settings section: display language and the Google API key
- * used to extract product info from URLs.
+ * The "General" settings section: display language.
  *
  * @param {object} props
  * @param {string} props.language
  * @param {(value: string) => void} props.onLanguageChange - Only updates the
  *   draft: the language is applied and persisted after a successful Save
  *   (see `configStore.save`).
- * @param {string} props.googleApiKey
- * @param {(value: string) => void} props.onGoogleApiKeyChange
- * @param {string} props.savedGoogleApiKey
  */
-export const GeneralSection = ({
-  language,
-  onLanguageChange,
-  googleApiKey,
-  onGoogleApiKeyChange,
-  savedGoogleApiKey
-}) => {
+export const GeneralSection = ({ language, onLanguageChange }) => {
   const { t } = useTranslation();
 
   const languageCollection = useMemo(
@@ -73,30 +62,6 @@ export const GeneralSection = ({
           </SelectContent>
         </SelectRoot>
       </Field>
-
-      <SecretInput
-        label={t('pages.settings.fields.googleApiKey.label')}
-        helperText={
-          <Trans
-            i18nKey="pages.settings.fields.googleApiKey.helper"
-            components={{
-              link: (
-                <Link
-                  href="https://aistudio.google.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  color="fg"
-                  textDecoration="underline"
-                />
-              )
-            }}
-          />
-        }
-        value={googleApiKey}
-        onChange={onGoogleApiKeyChange}
-        savedValue={savedGoogleApiKey}
-        placeholder={t('common.placeholders.googleApiKey')}
-      />
     </SettingsSection>
   );
 };

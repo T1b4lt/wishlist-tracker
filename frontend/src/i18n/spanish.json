@@ -398,6 +398,7 @@
       "subtitle": "Configura las preferencias de la aplicación",
       "sections": {
         "general": "General",
+        "aiProvider": "Proveedor de IA",
         "analysis": "Análisis",
         "notifications": "Notificaciones"
       },
@@ -405,7 +406,7 @@
         "language": "Idioma",
         "googleApiKey": {
           "label": "Clave de Google AI Studio",
-          "helper": "Necesaria para extraer información de los productos a partir de URLs. Obtén tu clave en <link>Google AI Studio</link>."
+          "helper": "Necesaria para usar Google AI Studio. Consigue tu clave en <link>Google AI Studio</link>."
         },
         "analysisHour": {
           "label": "Hora de análisis",
@@ -421,6 +422,30 @@
         },
         "telegramChatId": {
           "label": "Chat ID de Telegram"
+        },
+        "aiProvider": {
+          "label": "Proveedor",
+          "helper": "Servicio que extrae la información de los productos y revisa los precios cada día.",
+          "options": {
+            "google_ai_studio": "Google AI Studio",
+            "ollama": "Ollama"
+          }
+        },
+        "ollamaUrl": {
+          "label": "URL de Ollama",
+          "helper": "Dirección de tu instancia de Ollama, normalmente ip:11434.",
+          "placeholder": "http://192.168.1.20:11434"
+        },
+        "ollamaModel": {
+          "label": "Modelo",
+          "helper": "Modelos instalados en tu instancia de Ollama.",
+          "placeholder": "Selecciona un modelo",
+          "enterUrl": "Introduce la URL de Ollama para ver sus modelos",
+          "loading": "Cargando modelos…",
+          "loadError": "No se han podido cargar los modelos: {{detail}}",
+          "refresh": "Recargar modelos",
+          "notAvailable": "{{model}} (no disponible)",
+          "smallWarning": "Los modelos de menos de {{threshold}}B parámetros no aseguran un buen rendimiento. Modelos mayores como qwen3.8 funcionan de forma fiable."
         }
       },
       "alerts": {
