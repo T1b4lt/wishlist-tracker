@@ -53,7 +53,11 @@ import { LuSparkles, LuPlus } from 'react-icons/lu';
 import { products as productsApi } from '@/lib/api';
 import { useProductsStore } from '@/stores/productsStore';
 import { useCategoriesStore } from '@/stores/categoriesStore';
-import { CURRENCY_CODES, getCurrencySymbol } from '@/lib/web_utils';
+import {
+  CURRENCY_CODES,
+  getCurrencySymbol,
+  isValidProductUrl
+} from '@/lib/web_utils';
 import { DEFAULT_CATEGORY_COLOR } from '@/lib/categoryColors';
 import { PRIORITY_ICONS, PRIORITY_FONT_WEIGHTS } from '@/lib/priorityVisuals';
 
@@ -65,17 +69,6 @@ const CURRENCY_ITEMS = CURRENCY_CODES.map((code) => ({
   value: code,
   label: `${code} · ${getCurrencySymbol(code)}`
 }));
-
-/** Whether `value` parses as an absolute `http(s)` URL. */
-function isValidProductUrl(value) {
-  if (!value) return false;
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Add/edit product dialog (spec Task 11). A single component handles both

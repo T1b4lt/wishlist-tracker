@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import { Route, Router, useLocation } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { singleStoreDetail } from '@/test/products';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import { products as productsApi, config as configApi } from '@/lib/api';
 import { useProductsStore, initialProductsState } from '@/stores/productsStore';
@@ -47,7 +48,7 @@ const DAY = 60 * 60 * 24;
 
 const buildProduct = (overrides = {}) => {
   const now = Date.now() / 1000;
-  return {
+  return singleStoreDetail({
     id: 7,
     name: 'Mechanical Keyboard',
     url: 'https://example.com/keyboard',
@@ -65,7 +66,7 @@ const buildProduct = (overrides = {}) => {
     currency: 'USD',
     last_checked_at: now - 3600,
     ...overrides
-  };
+  });
 };
 
 const LocationProbe = () => {

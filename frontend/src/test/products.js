@@ -36,3 +36,44 @@ export function singleStoreProduct(flat) {
     ]
   };
 }
+
+/**
+ * Test helper: turns a flat single-store product detail (the pre-offers
+ * shape, with `url`, `store_*`, `current_price`, `is_in_stock`,
+ * `last_checked_at` and `price_history` on the product) into a detail with
+ * one offer.
+ *
+ * @param {object} flat
+ * @returns {object} The detail with `offers`.
+ */
+export function singleStoreDetail(flat) {
+  const {
+    url = 'https://example.com',
+    store_id = null,
+    store_name = null,
+    store_domain = null,
+    store_has_favicon = false,
+    current_price = null,
+    is_in_stock = null,
+    last_checked_at = null,
+    price_history = [],
+    ...product
+  } = flat;
+  return {
+    ...product,
+    offers: [
+      {
+        id: (product.id ?? 1) * 10,
+        url,
+        store_id,
+        store_name,
+        store_domain,
+        store_has_favicon,
+        current_price,
+        is_in_stock,
+        last_checked_at,
+        price_history
+      }
+    ]
+  };
+}

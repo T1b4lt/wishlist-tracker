@@ -48,4 +48,37 @@ describe('ProductStatsRow', () => {
     expect(screen.getByText('N/A')).toBeInTheDocument();
     expect(screen.queryByText(/^Reached /)).not.toBeInTheDocument();
   });
+
+  it('names the stores of the current and lowest prices when given', () => {
+    renderWithProviders(
+      <ProductStatsRow
+        currentPrice={90}
+        currency="USD"
+        locale="en-US"
+        lowest={{ price: 80, timestamp: 1700000000 }}
+        average={100}
+        currentVsAverage={-10}
+        currentStoreName="Amazon"
+        lowestStoreName="Thomann"
+      />
+    );
+
+    expect(screen.getByText('at Amazon')).toBeInTheDocument();
+    expect(screen.getByText(/^at Thomann · Reached/)).toBeInTheDocument();
+  });
+
+  it('names no store by default', () => {
+    renderWithProviders(
+      <ProductStatsRow
+        currentPrice={90}
+        currency="USD"
+        locale="en-US"
+        lowest={{ price: 80, timestamp: 1700000000 }}
+        average={100}
+        currentVsAverage={-10}
+      />
+    );
+
+    expect(screen.queryByText(/^at /)).not.toBeInTheDocument();
+  });
 });

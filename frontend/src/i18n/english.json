@@ -146,6 +146,16 @@
         "title": "We could not load this product",
         "message": "Something went wrong loading the product details. Please try again."
       }
+    },
+    "editOfferDialog": {
+      "title": "Edit store URL",
+      "urlLabel": "Store URL",
+      "urlInvalid": "Enter a valid http(s) URL.",
+      "submit": "Save"
+    },
+    "removeOfferDialog": {
+      "title": "Remove store",
+      "description": "Remove <strong>{{store}}</strong> and its price history from this product?"
     }
   },
   "pages": {
@@ -302,7 +312,8 @@
         "lowestInRange": "Lowest in range",
         "lowestReachedOn": "Reached {{date}}",
         "averageInRange": "Average in range",
-        "currentVsAverage": "Current vs average"
+        "currentVsAverage": "Current vs average",
+        "atStore": "at {{store}}"
       },
       "chart": {
         "title": "Price history",
@@ -327,7 +338,22 @@
         "title_one": "Price not updated for {{count}} day",
         "title_other": "Price not updated for {{count}} days",
         "description": "The last price was recorded on {{date}}. Since then the daily check could not read this product: the store may be down, the product may have been removed, or the page may be blocking the agent.",
-        "action": "Check the store page"
+        "action": "Check the store page",
+        "titleStore_one": "{{store}}: price not updated for {{count}} day",
+        "titleStore_other": "{{store}}: price not updated for {{count}} days"
+      },
+      "offers": {
+        "title": "Stores",
+        "addStore": "Add store",
+        "bestPrice": "Best price",
+        "notChecked": "Not checked yet",
+        "lastChecked": "Checked {{time}}",
+        "rowActions": "Actions for {{store}}",
+        "open": "Open in store",
+        "editUrl": "Edit URL",
+        "unlink": "Unlink as a separate product",
+        "remove": "Remove store",
+        "onlyStoreHint": "A product needs at least one store."
       }
     },
     "settings": {
@@ -534,6 +560,14 @@
         "title": "Couldn't copy",
         "description": "Your browser blocked clipboard access. Reveal the value and copy it manually."
       }
+    },
+    "offers": {
+      "updateSuccess": "Store URL updated",
+      "unlinkSuccess": "{{store}} is now a separate product",
+      "unlinkAction": "Open",
+      "removeSuccess": "{{store}} removed",
+      "error": "Something went wrong. Please try again.",
+      "duplicateUrl": "This store URL is already tracked for this product."
     }
   }
 }

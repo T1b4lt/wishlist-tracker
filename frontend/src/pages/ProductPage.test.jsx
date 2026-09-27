@@ -4,10 +4,12 @@ import { vi } from 'vitest';
 import { Route, Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { singleStoreDetail } from '@/test/products';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import { products as productsApi, config as configApi } from '@/lib/api';
 import { useProductsStore, initialProductsState } from '@/stores/productsStore';
 import { useConfigStore, initialConfigState } from '@/stores/configStore';
+import { buildMultiStoreDetail } from '../../e2e/fixtures/products';
 import ProductPage from './ProductPage';
 
 // The edit and delete flows (each opens its own Ark dismissable layer, a
@@ -58,7 +60,7 @@ const DAY = 60 * 60 * 24;
  * "now" so the test never depends on wall-clock date. */
 const buildProduct = (overrides = {}) => {
   const now = Date.now() / 1000;
-  return {
+  return singleStoreDetail({
     id: 7,
     name: 'Mechanical Keyboard',
     url: 'https://example.com/keyboard',
@@ -80,7 +82,7 @@ const buildProduct = (overrides = {}) => {
     store_domain: null,
     store_has_favicon: false,
     ...overrides
-  };
+  });
 };
 
 /** Renders `ProductPage` at `/product/<id>`, wired through wouter so
@@ -136,8 +138,10 @@ describe('ProductPage', () => {
       await screen.findByRole('heading', { name: 'Mechanical Keyboard' })
     ).toBeInTheDocument();
     expect(screen.getByText('Electronics')).toBeInTheDocument();
-    expect(screen.getByText('In stock')).toBeInTheDocument();
-    expect(screen.getByText('$95.00')).toBeInTheDocument();
+    // Once in the header (the product) and once in its only store's row.
+    expect(screen.getAllByText('In stock')).toHaveLength(2);
+    // The current price, in the stats row and in the store's row.
+    expect(screen.getAllByText('$95.00')).toHaveLength(2);
     expect(screen.getByTestId('price-history-chart-stub')).toHaveAttribute(
       'data-has-enough-history',
       'true'
@@ -282,5 +286,36 @@ describe('ProductPage', () => {
     expect(await stat('Lowest in range')).toHaveTextContent('$80.00');
     expect(await stat('Average in range')).toHaveTextContent('$90.00');
     expect(await stat('Current vs average')).toHaveTextContent('N/A');
+  });
+
+  it('lists every store and values the product by the best one', async () => {
+    productsApi.get.mockResolvedValue(buildMultiStoreDetail());
+
+    renderProductPage(3);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Stores' })
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByText('at Amazon')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Open in Amazon' })
+    ).toHaveAttribute('href', 'https://example.com/headphones');
+  });
+
+  it('shows one outdated warning per stale store, naming it', async () => {
+    const now = Date.now() / 1000;
+    const detail = buildMultiStoreDetail();
+    detail.offers[1].last_checked_at = now - 5 * DAY;
+    productsApi.get.mockResolvedValue(detail);
+
+    renderProductPage(3);
+
+    expect(
+      await screen.findByText(/^Thomann: price not updated for \d+ days$/)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/^Amazon: price not updated/)
+    ).not.toBeInTheDocument();
   });
 });

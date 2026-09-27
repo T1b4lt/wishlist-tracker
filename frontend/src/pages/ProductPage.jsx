@@ -26,18 +26,25 @@ import {
   ConfirmDialog,
   ErrorState,
   PriorityBadge,
-  StockStatus,
-  StoreBadge
+  StockStatus
 } from '@/components/common';
 import { ProductFormDialog } from '@/components/products';
 import {
+  EditOfferDialog,
+  OfferList,
   PriceHistoryChart,
   ProductDescription,
   ProductStatsRow,
   StaleProductNotice
 } from '@/components/product';
 import { toaster } from '@/components/ui/toaster';
-import { formatRelative, getLocale } from '@/lib/format';
+import { getLocale } from '@/lib/format';
+import {
+  computeLowestAcrossOffers,
+  computeProductOfferStats,
+  selectBestOffer
+} from '@/lib/bestOffer';
+import { staleOffers } from '@/lib/staleness';
 import {
   buildChartPoints,
   computeOutOfStockBands,
@@ -67,6 +74,8 @@ const ProductPage = () => {
   const detail = useProductsStore((state) => state.details[productId]);
   const fetchDetail = useProductsStore((state) => state.fetchDetail);
   const removeProduct = useProductsStore((state) => state.remove);
+  const unlinkOffer = useProductsStore((state) => state.unlinkOffer);
+  const removeOffer = useProductsStore((state) => state.removeOffer);
 
   const status = detail?.status ?? 'idle';
   const product = detail?.data ?? null;
@@ -85,6 +94,11 @@ const ProductPage = () => {
   // focus-trap can no longer fall back to "whatever was focused before it
   // opened" - it needs this ref as an explicit `finalFocusEl`.
   const deleteMenuTriggerRef = useRef(null);
+  // Same for the store rows' menus (edit URL / remove store dialogs).
+  const offerMenuTriggerRef = useRef(null);
+  const [editingOffer, setEditingOffer] = useState(null);
+  const [removingOffer, setRemovingOffer] = useState(null);
+  const [isRemovingOffer, setIsRemovingOffer] = useState(false);
 
   // The range selector defaults to the configured `hist_window_size`
   // (or the default window when it is not an offered option) until the user picks one
@@ -125,7 +139,21 @@ const ProductPage = () => {
     setRange(value);
   };
 
-  const rawHistory = useMemo(() => product?.price_history ?? [], [product]);
+  // The product is valued by its best offer (see `lib/bestOffer.js`): the
+  // stats row and the chart's average use its history; "lowest in range"
+  // looks at every store.
+  const offers = useMemo(() => product?.offers ?? [], [product]);
+  const bestOfferId = useMemo(() => selectBestOffer(offers), [offers]);
+  const bestOffer =
+    offers.find((offer) => offer.id === bestOfferId) ?? offers[0] ?? null;
+  const productStock = useMemo(
+    () => computeProductOfferStats(offers, range).isInStock,
+    [offers, range]
+  );
+  const isMultiStore = offers.length > 1;
+  const storeNameOf = (offerId) =>
+    offers.find((offer) => offer.id === offerId)?.store_name ?? null;
+  const rawHistory = useMemo(() => bestOffer?.price_history ?? [], [bestOffer]);
   const filteredHistory = useMemo(
     () => filterPriceHistoryByRange(rawHistory, range),
     [rawHistory, range]
@@ -153,9 +181,13 @@ const ProductPage = () => {
     () => getCurrentRecord(rawHistory),
     [rawHistory]
   );
-  const { lowest, average, currentVsAverage } = useMemo(
+  const { average, currentVsAverage } = useMemo(
     () => computeRangeStats(filteredHistory, currentRecord),
     [filteredHistory, currentRecord]
+  );
+  const lowest = useMemo(
+    () => computeLowestAcrossOffers(offers, range),
+    [offers, range]
   );
   const trackingStartDate = useMemo(
     () => getTrackingStartTimestamp(rawHistory),
@@ -184,6 +216,40 @@ const ProductPage = () => {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleUnlink = async (offer) => {
+    try {
+      const created = await unlinkOffer(product.id, offer.id);
+      toaster.create({
+        title: t('toasts.offers.unlinkSuccess', { store: offer.store_name }),
+        type: 'success',
+        action: {
+          label: t('toasts.offers.unlinkAction'),
+          onClick: () => navigate(`/product/${created.id}`)
+        }
+      });
+    } catch {
+      toaster.create({ title: t('toasts.offers.error'), type: 'error' });
+    }
+  };
+
+  const handleRemoveOfferConfirm = async () => {
+    setIsRemovingOffer(true);
+    try {
+      await removeOffer(product.id, removingOffer.id);
+      toaster.create({
+        title: t('toasts.offers.removeSuccess', {
+          store: removingOffer.store_name
+        }),
+        type: 'success'
+      });
+      setRemovingOffer(null);
+    } catch {
+      toaster.create({ title: t('toasts.offers.error'), type: 'error' });
+    } finally {
+      setIsRemovingOffer(false);
     }
   };
 
@@ -256,16 +322,22 @@ const ProductPage = () => {
         backLink={{ href: '/', label: t('common.actions.backToWishlist') }}
         actions={
           <HStack gap={2} wrap="wrap" justify="flex-end">
-            <Button variant="outline" asChild>
-              <a href={product.url} target="_blank" rel="noopener noreferrer">
-                <Icon as={LuExternalLink} />
-                {product.store_name
-                  ? t('pages.product.actions.openInStore', {
-                      store: product.store_name
-                    })
-                  : t('pages.product.actions.openStorePage')}
-              </a>
-            </Button>
+            {bestOffer && (
+              <Button variant="outline" asChild>
+                <a
+                  href={bestOffer.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icon as={LuExternalLink} />
+                  {bestOffer.store_name
+                    ? t('pages.product.actions.openInStore', {
+                        store: bestOffer.store_name
+                      })
+                    : t('pages.product.actions.openStorePage')}
+                </a>
+              </Button>
+            )}
             <Button onClick={() => setIsFormOpen(true)}>
               <Icon as={LuPencil} />
               {t('common.actions.edit')}
@@ -305,43 +377,60 @@ const ProductPage = () => {
       <FadeIn>
         <VStack align="stretch" gap={6} mb={6}>
           <HStack gap={3} wrap="wrap">
-            <StoreBadge
-              storeId={product.store_id}
-              name={product.store_name}
-              hasFavicon={product.store_has_favicon}
-              size="md"
-            />
             <CategoryTag
               name={product.category_name}
               color={product.category_color}
             />
             <PriorityBadge priority={product.priority} />
-            <StockStatus inStock={product.is_in_stock} />
-            <Text textStyle="caption" color="fg.muted">
-              {product.last_checked_at
-                ? t('pages.product.metadata.lastChecked', {
-                    time: formatRelative(product.last_checked_at, locale)
-                  })
-                : t('pages.product.metadata.lastCheckedUnknown')}
-            </Text>
+            <StockStatus inStock={productStock} />
           </HStack>
 
-          <StaleProductNotice
-            lastCheckedAt={product.last_checked_at}
-            url={product.url}
-            locale={locale}
-          />
+          {staleOffers(product).map((offer) => (
+            <StaleProductNotice
+              key={offer.id}
+              lastCheckedAt={offer.last_checked_at}
+              url={offer.url}
+              storeName={isMultiStore ? offer.store_name : undefined}
+              locale={locale}
+            />
+          ))}
 
           <ProductStatsRow
-            currentPrice={product.current_price}
+            currentPrice={bestOffer?.current_price ?? null}
             currency={product.currency}
             locale={locale}
             lowest={lowest}
             average={average}
             currentVsAverage={currentVsAverage}
+            currentStoreName={
+              isMultiStore ? (bestOffer?.store_name ?? undefined) : undefined
+            }
+            lowestStoreName={
+              isMultiStore && lowest
+                ? (storeNameOf(lowest.offerId) ?? undefined)
+                : undefined
+            }
           />
         </VStack>
       </FadeIn>
+
+      <Box mb={6}>
+        <OfferList
+          offers={offers}
+          currency={product.currency}
+          bestOfferId={bestOfferId}
+          locale={locale}
+          onEdit={(offer, triggerEl) => {
+            offerMenuTriggerRef.current = triggerEl;
+            setEditingOffer(offer);
+          }}
+          onUnlink={handleUnlink}
+          onRemove={(offer, triggerEl) => {
+            offerMenuTriggerRef.current = triggerEl;
+            setRemovingOffer(offer);
+          }}
+        />
+      </Box>
 
       <VStack align="stretch" gap={6}>
         <PriceHistoryChart
@@ -367,6 +456,34 @@ const ProductPage = () => {
         onClose={() => setIsFormOpen(false)}
         mode="edit"
         product={product}
+      />
+
+      <EditOfferDialog
+        open={editingOffer !== null}
+        onClose={() => setEditingOffer(null)}
+        productId={product.id}
+        offer={editingOffer}
+        finalFocusEl={() => offerMenuTriggerRef.current}
+      />
+
+      <ConfirmDialog
+        open={removingOffer !== null}
+        onClose={() => setRemovingOffer(null)}
+        onConfirm={handleRemoveOfferConfirm}
+        finalFocusEl={() => offerMenuTriggerRef.current}
+        title={t('components.removeOfferDialog.title')}
+        body={
+          <Text>
+            <Trans
+              i18nKey="components.removeOfferDialog.description"
+              values={{ store: removingOffer?.store_name ?? '' }}
+              components={{ strong: <strong /> }}
+            />
+          </Text>
+        }
+        confirmLabel={t('pages.product.offers.remove')}
+        destructive
+        isLoading={isRemovingOffer}
       />
 
       <ConfirmDialog

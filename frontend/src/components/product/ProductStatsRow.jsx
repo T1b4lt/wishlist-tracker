@@ -36,6 +36,9 @@ const Stat = ({ label, children }) => (
  * @param {{price: number, timestamp: number}|null} props.lowest
  * @param {number|null} props.average
  * @param {number|null} props.currentVsAverage
+ * @param {string} [props.currentStoreName] - Store of the current (best)
+ *   price, for a product tracked in several stores.
+ * @param {string} [props.lowestStoreName] - Store of the lowest price.
  */
 export const ProductStatsRow = ({
   currentPrice,
@@ -43,7 +46,9 @@ export const ProductStatsRow = ({
   locale,
   lowest,
   average,
-  currentVsAverage
+  currentVsAverage,
+  currentStoreName,
+  lowestStoreName
 }) => {
   const { t } = useTranslation();
 
@@ -53,6 +58,11 @@ export const ProductStatsRow = ({
         <Text textStyle="numeric" fontSize="xl" fontWeight="semibold">
           {formatPrice(currentPrice, currency, locale)}
         </Text>
+        {currentStoreName && (
+          <Text textStyle="caption" color="fg.subtle">
+            {t('pages.product.stats.atStore', { store: currentStoreName })}
+          </Text>
+        )}
       </Stat>
 
       <Stat label={t('pages.product.stats.lowestInRange')}>
@@ -61,6 +71,8 @@ export const ProductStatsRow = ({
         </Text>
         {lowest && (
           <Text textStyle="caption" color="fg.subtle">
+            {lowestStoreName &&
+              `${t('pages.product.stats.atStore', { store: lowestStoreName })} · `}
             {t('pages.product.stats.lowestReachedOn', {
               date: formatDate(lowest.timestamp, locale)
             })}

@@ -146,6 +146,16 @@
         "title": "No pudimos cargar este producto",
         "message": "Ocurrió un problema al cargar los detalles del producto. Inténtalo de nuevo."
       }
+    },
+    "editOfferDialog": {
+      "title": "Editar URL de la tienda",
+      "urlLabel": "URL de la tienda",
+      "urlInvalid": "Introduce una URL http(s) válida.",
+      "submit": "Guardar"
+    },
+    "removeOfferDialog": {
+      "title": "Quitar tienda",
+      "description": "¿Quitar <strong>{{store}}</strong> y su historial de precios de este producto?"
     }
   },
   "pages": {
@@ -302,7 +312,8 @@
         "lowestInRange": "Precio mínimo en el rango",
         "lowestReachedOn": "Alcanzado el {{date}}",
         "averageInRange": "Precio promedio en el rango",
-        "currentVsAverage": "Actual frente al promedio"
+        "currentVsAverage": "Actual frente al promedio",
+        "atStore": "en {{store}}"
       },
       "chart": {
         "title": "Historial de precios",
@@ -327,7 +338,22 @@
         "title_one": "Precio sin actualizar desde hace {{count}} día",
         "title_other": "Precio sin actualizar desde hace {{count}} días",
         "description": "El último precio se registró el {{date}}. Desde entonces la comprobación diaria no ha podido leer este producto: puede que la tienda esté caída, que el producto se haya retirado o que la página esté bloqueando al agente.",
-        "action": "Revisar la página de la tienda"
+        "action": "Revisar la página de la tienda",
+        "titleStore_one": "{{store}}: precio sin actualizar desde hace {{count}} día",
+        "titleStore_other": "{{store}}: precio sin actualizar desde hace {{count}} días"
+      },
+      "offers": {
+        "title": "Tiendas",
+        "addStore": "Añadir tienda",
+        "bestPrice": "Mejor precio",
+        "notChecked": "Sin revisar todavía",
+        "lastChecked": "Revisado {{time}}",
+        "rowActions": "Acciones de {{store}}",
+        "open": "Abrir en la tienda",
+        "editUrl": "Editar URL",
+        "unlink": "Separar como otro producto",
+        "remove": "Quitar tienda",
+        "onlyStoreHint": "Un producto necesita al menos una tienda."
       }
     },
     "settings": {
@@ -534,6 +560,14 @@
         "title": "No se pudo copiar",
         "description": "Tu navegador bloqueó el acceso al portapapeles. Muestra el valor y cópialo manualmente."
       }
+    },
+    "offers": {
+      "updateSuccess": "URL de la tienda actualizada",
+      "unlinkSuccess": "{{store}} ahora es un producto aparte",
+      "unlinkAction": "Abrir",
+      "removeSuccess": "{{store}} quitada",
+      "error": "Algo ha ido mal. Inténtalo de nuevo.",
+      "duplicateUrl": "Esta URL ya se sigue en este producto."
     }
   }
 }

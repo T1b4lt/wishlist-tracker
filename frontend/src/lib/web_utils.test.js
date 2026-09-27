@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  isValidProductUrl,
   CURRENCY_CODES,
   getCurrencySymbol,
   getPriorityLabel
@@ -86,5 +87,15 @@ describe('getPriorityLabel', () => {
   it('returns an empty string when given no priority', () => {
     expect(getPriorityLabel('')).toBe('');
     expect(getPriorityLabel(undefined)).toBe('');
+  });
+});
+
+describe('isValidProductUrl', () => {
+  it('accepts absolute http(s) URLs only', () => {
+    expect(isValidProductUrl('https://a.es/x')).toBe(true);
+    expect(isValidProductUrl('http://a.es/x')).toBe(true);
+    expect(isValidProductUrl('ftp://a.es')).toBe(false);
+    expect(isValidProductUrl('a.es/x')).toBe(false);
+    expect(isValidProductUrl('')).toBe(false);
   });
 });

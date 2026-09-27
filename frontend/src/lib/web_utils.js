@@ -78,3 +78,18 @@ export const getPriorityLabel = (priority, translate) => {
 
   return priority;
 };
+
+/**
+ * Whether `value` parses as an absolute `http(s)` URL.
+ * @param {string|null|undefined} value
+ * @returns {boolean}
+ */
+export function isValidProductUrl(value) {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}

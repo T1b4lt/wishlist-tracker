@@ -55,4 +55,20 @@ describe('StaleProductNotice', () => {
 
     expect(screen.queryByText(/Price not updated/)).not.toBeInTheDocument();
   });
+
+  it('names the store for a product tracked in several stores', () => {
+    renderWithProviders(
+      <StaleProductNotice
+        lastCheckedAt={NOW - 5 * DAY}
+        url={URL}
+        storeName="Amazon"
+        locale="en-US"
+        now={NOW}
+      />
+    );
+
+    expect(
+      screen.getByText('Amazon: price not updated for 5 days')
+    ).toBeInTheDocument();
+  });
 });

@@ -19,7 +19,9 @@ import {
  * @param {object} props
  * @param {number|null|undefined} props.lastCheckedAt - Unix seconds of the
  *   latest price record (`last_checked_at`).
- * @param {string} props.url - The product's store page.
+ * @param {string} props.url - The store page.
+ * @param {string} [props.storeName] - Named in the title for a product
+ *   tracked in several stores (one notice per stale store).
  * @param {string} props.locale - An `Intl` locale tag, see `getLocale`.
  * @param {number} [props.now] - Reference Unix time in seconds; defaults to
  *   now (set in tests for deterministic output).
@@ -27,6 +29,7 @@ import {
 export const StaleProductNotice = ({
   lastCheckedAt,
   url,
+  storeName,
   locale,
   now = nowInSeconds()
 }) => {
@@ -40,7 +43,12 @@ export const StaleProductNotice = ({
       <Alert.Indicator />
       <Alert.Content>
         <Alert.Title>
-          {t('pages.product.stale.title', { count: days })}
+          {storeName
+            ? t('pages.product.stale.titleStore', {
+                store: storeName,
+                count: days
+              })
+            : t('pages.product.stale.title', { count: days })}
         </Alert.Title>
         <Alert.Description>
           {t('pages.product.stale.description', {
