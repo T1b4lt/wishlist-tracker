@@ -1,9 +1,8 @@
 """
 Best-offer rules: which offer represents a product tracked in several stores.
 
-Pure functions, no database access. Mirrored by
-``frontend/src/lib/bestOffer.js``; both are pinned by
-``contracts/best-offer-cases.json`` (see ``contracts/README.md``).
+Pure functions, no database access. Table-driven cases live in
+``tests/cases/best-offer-cases.json``.
 
 Definitions (per offer, *current* is the newest record of its history):
     * best offer: among offers with history, the one ranked first by

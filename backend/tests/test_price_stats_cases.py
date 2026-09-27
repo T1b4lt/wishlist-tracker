@@ -1,8 +1,5 @@
-"""Shared price-stats contract for the Python mirror formulas.
-
-The same cases (``contracts/price-stats-cases.json``) run against
-``frontend/src/lib/productHistory.js`` in ``productHistory.contract.test.js``,
-so the two implementations cannot drift apart silently.
+"""Table-driven cases (``tests/cases/price-stats-cases.json``) for
+``src/services/price_stats.py``.
 """
 
 from types import SimpleNamespace
@@ -11,19 +8,19 @@ import pytest
 from src.models.database_models import Category, Config, OfferHist
 from src.services import product_service
 from src.services.price_stats import compute_price_stats
-from tests.contract_utils import load_contract
+from tests.case_utils import load_cases
 from tests.factories import make_offer, make_product
 
-CONTRACT = load_contract("price-stats-cases.json")
-TOLERANCE = CONTRACT["tolerance"]
+CASES = load_cases("price-stats-cases.json")
+TOLERANCE = CASES["tolerance"]
 
 
 def _approx(value):
     return None if value is None else pytest.approx(value, abs=TOLERANCE)
 
 
-@pytest.mark.parametrize("case", CONTRACT["cases"], ids=lambda case: case["name"])
-def test_price_stats_contract(case):
+@pytest.mark.parametrize("case", CASES["cases"], ids=lambda case: case["name"])
+def test_price_stats_cases(case):
     history = [SimpleNamespace(**record) for record in case["history"]]
     expected = case["expected"]
 
@@ -59,12 +56,12 @@ def test_compute_price_stats_does_not_mutate_the_input():
 # ``_latest_records``) and passes them to ``compute_window_stats``. Running
 # the same cases through the endpoint's service pins that production path
 # too, so a change in the SQL (e.g. the cutoff comparison or the tie-break)
-# cannot drift from the contract silently.
-DASHBOARD_CASES = [case for case in CONTRACT["cases"] if case["window_days"]]
+# cannot drift from the cases silently.
+DASHBOARD_CASES = [case for case in CASES["cases"] if case["window_days"]]
 
 
 @pytest.mark.parametrize("case", DASHBOARD_CASES, ids=lambda case: case["name"])
-def test_dashboard_summary_follows_the_price_stats_contract(session, case):
+def test_dashboard_summary_follows_the_price_stats_cases(session, case):
     category = Category(name="Contract", color="#000000")
     session.add(category)
     session.add(Config(key="hist_window_size", value=str(case["window_days"])))

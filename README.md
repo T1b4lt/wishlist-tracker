@@ -102,7 +102,6 @@ wishlist-tracker/
 ├── .dockerignore                     # Files excluded from the Docker build context
 ├── entrypoint.sh                     # Container entrypoint (DB init, cron, API, Nginx)
 ├── nginx.conf                        # Nginx config (serves frontend, proxies /api)
-├── contracts/                        # Shared frontend/backend test contracts (formulas, window options, API fields)
 ├── .gitignore
 │
 ├── backend/                          # Python backend (FastAPI)
@@ -285,9 +284,12 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 8 tables. A 
   sparkline are the best offer's; it is in stock when any store is, "at
   lowest" when the best offer's price is not above the lowest in-stock price
   of any store in the window, and outdated when any store is.
+- A store is outdated when its price has not been updated for 3 days or more.
 
-The same rules are implemented in the backend and the frontend and pinned
-by the shared fixtures in [`contracts/`](contracts/README.md).
+The backend is the single source of truth for these rules: it computes every
+value (best offer, statistics of every chart range, staleness, config
+options) and the frontend only presents them. The formulas are pinned by
+table-driven cases in `backend/tests/cases/`.
 
 ---
 

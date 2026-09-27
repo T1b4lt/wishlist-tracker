@@ -65,7 +65,10 @@ src/
 
 ## lib
 
-Framework-free helpers under `src/lib/`:
+Framework-free presentation helpers under `src/lib/`. The backend is the
+single source of truth for business rules (best offer, price statistics of
+every chart range, staleness, config options); these helpers only format,
+filter, sort, draw and aggregate the values it sends.
 
 - `lib/api/`: a small fetch-based client (`client.js`) plus one module per
   resource (`products.js`, `categories.js`, `config.js`, `telegram.js`,
@@ -74,13 +77,15 @@ Framework-free helpers under `src/lib/`:
   `@/lib/api/stores` directly, so tests that mock `@/lib/api` still render
   favicons.
 - `lib/format.js`: locale-aware price/date/relative-time formatting.
-- `lib/dashboardSummary.js`, `lib/productHistory.js`: pure functions the
-  dashboard and product pages use to derive totals, chart points and stats
-  from store data.
-- `lib/staleness.js`: when a product's price counts as outdated (no new
-  price record for `STALE_AFTER_DAYS` = 3 days, based on `last_checked_at`),
-  shared by the dashboard badge, summary count, filter and the product
-  page's `StaleProductNotice`.
+- `lib/dashboardSummary.js`: the dashboard summary strip's totals and
+  counts, aggregated from backend fields (`current_price`,
+  `price_change_pct`, `is_at_lowest`, `is_stale`).
+- `lib/productHistory.js`, `lib/offerChart.js`: the product chart's points,
+  series and Y domain, filtered by the selected range's `window_start` (the
+  range statistics themselves come precomputed in
+  `ProductDetailResponse.ranges`).
+- `lib/offers.js`: finds the best offer's summary by the backend's
+  `best_offer_id`.
 - `lib/settingsDraft.js`: the Settings page's dirty/merge logic (draft vs.
   saved config).
 - `lib/productFilters.js`: the dashboard's search, filter and sort logic
@@ -138,7 +143,10 @@ against fixtures in `e2e/fixtures/`: no backend process is started, and any
 API call the fixtures don't cover fails loudly (a `500` plus a `console.error`
 in the test output) instead of silently falling through. Store favicons
 (`/stores/{id}/favicon`) are served as a fixed 1x1 PNG, so snapshots stay
-deterministic. `playwright.config.js`
+deterministic. `e2e/fixtures/backendFields.js` is a test-only stand-in for the
+fields the backend computes (staleness, best offer, precomputed ranges), so
+each mocked response stays consistent with its own price history; the app
+never imports it. `playwright.config.js`
 starts its own dev server on a dedicated port, pins `timezoneId`/`locale` to
 `UTC`/`en-US` for stable date assertions, and runs two projects: `desktop`
 (1440x900) and `mobile` (390x844, touch-enabled). Motion is reduced by

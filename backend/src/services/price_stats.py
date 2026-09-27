@@ -1,9 +1,8 @@
 """
-Price statistics shared by the dashboard (and mirrored by the frontend).
+Price statistics of a price history over a window.
 
-Pure functions, no database access. The same rules are implemented in
-``frontend/src/lib/productHistory.js`` and both implementations are pinned
-by ``contracts/price-stats-cases.json`` (see ``contracts/README.md``).
+Pure functions, no database access. Table-driven cases live in
+``tests/cases/price-stats-cases.json``.
 
 Records are any objects exposing ``price``, ``is_in_stock`` and
 ``timestamp`` (Unix seconds), e.g. ``OfferHist`` rows.

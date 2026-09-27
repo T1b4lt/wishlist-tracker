@@ -1,5 +1,5 @@
 {
-  "description": "Best offer and product-level stock / at-lowest rules. See contracts/README.md.",
+  "description": "Best offer and product-level stock / at-lowest rules (backend/src/services/best_offer.py).",
   "cases": [
     {
       "name": "no offer has history",

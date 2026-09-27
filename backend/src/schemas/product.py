@@ -89,7 +89,7 @@ class ProductInfoResponse(BaseModel):
 
 
 class OfferSummary(BaseModel):
-    """An offer's store and latest status. Pinned by ``contracts/api-fields.json``."""
+    """An offer's store, latest status and staleness."""
 
     id: int
     url: str
@@ -122,8 +122,8 @@ class ProductDashboardSummary(BaseModel):
     """A product on the dashboard, valued by its best offer.
 
     Rules in ``src/services/best_offer.py``; price statistics of the best
-    offer follow ``src/services/price_stats.py``. Field names are pinned by
-    ``contracts/api-fields.json``.
+    offer follow ``src/services/price_stats.py``; staleness follows
+    ``src/services/staleness.py``.
     """
 
     id: int

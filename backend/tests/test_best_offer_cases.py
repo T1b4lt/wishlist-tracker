@@ -1,7 +1,5 @@
-"""Shared best-offer contract for the backend rules.
-
-The same cases (``contracts/best-offer-cases.json``) run against
-``frontend/src/lib/bestOffer.js`` in ``bestOffer.contract.test.js``.
+"""Table-driven cases (``tests/cases/best-offer-cases.json``) for
+``src/services/best_offer.py``.
 """
 
 from types import SimpleNamespace
@@ -12,9 +10,9 @@ from src.services.best_offer import (
     compute_product_offer_stats,
     select_best_offer,
 )
-from tests.contract_utils import load_contract
+from tests.case_utils import load_cases
 
-CONTRACT = load_contract("best-offer-cases.json")
+CASES = load_cases("best-offer-cases.json")
 
 
 def _offers(case):
@@ -27,8 +25,8 @@ def _offers(case):
     ]
 
 
-@pytest.mark.parametrize("case", CONTRACT["cases"], ids=lambda case: case["name"])
-def test_best_offer_contract(case):
+@pytest.mark.parametrize("case", CASES["cases"], ids=lambda case: case["name"])
+def test_best_offer_cases(case):
     expected = case["expected"]
 
     stats = compute_product_offer_stats(_offers(case), case["window_days"], case["now"])
@@ -39,5 +37,5 @@ def test_best_offer_contract(case):
 
 
 def test_select_best_offer_matches_the_stats():
-    case = CONTRACT["cases"][2]
+    case = CASES["cases"][2]
     assert select_best_offer(_offers(case)) == case["expected"]["best_offer_id"]
