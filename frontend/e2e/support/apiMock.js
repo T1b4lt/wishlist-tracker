@@ -236,12 +236,16 @@ export class ApiMock {
           json: this.products.map((product) => ({
             id: product.id,
             name: product.name,
-            url: product.url,
             priority: product.priority,
             category_id: product.category_id,
             description: this.details[product.id]?.description ?? '',
-            currency: product.currency,
-            store_id: product.store_id ?? null
+            offers: product.offers.map((offer) => ({
+              id: offer.id,
+              product_id: product.id,
+              url: offer.url,
+              store_id: offer.store_id,
+              currency: product.currency
+            }))
           }))
         });
       }
@@ -254,14 +258,20 @@ export class ApiMock {
         const category = this.categories.find((c) => c.id === body.category_id);
         const extractedStore = (this.extraction ?? DEFAULT_EXTRACTION).store;
         const store =
-          extractedStore && extractedStore.id === body.store_id
+          extractedStore && extractedStore.id === body.offer.store_id
             ? extractedStore
             : null;
-        const storeFields = {
+        // The new product's first store (offer), not checked yet.
+        const offer = {
+          id,
+          url: body.offer.url,
           store_id: store?.id ?? null,
           store_name: store?.name ?? null,
           store_domain: store?.domain ?? null,
-          store_has_favicon: store?.has_favicon ?? false
+          store_has_favicon: store?.has_favicon ?? false,
+          current_price: null,
+          is_in_stock: null,
+          last_checked_at: null
         };
 
         this.products = [
@@ -269,38 +279,47 @@ export class ApiMock {
           {
             id,
             name: body.name,
-            url: body.url,
             category_id: body.category_id,
             category_name: category?.name ?? '',
             category_color: category?.color ?? '#94A3B8',
             priority: body.priority,
+            currency: body.offer.currency,
             current_price: null,
             price_change_pct: null,
             is_at_lowest: false,
             is_in_stock: null,
-            currency: body.currency,
             recent_prices: [],
-            last_checked_at: null,
-            ...storeFields
+            best_offer_id: null,
+            offers: [offer]
           }
         ];
         this.details[id] = {
           id,
           name: body.name,
-          url: body.url,
           priority: body.priority,
           category_id: body.category_id,
           category_name: category?.name ?? '',
           category_color: category?.color ?? '#94A3B8',
           description: body.description,
-          current_price: null,
-          is_in_stock: null,
-          price_history: [],
-          currency: body.currency,
-          last_checked_at: null,
-          ...storeFields
+          currency: body.offer.currency,
+          offers: [{ ...offer, price_history: [] }]
         };
-        return route.fulfill({ json: { id, ...body } });
+        const { offer: _offer, ...shared } = body;
+        return route.fulfill({
+          json: {
+            id,
+            ...shared,
+            offers: [
+              {
+                id,
+                product_id: id,
+                url: offer.url,
+                store_id: offer.store_id,
+                currency: body.offer.currency
+              }
+            ]
+          }
+        });
       }
       return this._recordUnmatched(route);
     });

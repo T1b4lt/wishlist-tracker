@@ -53,7 +53,12 @@ export const DashboardSummary = ({ products, locale }) => {
     <Stagger>
       <Flex wrap="wrap" gap={{ base: 6, md: 10 }} mb={{ base: 6, md: 8 }}>
         <Stat label={t('pages.dashboard.summary.items')}>
-          <Text textStyle="numeric" fontSize="xl" fontWeight="semibold">
+          <Text
+            data-testid="summary-items"
+            textStyle="numeric"
+            fontSize="xl"
+            fontWeight="semibold"
+          >
             {itemCount}
           </Text>
         </Stat>

@@ -67,7 +67,7 @@ const PAGES = [
       await expect(
         page.getByRole('heading', { name: 'Product 03', level: 1 })
       ).toBeVisible();
-      await expect(page.locator('.recharts-line-curve')).toBeVisible();
+      await expect(page.locator('.recharts-line-curve').first()).toBeVisible();
     }
   },
   {

@@ -42,8 +42,9 @@ Key highlights:
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                                                                                                                                                     |
 | **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini.                                                                                                                                                                              |
-| **Store Detection**        | Each product records its store (AI-extracted name + favicon downloaded from the page), shown on the dashboard and detail page, so the same item tracked in several stores is easy to tell apart.                                                                                                                           |
-| **Price Tracking**         | One price check per product per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                      |
+| **Store Detection**        | Each store a product is tracked in records its name (AI-extracted) and favicon (downloaded from the page), shown on the dashboard and detail page. |
+| **Multiple Stores per Product** | Track the same product in several stores. It counts once on the dashboard, valued by its best offer (the cheapest store in stock). Add stores from the product page or the "New product" dialog ("Same product as…"), merge two products into one, or unlink a store back into its own product. Each store keeps its own price history, stock, outdated warning and Telegram alerts. |
+| **Price Tracking**         | One price check per store per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                      |
 | **Gemini Quota Handling**  | When the Gemini quota runs out, the products left are retried every 10 minutes for the rest of the day, least recently checked first; the dashboard shows when the limit was reached and how many products are still pending. |
 | **Outdated Price Warning** | Products whose price has not been updated for 3 days or more (the store may be down, the product may have been removed, or the page may be blocking the agent) get a badge on the dashboard, a warning on their detail page, a count in the summary strip and their own filter. |
 | **Interactive Dashboard**  | Overview of all products with current price, price change vs. the window's average (%), sparkline, stock status, and category indicators.                                                                                                                                                                                  |
@@ -127,6 +128,8 @@ wishlist-tracker/
 │       │   ├── config_service.py     # Configuration read/update logic
 │       │   ├── daily_check_service.py # Today's daily check summary & counts
 │       │   ├── category_service.py   # Category CRUD operations
+│       │   ├── best_offer.py         # Pure best-offer rules (which store represents a product)
+│       │   ├── offer_service.py      # Offers (a product in one store): add, edit URL, unlink, delete
 │       │   ├── price_stats.py        # Pure price statistics (window, average, change, lowest)
 │       │   ├── product_service.py    # Product CRUD, dashboard, detail & AI extraction
 │       │   ├── store_service.py      # Store lookup/creation by domain & favicon access
@@ -135,7 +138,8 @@ wishlist-tracker/
 │       │   ├── config_router.py      # GET/PATCH /config/
 │       │   ├── daily_check_router.py # GET /daily-check/
 │       │   ├── category_router.py    # CRUD /categories/
-│       │   ├── product_router.py     # CRUD /products/ + /extract-product-info/
+│       │   ├── offer_router.py       # /products/{id}/offers, /offers/{id}, /offers/{id}/unlink
+│       │   ├── product_router.py     # CRUD /products/, /products/{id}/merge + /extract-product-info/
 │       │   ├── store_router.py       # GET /stores/{id}/favicon
 │       │   └── telegram_router.py    # /telegram-chat-id, /telegram-test-message
 │       ├── stagehand_utils.py        # Stagehand v4 AI scraping functions
@@ -196,7 +200,7 @@ wishlist-tracker/
 
 ## 🗄 Database Schema
 
-The application uses **SQLite** with **SQLModel** as ORM. There are 7 tables:
+The application uses **SQLite** with **SQLModel** as ORM. There are 8 tables. A **product** is what you want to buy; an **offer** is that product in one store (URL, store, currency) with its own price history. Every product has at least one offer, and all offers of a product share one currency.
 
 ```
 ┌──────────────┐       ┌──────────────┐
@@ -208,21 +212,18 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 7 tables:
 └──────┬───────┘       └──────────────┘
        │ 1:N
        ▼
-┌──────────────┐       ┌──────────────┐
-│   Product    │       │ ProductHist  │
-├──────────────┤       ├──────────────┤
-│ id (PK)      │──1:N──│ id (PK)      │
-│ name         │       │ product_id   │ (FK → Product, CASCADE DELETE)
-│ url          │       │ price        │
-│ priority     │       │ is_in_stock  │
-│ category_id  │ (FK)  │ timestamp    │ (Unix seconds)
-│ description  │       └──────────────┘
-│ currency     │
-│ store_id     │ (FK)
-└──────▲───────┘
-       │ N:1
-┌──────┴───────┐
-│    Store     │
+┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│   Product    │       │    Offer     │       │  OfferHist   │
+├──────────────┤       ├──────────────┤       ├──────────────┤
+│ id (PK)      │──1:N──│ id (PK)      │──1:N──│ id (PK)      │
+│ name         │       │ product_id   │       │ offer_id     │
+│ priority     │       │ url          │       │ price        │
+│ category_id  │ (FK)  │ store_id     │ (FK)  │ is_in_stock  │
+│ description  │       │ currency     │       │ timestamp    │
+└──────────────┘       └──────▲───────┘       └──────────────┘
+                              │ N:1
+┌──────────────┐              │
+│    Store     │──────────────┘
 ├──────────────┤
 │ id (PK)      │
 │ domain       │ (UNIQUE, e.g. "amazon.es")
@@ -234,7 +235,7 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 7 tables:
 ┌────────────────────┐
 │ PendingStatusRetry │
 ├────────────────────┤
-│ product_id (PK)    │ (FK → Product, CASCADE DELETE)
+│ offer_id (PK)      │ (FK → Offer, CASCADE DELETE)
 │ day_start          │ (Unix seconds, start of the local day)
 └────────────────────┘
 
@@ -243,14 +244,14 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 7 tables:
 ├────────────────────┤
 │ day_start (PK)     │ (Unix seconds, start of the local day)
 │ started_at         │
-│ total_products     │
+│ total_offers       │
 │ limit_reached_at   │ (nullable, first Gemini quota error)
 │ pending_at_limit   │ (nullable)
 │ report_sent        │
 └────────────────────┘
 ```
 
-`PendingStatusRetry` holds the products whose daily check hit the Gemini quota; the cronjob retries them every 10 minutes for the rest of that local day. `DailyCheckRun` keeps one summary row per local day: when the daily check started, how many products it covered, and the first Gemini quota error (time and products left), shown on the dashboard (see [What the Cronjob Does](#what-the-cronjob-does)).
+`Offer.product_id` and `OfferHist.offer_id` cascade on delete, and `OfferHist.timestamp` is in Unix seconds. `PendingStatusRetry` holds the offers whose daily check hit the Gemini quota; the cronjob retries them every 10 minutes for the rest of that local day. `DailyCheckRun` keeps one summary row per local day: when the daily check started, how many offers (prices) it covered, and the first Gemini quota error (time and prices left), shown on the dashboard (see [What the Cronjob Does](#what-the-cronjob-does)).
 
 **Config keys** stored in the `Config` table:
 
@@ -275,8 +276,14 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 7 tables:
   the charts.
 - The price change compares the current price with the average of the
   previous in-stock checks in the window.
-- The daily job stores at most one check per product per day and discards
+- The daily job stores at most one check per store per day and discards
   invalid prices (zero, negative or not a number).
+- A product tracked in several stores is represented by its **best offer**:
+  the cheapest store whose latest check is in stock (the cheapest overall
+  when none is; ties go to the most recently checked). Its price, change and
+  sparkline are the best offer's; it is in stock when any store is, "at
+  lowest" when the best offer's price is not above the lowest in-stock price
+  of any store in the window, and outdated when any store is.
 
 The same rules are implemented in the backend and the frontend and pinned
 by the shared fixtures in [`contracts/`](contracts/README.md).
@@ -306,16 +313,26 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 
 ### Products
 
-| Method   | Endpoint                      | Description                                                                                                                                            |
-| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `POST`   | `/products/`                  | Create a new product                                                                                                                                   |
-| `GET`    | `/products/`                  | List all products                                                                                                                                      |
-| `GET`    | `/products/dashboard-summary` | Get enriched product list for dashboard view (`url`, current price, `price_change_pct`, stock, `is_at_lowest`, `recent_prices` for the sparkline, `last_checked_at`, store fields) |
-| `GET`    | `/products/{id}`              | Get full product detail with price history, `last_checked_at` and store fields                                                                         |
-| `PATCH`  | `/products/{id}`              | Update a product (name, URL, priority, category, description, currency)                                                                                |
-| `DELETE` | `/products/{id}`              | Delete a product (cascades to price history)                                                                                                           |
+| Method   | Endpoint                      | Description |
+| -------- | ----------------------------- | ----------- |
+| `POST`   | `/products/`                  | Create a product with its first store: `{name, priority, category_id, description, offer: {url, currency, store_id?}}` |
+| `GET`    | `/products/`                  | List all products with their offers |
+| `GET`    | `/products/dashboard-summary` | One entry per product, valued by its best offer (current price, `price_change_pct`, stock, `is_at_lowest`, `recent_prices` for the sparkline, `best_offer_id`) with its `offers` (store fields, current price, stock, `last_checked_at`) |
+| `GET`    | `/products/{id}`              | Full product detail: shared fields and every offer with its store fields and price history |
+| `PATCH`  | `/products/{id}`              | Update the shared fields (name, priority, category, description) |
+| `DELETE` | `/products/{id}`              | Delete a product (cascades to its offers and their price history) |
+| `POST`   | `/products/{id}/merge`        | Merge another product into this one: `{source_product_id, keep}` (`keep` is `target` or `source`: whose shared fields to keep). 400 with itself, 409 for another currency or a shared URL |
 
-Products are linked to a store resolved from their URL's domain on create and on URL change. The dashboard summary and detail responses include `store_id`, `store_name`, `store_domain` and `store_has_favicon`.
+### Offers
+
+| Method   | Endpoint                 | Description |
+| -------- | ------------------------ | ----------- |
+| `POST`   | `/products/{id}/offers`  | Add a store to a product: `{url, currency, store_id?}`. 409 for another currency or a URL already tracked |
+| `PATCH`  | `/offers/{id}`           | Change a store's URL: `{url}` (the store is re-resolved) |
+| `POST`   | `/offers/{id}/unlink`    | Move the store (with its history) into a new product with the same fields. 409 for a product's only store |
+| `DELETE` | `/offers/{id}`           | Remove a store and its history. 409 for a product's only store |
+
+Offers are linked to a store resolved from their URL's domain on create and on URL change.
 
 ### Stores
 
@@ -380,6 +397,8 @@ uv run pytest
 ```
 
 The API will start at `http://localhost:8000`. See [`backend/README.md`](backend/README.md) for testing details.
+
+> The schema has no migrations. After pulling a change to the database models (such as the split of products into offers per store), recreate the database: `just db-clean && just db-init` (or `just db-seed` for demo data).
 
 ### 3. Frontend Setup
 
@@ -551,6 +570,15 @@ All application settings can be managed through the **Settings** page (`/setting
 4. Set the priority level (High / Medium / Low).
 5. Save — the product now appears on your Dashboard.
 
+### Tracking a Product in Several Stores
+
+- **Add a store** from the product page (**Stores** card → **Add store**): paste the other store's URL; its store and currency are extracted, and its first price arrives with the next daily check.
+- Or, in the **Add product** dialog, pick the product in **Same product as…**: the URL is added as another store of that product instead of a new product.
+- Already added the same item twice? Open one of them and use **⋯ → Merge with…** to combine both (stores and price histories), choosing whose name, category, priority and description to keep.
+- From a store's menu you can edit its URL, **unlink** it into its own product, or remove it (a product always keeps at least one store).
+- The dashboard counts the product once, at its best offer's price; a **+N** chip lists every store with its price.
+- All stores of a product must use the same currency.
+
 ### Managing Categories
 
 - Navigate to the **Categories** page from the header.
@@ -602,20 +630,20 @@ crontab -e
 ### What the Cronjob Does
 
 1. The first run at or after the configured **analysis hour** each day starts the daily check (once per day, even if the container was stopped at that hour) and records it in `DailyCheckRun`.
-2. It iterates over all products not yet checked today — least recently checked first (never-checked products at the front), so if the daily quota cannot cover every product, the ones left out one day go first the next — and:
-   - Opens each product URL via the AI agent (Stagehand + Gemini).
+2. It iterates over all offers (a product in one store) not yet checked today — least recently checked first (never-checked ones at the front), so if the daily quota cannot cover every offer, the ones left out one day go first the next — and:
+   - Opens each offer URL via the AI agent (Stagehand + Gemini).
    - Extracts the current price and stock status.
-   - Stores a new `ProductHist` record in the database.
+   - Stores a new `OfferHist` record in the database.
 3. Compares current values with the previous record:
-   - If the price dropped → sends a **price drop alert** via Telegram (if enabled).
-   - If the item is back in stock → sends a **stock alert** via Telegram (if enabled).
-4. If the **Gemini quota** runs out (requests per minute or per day), the run stops right away — every later call would fail too — and the products left are saved in `PendingStatusRetry`.
-5. At every later run that day (every 10 minutes), it retries only today's pending products (same steps 2–3), stopping again at the next quota error, until all of them have their record:
-   - A product leaves the list once it is stored, or if it fails for another reason (e.g. an invalid price or a page that does not load), so it does not keep spending quota.
-   - Pending products are dropped when the local day ends; the next analysis-hour run checks everything again.
-6. After each run, sends the **daily check report** on Telegram once per day (setting `daily_check_report`): ✅ as soon as no product is pending (with how many were recorded and how many failed), or ⚠️ on the 23:50 run with the count the Gemini limit left unchecked. `limit_days` only reports days the Gemini limit was reached, `every_day` reports every day, `off` never. A failed send is retried by the next run.
+   - If the price dropped → sends a **price drop alert** via Telegram (if enabled), naming the store.
+   - If the item is back in stock → sends a **stock alert** via Telegram (if enabled), naming the store.
+4. If the **Gemini quota** runs out (requests per minute or per day), the run stops right away — every later call would fail too — and the offers left are saved in `PendingStatusRetry`.
+5. At every later run that day (every 10 minutes), it retries only today's pending offers (same steps 2–3), stopping again at the next quota error, until all of them have their record:
+   - An offer leaves the list once it is stored, or if it fails for another reason (e.g. an invalid price or a page that does not load), so it does not keep spending quota.
+   - Pending offers are dropped when the local day ends; the next analysis-hour run checks everything again.
+6. After each run, sends the **daily check report** on Telegram once per day (setting `daily_check_report`): ✅ as soon as no price is pending (with how many were recorded and how many failed), or ⚠️ on the 23:50 run with the count the Gemini limit left unchecked. `limit_days` only reports days the Gemini limit was reached, `every_day` reports every day, `off` never. A failed send is retried by the next run.
 
-Example: with 10 products and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next run retries those 5, and so on until none are left.
+Example: with 10 offers and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next run retries those 5, and so on until none are left.
 
 Runs never overlap: each run holds an exclusive lock (`backend/db/cronjob.lock`), so a tick that fires while a long check is still running just exits.
 

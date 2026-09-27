@@ -1,7 +1,12 @@
 import { test, expect } from './support/fixtures';
 import { CONFIG_NOT_CONFIGURED } from './fixtures/config';
 import { CATEGORIES_BASIC } from './fixtures/categories';
-import { buildDashboardProduct, buildManyProducts } from './fixtures/products';
+import {
+  buildDashboardProduct,
+  buildMultiStoreProduct,
+  buildOfferSummary,
+  buildManyProducts
+} from './fixtures/products';
 import { buildDailyCheck } from './fixtures/dailyCheck';
 import { DAY_SECONDS, nowSeconds } from './fixtures/time';
 
@@ -45,7 +50,12 @@ test.describe('Dashboard', () => {
       buildDashboardProduct({
         id: 2,
         name: 'Discontinued Drone',
-        last_checked_at: nowSeconds() - 5 * DAY_SECONDS - 60
+        offers: [
+          buildOfferSummary({
+            id: 2,
+            last_checked_at: nowSeconds() - 5 * DAY_SECONDS - 60
+          })
+        ]
       })
     ]);
 
@@ -157,24 +167,41 @@ test.describe('Dashboard', () => {
       buildDashboardProduct({
         id: 1,
         name: 'DJI Mini 5 Pro',
-        store_id: 1,
-        store_name: 'Amazon',
-        current_price: 999
+        current_price: 999,
+        best_offer_id: 1,
+        offers: [
+          buildOfferSummary({
+            id: 1,
+            store_id: 1,
+            store_name: 'Amazon',
+            current_price: 999
+          })
+        ]
       }),
       buildDashboardProduct({
         id: 2,
         name: 'DJI Mini 5 Pro',
-        store_id: 2,
-        store_name: 'PcComponentes',
-        store_domain: 'pccomponentes.com',
         current_price: 949,
-        is_in_stock: false
+        is_in_stock: false,
+        best_offer_id: 2,
+        offers: [
+          buildOfferSummary({
+            id: 2,
+            store_id: 2,
+            store_name: 'PcComponentes',
+            store_domain: 'pccomponentes.com',
+            current_price: 949,
+            is_in_stock: false
+          })
+        ]
       }),
       buildDashboardProduct({
         id: 3,
         name: 'Wireless Headphones',
-        store_id: 1,
-        store_name: 'Amazon'
+        best_offer_id: 3,
+        offers: [
+          buildOfferSummary({ id: 3, store_id: 1, store_name: 'Amazon' })
+        ]
       })
     ]);
 
@@ -212,5 +239,21 @@ test.describe('Dashboard', () => {
 
     await page.getByRole('button', { name: 'Clear all' }).click();
     await expect(visibleItems()).toHaveCount(2);
+  });
+
+  test('counts a product tracked in two stores once', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts([buildMultiStoreProduct()]);
+
+    await page.goto('/');
+
+    await expect(page.getByTestId('summary-items')).toHaveText('1');
+    await expect(
+      page.getByRole('button', { name: '+1 store' }).filter({ visible: true })
+    ).toHaveCount(1);
   });
 });

@@ -80,4 +80,10 @@ describe('OfferList', () => {
       screen.getByRole('menuitem', { name: /Remove store/ })
     ).toHaveAttribute('aria-disabled', 'true');
   });
+
+  it('shows no "Best price" marker for a single store', () => {
+    renderList({ offers: [buildOfferDetail()] });
+
+    expect(screen.queryByText('Best price')).not.toBeInTheDocument();
+  });
 });

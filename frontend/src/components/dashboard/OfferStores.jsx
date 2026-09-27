@@ -1,12 +1,12 @@
 import { Badge, HStack, Text, VStack } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
-import { StoreBadge } from '@/components/common';
 import { Tooltip } from '@/components/ui/tooltip';
 import { findBestOfferSummary } from '@/lib/bestOffer';
 import { formatPrice } from '@/lib/format';
 
 /**
- * A dashboard product's stores: the best offer's store badge and, when the
+ * A dashboard product's stores: the best offer's store name (its favicon is
+ * already next to the product name) and, when the
  * product is tracked in more stores, a "+N" chip whose tooltip lists every
  * store with its price and stock (the best one marked). The chip is
  * focusable, so the list is reachable from the keyboard too.
@@ -24,11 +24,11 @@ export const OfferStores = ({ product, locale }) => {
 
   return (
     <HStack gap={1.5} minW={0}>
-      <StoreBadge
-        storeId={best.store_id}
-        name={best.store_name}
-        hasFavicon={best.store_has_favicon}
-      />
+      {best.store_name && (
+        <Text textStyle="xs" color="fg.muted" truncate>
+          {best.store_name}
+        </Text>
+      )}
       {extraCount > 0 && (
         <Tooltip
           showArrow

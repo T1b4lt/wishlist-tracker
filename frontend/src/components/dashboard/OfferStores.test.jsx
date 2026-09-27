@@ -35,4 +35,13 @@ describe('OfferStores', () => {
     expect(tooltip).toHaveTextContent('$199.99');
     expect(tooltip).toHaveTextContent('Best price');
   });
+
+  it('names the store as text, without a second favicon', () => {
+    const { container } = renderWithProviders(
+      <OfferStores product={buildDashboardProduct()} locale="en-US" />
+    );
+
+    expect(screen.getByText('Amazon')).toBeInTheDocument();
+    expect(container.querySelector('img, svg')).toBeNull();
+  });
 });

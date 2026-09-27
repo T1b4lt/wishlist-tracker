@@ -147,7 +147,8 @@ const OfferRow = ({
 
 /**
  * The product page's "Stores" card: one row per offer with its store,
- * price, stock, last check and a "Best price" marker, plus a menu to open
+ * price, stock, last check and, with several stores, a "Best price"
+ * marker, plus a menu to open
  * the store page, edit the URL, unlink the store into its own product or
  * remove it. Unlink and remove are disabled on a product's only store.
  *
@@ -188,7 +189,7 @@ export const OfferList = ({
               key={offer.id}
               offer={offer}
               currency={currency}
-              isBest={offer.id === bestOfferId}
+              isBest={offers.length > 1 && offer.id === bestOfferId}
               isOnly={offers.length === 1}
               locale={locale}
               onEdit={onEdit}

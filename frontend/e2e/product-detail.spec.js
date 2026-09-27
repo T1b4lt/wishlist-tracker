@@ -5,6 +5,10 @@ import {
   buildDashboardProduct,
   buildHistoryPoint,
   buildLongHistoryDetail,
+  buildMultiStoreDetail,
+  buildMultiStoreProduct,
+  buildOfferDetail,
+  buildOfferSummary,
   buildProductDetail,
   buildSinglePointDetail
 } from './fixtures/products';
@@ -49,7 +53,10 @@ test.describe('Product detail', () => {
     apiMock.setProducts([product]);
     apiMock.setDetail(
       1,
-      buildProductDetail({ id: 1, price_history: buildRangeHistory() })
+      buildProductDetail({
+        id: 1,
+        offers: [buildOfferDetail({ price_history: buildRangeHistory() })]
+      })
     );
 
     await page.goto('/product/1');
@@ -99,7 +106,7 @@ test.describe('Product detail', () => {
       buildDashboardProduct({
         id: 3,
         name: detail.name,
-        current_price: detail.current_price
+        current_price: detail.offers[0].current_price
       })
     ]);
     apiMock.setDetail(3, detail);
@@ -107,7 +114,7 @@ test.describe('Product detail', () => {
     // Computed directly from the fixture with the spec's rules (in-stock
     // records only; the average excludes the current, newest record), not
     // with the app's own helpers.
-    const history = detail.price_history;
+    const history = detail.offers[0].price_history;
     const current = history[history.length - 1];
     const inStock = history.filter((point) => point.is_in_stock);
     const baseline = inStock.filter(
@@ -157,7 +164,9 @@ test.describe('Product detail', () => {
       page.getByRole('heading', { name: 'Just Added Gadget', level: 1 })
     ).toBeVisible();
 
-    const startDate = formatShortDateUTC(detail.price_history[0].timestamp);
+    const startDate = formatShortDateUTC(
+      detail.offers[0].price_history[0].timestamp
+    );
     await expect(
       page.getByText(
         `Tracking started ${startDate}. The chart fills in as prices are checked.`
@@ -177,14 +186,22 @@ test.describe('Product detail', () => {
     apiMock.setCategories(CATEGORIES_BASIC);
     const lastCheckedAt = nowSeconds() - 4 * DAY_SECONDS - 60;
     apiMock.setProducts([
-      buildDashboardProduct({ id: 3, last_checked_at: lastCheckedAt })
+      buildDashboardProduct({
+        id: 3,
+        offers: [buildOfferSummary({ id: 3, last_checked_at: lastCheckedAt })]
+      })
     ]);
     apiMock.setDetail(
       3,
       buildProductDetail({
         id: 3,
-        url: 'https://shop.example.com/discontinued',
-        last_checked_at: lastCheckedAt
+        offers: [
+          buildOfferDetail({
+            id: 3,
+            url: 'https://shop.example.com/discontinued',
+            last_checked_at: lastCheckedAt
+          })
+        ]
       })
     );
 
@@ -194,5 +211,25 @@ test.describe('Product detail', () => {
     await expect(
       page.getByRole('link', { name: 'Check the store page' })
     ).toHaveAttribute('href', 'https://shop.example.com/discontinued');
+  });
+
+  test('lists every store of a product tracked in two stores', async ({
+    page,
+    apiMock
+  }) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories(CATEGORIES_BASIC);
+    apiMock.setProducts([buildMultiStoreProduct()]);
+    apiMock.setDetail(3, buildMultiStoreDetail());
+
+    await page.goto('/product/3');
+
+    await expect(page.getByRole('heading', { name: 'Stores' })).toBeVisible();
+    const legend = page.getByRole('list', { name: 'Stores' });
+    await expect(legend.getByText('Amazon')).toBeVisible();
+    await expect(legend.getByText('Thomann')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Actions for Thomann' })
+    ).toBeVisible();
   });
 });
