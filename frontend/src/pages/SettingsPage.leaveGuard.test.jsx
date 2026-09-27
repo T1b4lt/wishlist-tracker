@@ -37,6 +37,9 @@ const CONFIG = {
   is_price_drop_alert: false,
   is_stock_change_alert: false,
   daily_check_report: 'limit_days',
+  hist_window_options: [30, 60, 90, 180],
+  daily_check_report_options: ['off', 'limit_days', 'every_day'],
+  stale_after_days: 3,
   telegram_status: 'not_configured'
 };
 

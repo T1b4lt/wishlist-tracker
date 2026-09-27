@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Field } from '@/components/ui/field';
-import { HIST_WINDOW_OPTIONS, resolveHistWindow } from '@/lib/histWindow';
 import { SettingsSection } from './SettingsSection';
 
 const hourCollection = createListCollection({
@@ -29,29 +28,29 @@ const hourCollection = createListCollection({
  * @param {object} props
  * @param {number} props.analysisHour
  * @param {(value: number) => void} props.onAnalysisHourChange
- * @param {number} props.histWindowSize - In days; see `HIST_WINDOW_OPTIONS`.
+ * @param {number} props.histWindowSize - In days; one of `histWindowOptions`.
  * @param {(value: number) => void} props.onHistWindowSizeChange
+ * @param {number[]} props.histWindowOptions - `config.hist_window_options`.
  */
 export const AnalysisSection = ({
   analysisHour,
   onAnalysisHourChange,
   histWindowSize,
-  onHistWindowSizeChange
+  onHistWindowSizeChange,
+  histWindowOptions
 }) => {
   const { t } = useTranslation();
-  // A stored value outside the options (saved before they were enforced)
-  // shows the default as selected until the user saves a valid one.
-  const selectedHistWindow = resolveHistWindow(histWindowSize).toString();
+  const selectedHistWindow = histWindowSize.toString();
 
   const histWindowCollection = useMemo(
     () =>
       createListCollection({
-        items: HIST_WINDOW_OPTIONS.map((value) => ({
+        items: histWindowOptions.map((value) => ({
           label: t('pages.settings.histWindowOption', { days: value }),
           value: value.toString()
         }))
       }),
-    [t]
+    [histWindowOptions, t]
   );
 
   return (

@@ -192,6 +192,7 @@ const SettingsPage = () => {
             onAnalysisHourChange={setField('analysis_hour')}
             histWindowSize={draft.hist_window_size}
             onHistWindowSizeChange={setField('hist_window_size')}
+            histWindowOptions={config.hist_window_options}
           />
           <NotificationsSection
             telegramBotToken={draft.telegram_bot_token}
@@ -206,6 +207,7 @@ const SettingsPage = () => {
             onStockChangeAlertChange={setField('is_stock_change_alert')}
             dailyCheckReport={draft.daily_check_report}
             onDailyCheckReportChange={setField('daily_check_report')}
+            dailyCheckReportOptions={config.daily_check_report_options}
           />
         </Box>
       </Grid>

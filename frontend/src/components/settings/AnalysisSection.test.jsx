@@ -13,7 +13,8 @@ const baseProps = {
   analysisHour: 12,
   onAnalysisHourChange: vi.fn(),
   histWindowSize: 60,
-  onHistWindowSizeChange: vi.fn()
+  onHistWindowSizeChange: vi.fn(),
+  histWindowOptions: [30, 60, 90, 180]
 };
 
 describe('AnalysisSection', () => {
@@ -44,10 +45,19 @@ describe('AnalysisSection', () => {
     expect(onHistWindowSizeChange).toHaveBeenCalledWith(90);
   });
 
-  it('selects the default window when the stored value is not an option', () => {
-    // Review focus: a value saved before the options were enforced.
-    renderWithProviders(<AnalysisSection {...baseProps} histWindowSize={45} />);
+  it('offers exactly the window options the backend sends', () => {
+    renderWithProviders(
+      <AnalysisSection
+        {...baseProps}
+        histWindowOptions={[30, 90]}
+        histWindowSize={30}
+      />
+    );
 
-    expect(screen.getByRole('radio', { name: '60 days' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '30 days' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '90 days' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: '60 days' })
+    ).not.toBeInTheDocument();
   });
 });

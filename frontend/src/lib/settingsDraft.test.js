@@ -40,15 +40,14 @@ describe('draftFromConfig', () => {
     });
   });
 
-  it('drafts the daily check report, falling back to the default for unknown values', () => {
-    expect(
-      draftFromConfig({ ...CONFIG, daily_check_report: 'every_day' })
-        .daily_check_report
-    ).toBe('every_day');
-    expect(
-      draftFromConfig({ ...CONFIG, daily_check_report: 'weekly' })
-        .daily_check_report
-    ).toBe('limit_days');
+  it('copies the window and the report mode as the backend sends them', () => {
+    const draft = draftFromConfig({
+      ...CONFIG,
+      hist_window_size: 90,
+      daily_check_report: 'off'
+    });
+    expect(draft.hist_window_size).toBe(90);
+    expect(draft.daily_check_report).toBe('off');
   });
 
   it('never includes telegram_bot_chat_id or telegram_status', () => {
@@ -157,14 +156,5 @@ describe('buildConfigPatch', () => {
   it('sends every editable field', () => {
     const patch = buildConfigPatch(draftFromConfig(CONFIG));
     expect(Object.keys(patch).sort()).toEqual([...EDITABLE_FIELDS].sort());
-  });
-
-  it('replaces a stored off-list window with the default so saving never sends an invalid option', () => {
-    // A `hist_window_size` saved before the options were enforced (e.g. 45)
-    // would make the backend reject the whole save with a 422.
-    const patch = buildConfigPatch(
-      draftFromConfig({ ...CONFIG, hist_window_size: 45 })
-    );
-    expect(patch.hist_window_size).toBe(60);
   });
 });

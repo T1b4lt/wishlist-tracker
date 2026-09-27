@@ -30,7 +30,8 @@ const baseProps = {
   isStockChangeAlert: false,
   onStockChangeAlertChange: vi.fn(),
   dailyCheckReport: 'limit_days',
-  onDailyCheckReportChange: vi.fn()
+  onDailyCheckReportChange: vi.fn(),
+  dailyCheckReportOptions: ['off', 'limit_days', 'every_day']
 };
 
 const setStatus = (telegram_status) => {
@@ -102,13 +103,17 @@ describe('NotificationsSection', () => {
     ).toBeDisabled();
   });
 
-  it('reports the selected daily report mode', async () => {
+  // Opens the report `Select` once (one Ark overlay per test file), so it
+  // also checks that only the options the backend sends are offered.
+  it('offers the backend report options and reports the selected one', async () => {
     setStatus('connected');
     const onDailyCheckReportChange = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
       <NotificationsSection
         {...baseProps}
+        dailyCheckReport="off"
+        dailyCheckReportOptions={['off', 'every_day']}
         onDailyCheckReportChange={onDailyCheckReportChange}
       />
     );
@@ -116,6 +121,11 @@ describe('NotificationsSection', () => {
     await user.click(
       screen.getByRole('combobox', { name: 'Daily check report' })
     );
+    expect(
+      screen.queryByRole('option', {
+        name: 'Only on days the limit is reached'
+      })
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole('option', { name: 'Every day' }));
 
     expect(onDailyCheckReportChange).toHaveBeenCalledWith('every_day');

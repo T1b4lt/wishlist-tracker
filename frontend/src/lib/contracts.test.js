@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { readContract } from '@/test/contracts';
-import { DEFAULT_HIST_WINDOW, HIST_WINDOW_OPTIONS } from './histWindow';
-import {
-  DAILY_CHECK_REPORT_OPTIONS,
-  DEFAULT_DAILY_CHECK_REPORT
-} from './dailyCheckReport';
 import {
   buildDashboardProduct,
   buildHistoryPoint,
@@ -16,30 +11,6 @@ import { buildDailyCheck } from '../../e2e/fixtures/dailyCheck';
 
 // Frontend side of the shared contracts (see `contracts/README.md`); the
 // backend side lives in `backend/tests/test_contracts.py`.
-
-const HIST_WINDOW = readContract('hist-window.json');
-
-describe('hist-window contract', () => {
-  it('pins the window options', () => {
-    expect(HIST_WINDOW_OPTIONS).toEqual(HIST_WINDOW.options);
-  });
-
-  it('pins the default window', () => {
-    expect(DEFAULT_HIST_WINDOW).toBe(HIST_WINDOW.default);
-  });
-});
-
-const DAILY_CHECK_REPORT = readContract('daily-check-report.json');
-
-describe('daily-check-report contract', () => {
-  it('pins the report options', () => {
-    expect(DAILY_CHECK_REPORT_OPTIONS).toEqual(DAILY_CHECK_REPORT.options);
-  });
-
-  it('pins the default report', () => {
-    expect(DEFAULT_DAILY_CHECK_REPORT).toBe(DAILY_CHECK_REPORT.default);
-  });
-});
 
 const API_FIELDS = readContract('api-fields.json');
 

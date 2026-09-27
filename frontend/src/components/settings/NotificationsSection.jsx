@@ -18,7 +18,6 @@ import {
   SelectItem
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { DAILY_CHECK_REPORT_OPTIONS } from '@/lib/dailyCheckReport';
 import { useConfigStore } from '@/stores/configStore';
 import { SettingsSection } from './SettingsSection';
 import { TelegramSetup } from './TelegramSetup';
@@ -81,8 +80,10 @@ const AlertRow = ({
  * @param {(value: boolean) => void} props.onPriceDropAlertChange
  * @param {boolean} props.isStockChangeAlert
  * @param {(value: boolean) => void} props.onStockChangeAlertChange
- * @param {string} props.dailyCheckReport - One of `DAILY_CHECK_REPORT_OPTIONS`.
+ * @param {string} props.dailyCheckReport - One of `dailyCheckReportOptions`.
  * @param {(value: string) => void} props.onDailyCheckReportChange
+ * @param {string[]} props.dailyCheckReportOptions -
+ *   `config.daily_check_report_options`.
  */
 export const NotificationsSection = ({
   telegramBotToken,
@@ -94,7 +95,8 @@ export const NotificationsSection = ({
   isStockChangeAlert,
   onStockChangeAlertChange,
   dailyCheckReport,
-  onDailyCheckReportChange
+  onDailyCheckReportChange,
+  dailyCheckReportOptions
 }) => {
   const { t } = useTranslation();
   const telegramStatus = useConfigStore(
@@ -104,12 +106,12 @@ export const NotificationsSection = ({
   const dailyReportCollection = useMemo(
     () =>
       createListCollection({
-        items: DAILY_CHECK_REPORT_OPTIONS.map((value) => ({
+        items: dailyCheckReportOptions.map((value) => ({
           value,
           label: t(`pages.settings.alerts.dailyReport.options.${value}`)
         }))
       }),
-    [t]
+    [dailyCheckReportOptions, t]
   );
   const reason = isConnected
     ? null
