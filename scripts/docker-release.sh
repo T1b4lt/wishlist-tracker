@@ -8,8 +8,9 @@
 #
 # Environment variables:
 #   DOCKERHUB_USERNAME  (required) Docker Hub account that owns the repository.
-#   DOCKERHUB_TOKEN     (required) Docker Hub personal access token with
-#                       Read & Write scope, used to log in before pushing.
+#   DOCKERHUB_TOKEN     (optional) Docker Hub personal access token with
+#                       Read & Write scope. When set, the script logs in with
+#                       it; otherwise it requires an existing `docker login`.
 #   DOCKERHUB_REPO      (optional) Repository name, defaults to
 #                       "$DOCKERHUB_USERNAME/wishlist-tracker".
 #   DOCKER_PLATFORMS    (optional) Target platforms, defaults to "linux/amd64"
@@ -28,13 +29,7 @@ die() {
 command -v docker >/dev/null || die "docker is not installed."
 docker buildx version >/dev/null 2>&1 || die "docker buildx is not available."
 
-# Fail fast, before building anything, if the credentials are not set.
-missing=()
-[[ -n "${DOCKERHUB_USERNAME:-}" ]] || missing+=("DOCKERHUB_USERNAME")
-[[ -n "${DOCKERHUB_TOKEN:-}" ]] || missing+=("DOCKERHUB_TOKEN")
-if ((${#missing[@]})); then
-    die "missing required environment variable(s): ${missing[*]}."
-fi
+[[ -n "${DOCKERHUB_USERNAME:-}" ]] || die "missing required environment variable: DOCKERHUB_USERNAME."
 
 repo="${DOCKERHUB_REPO:-$DOCKERHUB_USERNAME/wishlist-tracker}"
 platforms="${DOCKER_PLATFORMS:-linux/amd64}"
@@ -49,8 +44,17 @@ version="${1:-$(git rev-parse --short HEAD)}"
 [[ "$version" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]] || die "invalid tag '$version'."
 [[ "$version" != "latest" ]] || die "pass a version, 'latest' is added automatically."
 
-echo "Logging in to Docker Hub as $DOCKERHUB_USERNAME..."
-printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+# Authenticate before building, so missing or bad credentials fail fast.
+if [[ -n "${DOCKERHUB_TOKEN:-}" ]]; then
+    echo "Logging in to Docker Hub as $DOCKERHUB_USERNAME..."
+    printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+else
+    # Without a TTY, `docker login` only reuses and validates stored
+    # credentials; it fails right away instead of prompting when there are none.
+    echo "DOCKERHUB_TOKEN is not set, checking the existing Docker Hub session..."
+    docker login </dev/null >/dev/null 2>&1 ||
+        die "DOCKERHUB_TOKEN is not set and there is no Docker Hub session: set it or run 'docker login'."
+fi
 
 echo "Building and pushing $repo:$version and $repo:latest ($platforms)..."
 docker buildx build \
