@@ -13,7 +13,9 @@
     "is_at_lowest",
     "recent_prices",
     "best_offer_id",
-    "offers"
+    "offers",
+    "is_stale",
+    "stale_days"
   ],
   "OfferSummary": [
     "id",
@@ -24,7 +26,9 @@
     "store_has_favicon",
     "current_price",
     "is_in_stock",
-    "last_checked_at"
+    "last_checked_at",
+    "days_since_check",
+    "is_stale"
   ],
   "ProductDetailResponse": [
     "id",
@@ -35,7 +39,9 @@
     "category_color",
     "description",
     "currency",
-    "offers"
+    "offers",
+    "is_stale",
+    "stale_days"
   ],
   "OfferDetail": [
     "id",
@@ -47,7 +53,9 @@
     "current_price",
     "is_in_stock",
     "last_checked_at",
-    "price_history"
+    "price_history",
+    "days_since_check",
+    "is_stale"
   ],
   "OfferHistResponse": [
     "price",

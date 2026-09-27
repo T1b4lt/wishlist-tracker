@@ -99,6 +99,8 @@ class OfferSummary(BaseModel):
     current_price: float | None
     is_in_stock: bool | None
     last_checked_at: int | None
+    days_since_check: int | None
+    is_stale: bool
 
 
 class OfferHistResponse(BaseModel):
@@ -137,6 +139,8 @@ class ProductDashboardSummary(BaseModel):
     recent_prices: list[float]
     best_offer_id: int | None
     offers: list[OfferSummary]
+    is_stale: bool
+    stale_days: int | None
 
 
 class ProductDetailResponse(BaseModel):
@@ -155,3 +159,5 @@ class ProductDetailResponse(BaseModel):
     description: str
     currency: str
     offers: list[OfferDetail]
+    is_stale: bool
+    stale_days: int | None

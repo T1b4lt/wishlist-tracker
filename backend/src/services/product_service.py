@@ -31,6 +31,7 @@ from src.schemas.product import (
 from src.services import offer_service, store_service
 from src.services.best_offer import OfferHistory, compute_product_offer_stats
 from src.services.price_stats import SECONDS_PER_DAY, compute_window_stats
+from src.services.staleness import days_since_check, is_stale, product_stale_days
 from src.stagehand_utils import get_product_info
 
 # --- CRUD operations ---
@@ -189,17 +190,19 @@ def _latest_records(session: Session) -> dict[int, OfferHist]:
     return {row.offer_id: row for row in rows}
 
 
-def _offer_summary_fields(offer: Offer, store: Store | None, current) -> dict:
+def _offer_summary_fields(offer: Offer, store: Store | None, current, now: int) -> dict:
     """Return the ``OfferSummary`` fields of an offer.
 
     Args:
         offer (Offer): The offer.
         store (Store | None): Its store, if any.
         current: Its newest ``OfferHist`` record, or None.
+        now (int): Reference Unix timestamp for the staleness fields.
 
     Returns:
         dict: Keyword arguments for ``OfferSummary`` / ``OfferDetail``.
     """
+    last_checked_at = current.timestamp if current else None
     return {
         "id": offer.id,
         "url": offer.url,
@@ -209,7 +212,9 @@ def _offer_summary_fields(offer: Offer, store: Store | None, current) -> dict:
         "store_has_favicon": bool(store and store.favicon),
         "current_price": current.price if current else None,
         "is_in_stock": current.is_in_stock if current else None,
-        "last_checked_at": current.timestamp if current else None,
+        "last_checked_at": last_checked_at,
+        "days_since_check": days_since_check(last_checked_at, now),
+        "is_stale": is_stale(last_checked_at, now),
     }
 
 
@@ -271,6 +276,13 @@ def get_dashboard_summary(
         best_current = latest.get(best_id) if best_id is not None else None
         stats = compute_window_stats(best_window, best_current)
         category = categories.get(product.category_id)
+        stale_days = product_stale_days(
+            [
+                latest[offer.id].timestamp if offer.id in latest else None
+                for offer in offers
+            ],
+            now,
+        )
 
         summary_list.append(
             ProductDashboardSummary(
@@ -290,24 +302,37 @@ def get_dashboard_summary(
                 offers=[
                     OfferSummary(
                         **_offer_summary_fields(
-                            offer, stores.get(offer.store_id), latest.get(offer.id)
+                            offer,
+                            stores.get(offer.store_id),
+                            latest.get(offer.id),
+                            now,
                         )
                     )
                     for offer in offers
                 ],
+                is_stale=stale_days is not None,
+                stale_days=stale_days,
             )
         )
 
     return summary_list
 
 
-def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
+def get_detail(
+    session: Session, product_id: int, now: int | None = None
+) -> ProductDetailResponse:
     """Build the full product detail: every offer with its whole history.
+
+    Args:
+        session (Session): Active database session.
+        product_id (int): The product to describe.
+        now (int | None): Reference Unix timestamp; defaults to now.
 
     Raises:
         HTTPException: 404 if the product does not exist.
     """
     product = _get_or_404(session, product_id)
+    now = int(time.time()) if now is None else now
     category = session.get(Category, product.category_id)
     offers = offer_service.offers_of(session, product_id)
     stores = _by_id(session, Store, {offer.store_id for offer in offers})
@@ -319,6 +344,14 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
         .order_by(OfferHist.offer_id, OfferHist.timestamp, OfferHist.id)
     ).all():
         histories[row.offer_id].append(row)
+
+    stale_days = product_stale_days(
+        [
+            histories[offer.id][-1].timestamp if histories[offer.id] else None
+            for offer in offers
+        ],
+        now,
+    )
 
     return ProductDetailResponse(
         id=product.id,
@@ -335,6 +368,7 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
                     offer,
                     stores.get(offer.store_id),
                     histories[offer.id][-1] if histories[offer.id] else None,
+                    now,
                 ),
                 price_history=[
                     OfferHistResponse(
@@ -347,6 +381,8 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
             )
             for offer in offers
         ],
+        is_stale=stale_days is not None,
+        stale_days=stale_days,
     )
 
 

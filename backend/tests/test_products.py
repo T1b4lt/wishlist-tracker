@@ -390,3 +390,41 @@ def test_delete_product_deletes_offers_and_history(client, session):
     session.expire_all()
     assert session.get(Offer, offer_id) is None
     assert session.exec(select(OfferHist)).all() == []
+
+
+# --- Staleness ---
+
+
+def test_dashboard_and_detail_flag_stale_offers(client, session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    fresh = make_offer(session, product.id, url="https://a.es/x")
+    stale = make_offer(session, product.id, url="https://b.es/x")
+    now = int(time.time())
+    add_history(session, fresh.id, [(10.0, True, now - 3600)])
+    add_history(session, stale.id, [(12.0, True, now - 5 * DAY - 60)])
+
+    summary = client.get("/products/dashboard-summary").json()[0]
+    detail = client.get(f"/products/{product.id}").json()
+
+    for data in (summary, detail):
+        assert data["is_stale"] is True
+        assert data["stale_days"] == 5
+        offers = {offer["id"]: offer for offer in data["offers"]}
+        assert offers[fresh.id]["is_stale"] is False
+        assert offers[fresh.id]["days_since_check"] == 0
+        assert offers[stale.id]["is_stale"] is True
+        assert offers[stale.id]["days_since_check"] == 5
+
+
+def test_never_checked_product_is_not_stale(client, session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    make_offer(session, product.id)
+
+    data = client.get("/products/dashboard-summary").json()[0]
+
+    assert data["is_stale"] is False
+    assert data["stale_days"] is None
+    assert data["offers"][0]["days_since_check"] is None
+    assert data["offers"][0]["is_stale"] is False
