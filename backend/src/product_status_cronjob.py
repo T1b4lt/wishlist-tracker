@@ -20,15 +20,12 @@ This script should be run every 10 minutes via cron. It will:
 import asyncio
 import fcntl
 import logging
-import math
 import sys
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
-from enum import Enum
 
-from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlmodel import Session, delete, func, select
 from src.core.config import get_config_value, get_daily_check_report
 from src.core.database import engine
@@ -38,17 +35,18 @@ from src.models.database_models import (
     Offer,
     OfferHist,
     PendingStatusRetry,
-    Product,
-    Store,
 )
 from src.services import daily_check_service
-from src.stagehand_utils import get_product_status, is_rate_limit_error
+from src.services.offer_check_service import (
+    CheckOutcome,
+    check_offer,
+    has_record_between,
+    load_telegram_settings,
+)
 from src.telegram_utils import (
     build_daily_done_message,
     build_daily_unchecked_message,
     send_daily_check_report,
-    send_price_drop_alert,
-    send_stock_alert,
 )
 
 # Configure logging
@@ -58,169 +56,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
-
-
-async def _check_price_drop(
-    product,
-    offer,
-    store_name,
-    product_status,
-    last_in_stock_hist,
-    telegram_bot_token,
-    telegram_bot_chat_id,
-    selected_language,
-):
-    """Send a Telegram alert if the price dropped while in stock.
-
-    Only prices you could actually buy are compared: the new status must be
-    in stock and cheaper than the most recent in-stock record.
-
-    Args:
-        product: The Product record.
-        offer: The Offer record that was checked.
-        store_name (str | None): The offer's store name.
-        product_status: Freshly scraped (and validated) status.
-        last_in_stock_hist: The most recent in-stock OfferHist record,
-            or None if the product was never in stock.
-        telegram_bot_token (str): Bot token.
-        telegram_bot_chat_id (str): Chat ID.
-        selected_language (str): Language code.
-    """
-    if not product_status.is_in_stock or last_in_stock_hist is None:
-        return
-    if product_status.price < last_in_stock_hist.price:
-        logger.info(
-            f"Price drop detected for {product.name}: "
-            f"{last_in_stock_hist.price} -> {product_status.price} {offer.currency}"
-        )
-        try:
-            await send_price_drop_alert(
-                bot_token=telegram_bot_token,
-                chat_id=telegram_bot_chat_id,
-                product_name=product.name,
-                product_url=offer.url,
-                old_price=last_in_stock_hist.price,
-                new_price=product_status.price,
-                lang=selected_language,
-                currency=offer.currency,
-                store_name=store_name,
-            )
-            logger.info(f"Price drop alert sent for {product.name}")
-        except Exception as e:
-            logger.error(
-                f"Failed to send price drop alert for {product.name}: {str(e)}"
-            )
-
-
-async def _check_stock_change(
-    product,
-    offer,
-    store_name,
-    product_status,
-    last_hist,
-    telegram_bot_token,
-    telegram_bot_chat_id,
-    selected_language,
-):
-    """Send a Telegram alert if the product came back in stock.
-
-    Args:
-        product: The Product record.
-        offer: The Offer record that was checked.
-        store_name (str | None): The offer's store name.
-        product_status: Freshly scraped status.
-        last_hist: The most recent OfferHist record.
-        telegram_bot_token (str): Bot token.
-        telegram_bot_chat_id (str): Chat ID.
-        selected_language (str): Language code.
-    """
-    if not last_hist.is_in_stock and product_status.is_in_stock:
-        logger.info(f"Stock availability detected for {product.name}: now in stock")
-        try:
-            await send_stock_alert(
-                bot_token=telegram_bot_token,
-                chat_id=telegram_bot_chat_id,
-                product_name=product.name,
-                product_url=offer.url,
-                current_price=product_status.price,
-                lang=selected_language,
-                currency=offer.currency,
-                store_name=store_name,
-            )
-            logger.info(f"Stock alert sent for {product.name}")
-        except Exception as e:
-            logger.error(f"Failed to send stock alert for {product.name}: {str(e)}")
-
-
-def _load_telegram_settings(session: Session) -> dict:
-    """Read all Telegram-related settings from the Config table.
-
-    Args:
-        session (Session): Active database session.
-
-    Returns:
-        dict: Keys ``token``, ``chat_id``, ``price_drop``, ``stock_change``,
-              ``language``, and ``enabled``.
-    """
-    token = get_config_value(session, "telegram_bot_token")
-    chat_id = get_config_value(session, "telegram_bot_chat_id")
-    is_price_drop = (
-        get_config_value(session, "is_price_drop_alert", "false").lower() == "true"
-    )
-    is_stock_change = (
-        get_config_value(session, "is_stock_change_alert", "false").lower() == "true"
-    )
-    language = get_config_value(session, "selected_language", "english")
-
-    return {
-        "token": token,
-        "chat_id": chat_id,
-        "price_drop": is_price_drop,
-        "stock_change": is_stock_change,
-        "language": language,
-        "enabled": bool(token and chat_id),
-    }
-
-
-def _is_valid_price(price) -> bool:
-    """Whether a scraped price can be stored (finite and positive).
-
-    Args:
-        price: The scraped price.
-
-    Returns:
-        bool: True for a finite number greater than zero.
-    """
-    return (
-        isinstance(price, int | float)
-        and not isinstance(price, bool)
-        and math.isfinite(price)
-        and price > 0
-    )
-
-
-def _has_record_between(session: Session, offer_id: int, start: int, end: int) -> bool:
-    """Whether the offer already has a history record in ``[start, end)``."""
-    return (
-        session.exec(
-            select(OfferHist.id).where(
-                OfferHist.offer_id == offer_id,
-                OfferHist.timestamp >= start,
-                OfferHist.timestamp < end,
-            )
-        ).first()
-        is not None
-    )
-
-
-def _last_record(session: Session, offer_id: int, in_stock_only: bool = False):
-    """Return the offer's most recent record (optionally only in-stock ones)."""
-    query = select(OfferHist).where(OfferHist.offer_id == offer_id)
-    if in_stock_only:
-        query = query.where(OfferHist.is_in_stock == True)  # noqa: E712
-    return session.exec(
-        query.order_by(OfferHist.timestamp.desc(), OfferHist.id.desc())
-    ).first()
 
 
 # Held for the whole run, so a run that outlasts the 10-minute schedule (a
@@ -256,112 +91,6 @@ def _current_timestamp() -> int:
     return int(time.time())
 
 
-class _CheckOutcome(Enum):
-    """Result of checking one offer."""
-
-    STORED = "stored"  # A new history record was stored.
-    SKIPPED = "skipped"  # The offer already had a record today.
-    FAILED = "failed"  # Invalid price or non-quota error; nothing stored.
-    RATE_LIMITED = "rate_limited"  # The Gemini quota ran out.
-
-
-async def _check_offer(
-    session: Session,
-    offer: Offer,
-    google_api_key: str,
-    tg: dict,
-    now: datetime,
-) -> _CheckOutcome:
-    """Fetch, validate and store one offer's status, sending alerts.
-
-    Args:
-        session (Session): Active database session.
-        offer (Offer): The offer (a product in one store) to check.
-        google_api_key (str): Google API key for Stagehand.
-        tg (dict): Telegram settings from ``_load_telegram_settings``.
-        now (datetime): Naive local time of the run.
-
-    Returns:
-        _CheckOutcome: What happened to the offer.
-    """
-    # The user may remove a store (or its product) while a long run is in
-    # progress: skip it instead of stopping the whole run.
-    try:
-        product = session.get(Product, offer.product_id)
-    except ObjectDeletedError:
-        product = None
-    if product is None:
-        logger.warning("Skipping an offer that was deleted during the run")
-        return _CheckOutcome.SKIPPED
-    store = session.get(Store, offer.store_id) if offer.store_id is not None else None
-    store_name = store.name if store else None
-    label = f"{product.name} @ {store_name or offer.url} (offer ID: {offer.id})"
-    day_start, day_end = local_day_bounds(now)
-    try:
-        if _has_record_between(session, offer.id, day_start, day_end):
-            logger.info(f"Skipping {label}: already checked today")
-            return _CheckOutcome.SKIPPED
-
-        logger.info(f"Fetching product status for: {label}")
-        product_status = await get_product_status(google_api_key, offer.url)
-
-        if not _is_valid_price(product_status.price):
-            logger.error(
-                f"Invalid price {product_status.price!r} for {label}; nothing stored"
-            )
-            return _CheckOutcome.FAILED
-
-        # Conditional alerts
-        if tg["enabled"]:
-            if tg["price_drop"]:
-                await _check_price_drop(
-                    product,
-                    offer,
-                    store_name,
-                    product_status,
-                    _last_record(session, offer.id, in_stock_only=True),
-                    tg["token"],
-                    tg["chat_id"],
-                    tg["language"],
-                )
-            last_offer_hist = _last_record(session, offer.id)
-            if tg["stock_change"] and last_offer_hist:
-                await _check_stock_change(
-                    product,
-                    offer,
-                    store_name,
-                    product_status,
-                    last_offer_hist,
-                    tg["token"],
-                    tg["chat_id"],
-                    tg["language"],
-                )
-
-        # Store new history record
-        session.add(
-            OfferHist(
-                offer_id=offer.id,
-                price=product_status.price,
-                is_in_stock=product_status.is_in_stock,
-                timestamp=int(now.timestamp()),
-            )
-        )
-        session.commit()
-
-        logger.info(
-            f"Stored price {product_status.price} / stock {product_status.is_in_stock} "
-            f"for {label}"
-        )
-        return _CheckOutcome.STORED
-
-    except Exception as e:
-        if is_rate_limit_error(e):
-            logger.warning(f"Gemini quota exhausted while checking {label}: {str(e)}")
-            return _CheckOutcome.RATE_LIMITED
-        logger.error(f"Error processing {label}: {str(e)}")
-        return _CheckOutcome.FAILED
-
-
 async def _check_offers(
     session: Session,
     offers: list[Offer],
@@ -386,7 +115,7 @@ async def _check_offers(
             the Unix time of the quota error, or None if the quota never ran
             out.
     """
-    tg = _load_telegram_settings(session)
+    tg = load_telegram_settings(session)
     if tg["enabled"]:
         logger.info("Telegram notifications enabled")
         logger.info(
@@ -396,19 +125,19 @@ async def _check_offers(
     else:
         logger.info("Telegram notifications disabled (credentials not configured)")
 
-    counts = {outcome: 0 for outcome in _CheckOutcome}
+    counts = {outcome: 0 for outcome in CheckOutcome}
     pending_ids: list[int] = []
     limit_reached_at: int | None = None
     for index, offer in enumerate(offers):
-        outcome = await _check_offer(session, offer, google_api_key, tg, now)
+        outcome = await check_offer(session, offer, google_api_key, tg, now)
         counts[outcome] += 1
-        if outcome is _CheckOutcome.RATE_LIMITED:
+        if outcome is CheckOutcome.RATE_LIMITED:
             limit_reached_at = _current_timestamp()
             day_start, day_end = local_day_bounds(now)
             pending_ids = [offer.id] + [
                 o.id
                 for o in offers[index + 1 :]
-                if not _has_record_between(session, o.id, day_start, day_end)
+                if not has_record_between(session, o.id, day_start, day_end)
             ]
             logger.warning(
                 f"Stopping: {len(pending_ids)} offer(s) left for a retry on the next run"
@@ -416,9 +145,9 @@ async def _check_offers(
             break
 
     logger.info(
-        f"Process completed. Success: {counts[_CheckOutcome.STORED]}, "
-        f"Skipped: {counts[_CheckOutcome.SKIPPED]}, "
-        f"Errors: {counts[_CheckOutcome.FAILED]}, "
+        f"Process completed. Success: {counts[CheckOutcome.STORED]}, "
+        f"Skipped: {counts[CheckOutcome.SKIPPED]}, "
+        f"Errors: {counts[CheckOutcome.FAILED]}, "
         f"Pending retry: {len(pending_ids)}"
     )
     return pending_ids, limit_reached_at
@@ -617,7 +346,7 @@ async def send_daily_report_if_due(now: datetime) -> None:
         mode = get_daily_check_report(session)
         if mode == "off" or (mode == "limit_days" and run.limit_reached_at is None):
             return
-        tg = _load_telegram_settings(session)
+        tg = load_telegram_settings(session)
         if not tg["enabled"]:
             return
 

@@ -2,7 +2,7 @@
 Product router — CRUD, dashboard summary, detail, and AI extraction endpoints.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 from src.core.database import SessionDep
 from src.schemas.product import (
     ProductCreate,
@@ -15,6 +15,7 @@ from src.schemas.product import (
     ProductUpdate,
 )
 from src.services import product_service
+from src.services.offer_check_service import check_offer_now
 
 router = APIRouter(tags=["products"])
 
@@ -34,9 +35,13 @@ async def extract_product_info(
 
 
 @router.post("/products/")
-def create_product(payload: ProductCreate, session: SessionDep) -> ProductResponse:
-    """Create a new product."""
-    return product_service.create(session, payload)
+def create_product(
+    payload: ProductCreate, session: SessionDep, background_tasks: BackgroundTasks
+) -> ProductResponse:
+    """Create a new product, then check its price in the background."""
+    product = product_service.create(session, payload)
+    background_tasks.add_task(check_offer_now, product.offers[0].id)
+    return product
 
 
 @router.get("/products/")

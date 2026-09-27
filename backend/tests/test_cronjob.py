@@ -22,6 +22,7 @@ from src.models.database_models import (
     Product,
     Store,
 )
+from src.services import offer_check_service as offer_check
 from src.stagehand_utils import ProductStatusExtraction
 from stagehand.rpc_client import RPCError, _JSONRPCError
 
@@ -97,9 +98,9 @@ def cron(session, monkeypatch, tmp_path):
     async def fake_stock_alert(**kwargs):
         env.stock_alerts.append(kwargs)
 
-    monkeypatch.setattr(cronjob, "get_product_status", fake_get_product_status)
-    monkeypatch.setattr(cronjob, "send_price_drop_alert", fake_price_drop_alert)
-    monkeypatch.setattr(cronjob, "send_stock_alert", fake_stock_alert)
+    monkeypatch.setattr(offer_check, "get_product_status", fake_get_product_status)
+    monkeypatch.setattr(offer_check, "send_price_drop_alert", fake_price_drop_alert)
+    monkeypatch.setattr(offer_check, "send_stock_alert", fake_stock_alert)
     return env
 
 
@@ -607,7 +608,7 @@ def test_an_offer_removed_during_the_run_does_not_stop_it(session, cron, monkeyp
     doomed = _add_product(session, cron, "Doomed")
     doomed_product_id = session.get(Offer, doomed.id).product_id
     session.commit()
-    real_status = cronjob.get_product_status
+    real_status = offer_check.get_product_status
 
     async def status_then_delete(api_key, url):
         # While the first offer is checked, the user deletes the other product.
@@ -616,7 +617,7 @@ def test_an_offer_removed_during_the_run_does_not_stop_it(session, cron, monkeyp
             session.commit()
         return await real_status(api_key, url)
 
-    monkeypatch.setattr(cronjob, "get_product_status", status_then_delete)
+    monkeypatch.setattr(offer_check, "get_product_status", status_then_delete)
 
     _run()
 
