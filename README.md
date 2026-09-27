@@ -441,11 +441,37 @@ The app will be available at `http://localhost:5173`. See [`frontend/README.md`]
 
 You can run the entire application (Frontend, Backend, and Cronjob) in a single container. The image is built in two stages: the frontend is compiled with **Node.js 24**, and the runtime is **Python 3.12** with Nginx, cron and Chromium (for Stagehand).
 
+#### Quick Start (Docker Hub)
+
+A ready-made image is published on Docker Hub as [`t1b4lt/wishlist-tracker`](https://hub.docker.com/r/t1b4lt/wishlist-tracker). `latest` points to the newest release; pin a version tag (e.g. `1.0.0`) to control when you upgrade.
+
+```bash
+docker run -d \
+  -p 7755:7755 \
+  -e TZ=Europe/Madrid \
+  -v wishlist-tracker-db:/app/backend/db \
+  --restart unless-stopped \
+  --name wishlist-tracker-app \
+  t1b4lt/wishlist-tracker:1.0.0
+```
+
+Then open `http://localhost:7755` and configure the AI provider (Gemini API key or Ollama URL and model) and Telegram in the **Settings** page. These are stored in the database, so **no API keys are passed as environment variables**.
+
+| Option                          | Required    | Description                                                                                                     |
+| ------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `-p <host port>:7755`           | Yes         | The app (frontend and `/api`) is served on container port `7755`.                                               |
+| `-v <volume>:/app/backend/db`   | Recommended | Persists the SQLite database (and its migration backups). Without it, data is lost when the container is removed. |
+| `-e TZ=<zone>`                  | Recommended | Time zone (default `UTC`) used for the daily analysis hour and "one check per product per day".                  |
+
+`TZ` is the only environment variable the container reads; everything else is configured in the app.
+
+#### Build from Source
+
 ```bash
 # Build the Docker image
 docker build -t wishlist-tracker:latest .
 
-# Run the container (exposes the app on port 7755 and persists the database)
+# Run it with the same options as above, using the local tag
 docker run -d \
   -p 7755:7755 \
   -e TZ=Europe/Madrid \
@@ -455,9 +481,9 @@ docker run -d \
   wishlist-tracker:latest
 ```
 
-The application will be available at `http://localhost:7755`.
+`just docker-build` and `just docker-run` do the same (see [Task Runner](#-task-runner-just)).
 
-Inside the container:
+#### Inside the Container
 
 - **Nginx** listens on port `7755`, serves the compiled frontend and proxies `/api/*` to the FastAPI backend (the `/api` prefix is stripped).
 - **Uvicorn** runs the API on `127.0.0.1:8000` (not exposed outside the container).
@@ -472,9 +498,9 @@ Inside the container:
 Pull the new image and recreate the container with the same volume. On start, if the new version changes the database schema, the entrypoint copies the database to `db/backups/database-<old revision>-<date>.db` and then migrates it; the logs (`docker logs wishlist-tracker-app`) show both steps. If a migration fails, the container stops before the app starts.
 
 ```bash
-docker pull your_user/wishlist-tracker:2.0.0
+docker pull t1b4lt/wishlist-tracker:<new version>
 docker rm -f wishlist-tracker-app
-docker run -d ... your_user/wishlist-tracker:2.0.0   # Same options and volume as before
+docker run -d ... t1b4lt/wishlist-tracker:<new version>   # Same options and volume as before
 ```
 
 To roll back, run the previous image tag and restore the backup it made (older versions do not understand a newer schema):
@@ -483,7 +509,7 @@ To roll back, run the previous image tag and restore the backup it made (older v
 docker rm -f wishlist-tracker-app
 docker run --rm -v wishlist-tracker-db:/db alpine \
   sh -c 'ls /db/backups && cp /db/backups/database-<revision>-<date>.db /db/database.db'
-docker run -d ... your_user/wishlist-tracker:1.0.0
+docker run -d ... t1b4lt/wishlist-tracker:<previous version>
 ```
 
 Backups are never deleted automatically; remove old ones from `db/backups/` when you no longer need them.
@@ -500,19 +526,19 @@ just docker-release 1.0.0             # Pushes your_user/wishlist-tracker:1.0.0 
 
 Optional variables: `DOCKERHUB_REPO` (default `$DOCKERHUB_USERNAME/wishlist-tracker`) and `DOCKER_PLATFORMS` (default `linux/amd64`, e.g. `linux/amd64,linux/arm64` for a multi-arch image).
 
-### 5. Environment Variables
+### 5. Environment Variables (Local Development Only)
 
-Create a `backend/.env` file with your credentials:
+The app itself (including the Docker image) does **not** read API keys from the environment: they are managed through the **Settings** page and stored in the database.
+
+Only the standalone test scripts (`stagehand_utils.py`, `telegram_utils.py`) read a `backend/.env` file:
 
 ```env
-# Required for AI extraction
+# Used by stagehand_utils.py to test AI extraction
 ASD_GOOGLE=your_google_api_key
 
-# Optional — for Telegram notifications
+# Used by telegram_utils.py to send a test message
 DSA_TELEGRAM=your_telegram_bot_token
 ```
-
-> ⚠️ **Note**: These environment variables are used only by the standalone test scripts (`stagehand_utils.py`, `telegram_utils.py`). In production, the API keys are managed through the **Settings page** and stored in the database.
 
 ---
 
