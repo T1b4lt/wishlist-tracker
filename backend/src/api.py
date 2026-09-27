@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.core.database import lifespan
 from src.routers import (
+    ai_router,
     category_router,
     config_router,
     daily_check_router,
@@ -37,6 +38,7 @@ app.add_middleware(
 
 # --- Register routers ---
 
+app.include_router(ai_router.router)
 app.include_router(config_router.router)
 app.include_router(daily_check_router.router)
 app.include_router(category_router.router)
