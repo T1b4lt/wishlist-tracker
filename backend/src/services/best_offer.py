@@ -11,6 +11,8 @@ Definitions (per offer, *current* is the newest record of its history):
     * product in stock: any current record in stock (``None`` without history).
     * product at lowest: the best offer's current record is in stock and not
       above the lowest in-stock price of any offer inside the window.
+    * lowest across offers: cheapest in-stock record of any offer inside the
+      window (most recent on ties).
 """
 
 from collections.abc import Iterable
@@ -35,6 +37,15 @@ class ProductOfferStats:
     best_offer_id: int | None
     is_in_stock: bool | None
     is_at_lowest: bool
+
+
+@dataclass(frozen=True)
+class LowestRecord:
+    """The cheapest in-stock record of any offer inside a window."""
+
+    price: float
+    timestamp: int
+    offer_id: int
 
 
 def current_record(history: Iterable) -> Any | None:
@@ -80,6 +91,40 @@ def select_best_offer(offers: list[OfferHistory]) -> int | None:
     return min(ranked)[3] if ranked else None
 
 
+def lowest_across_offers(
+    offers: list[OfferHistory], window_days: int | None, now: int
+) -> LowestRecord | None:
+    """Return the cheapest in-stock record of any offer inside the window.
+
+    The most recent record wins on price ties.
+
+    Args:
+        offers (list[OfferHistory]): The product's offers.
+        window_days (int | None): Window length in days; ``None`` keeps
+            the full history.
+        now (int): Reference Unix timestamp (seconds).
+
+    Returns:
+        LowestRecord | None: The lowest record, or ``None`` when no offer has
+            an in-stock record inside the window.
+    """
+    lowest = None
+    for offer in offers:
+        for record in filter_window(offer.history, window_days, now):
+            if not record.is_in_stock:
+                continue
+            if (
+                lowest is None
+                or record.price < lowest.price
+                or (
+                    record.price == lowest.price
+                    and record.timestamp >= lowest.timestamp
+                )
+            ):
+                lowest = LowestRecord(record.price, record.timestamp, offer.offer_id)
+    return lowest
+
+
 def compute_product_offer_stats(
     offers: list[OfferHistory], window_days: int | None, now: int
 ) -> ProductOfferStats:
@@ -104,14 +149,9 @@ def compute_product_offer_stats(
     best_offer_id = select_best_offer(offers)
     is_at_lowest = False
     if best_offer_id is not None and currents[best_offer_id].is_in_stock:
-        in_stock_prices = [
-            record.price
-            for offer in offers
-            for record in filter_window(offer.history, window_days, now)
-            if record.is_in_stock
-        ]
-        is_at_lowest = bool(in_stock_prices) and (
-            currents[best_offer_id].price <= min(in_stock_prices)
+        lowest = lowest_across_offers(offers, window_days, now)
+        is_at_lowest = (
+            lowest is not None and currents[best_offer_id].price <= lowest.price
         )
 
     return ProductOfferStats(
