@@ -29,7 +29,7 @@
 Key highlights:
 
 - **Any product from any website** — the AI agent can navigate and extract data from virtually any e-commerce page.
-- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out are retried every 10 minutes until they are checked.
+- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out are retried every 10 minutes until they are checked. A newly added product or store gets its first price right away.
 - **Instant Telegram alerts** — get notified the moment a price drops or an item is back in stock.
 - **Complete price history** — visualize how prices evolve over time with interactive charts.
 - **Multi-language support** — the UI is fully translated in English and Spanish (i18n).
@@ -130,6 +130,7 @@ wishlist-tracker/
 │       │   ├── category_service.py   # Category CRUD operations
 │       │   ├── best_offer.py         # Pure best-offer rules (which store represents a product)
 │       │   ├── offer_service.py      # Offers (a product in one store): add, edit URL, unlink, delete
+│       │   ├── offer_check_service.py # Check one offer's price & stock (daily run and right after adding it)
 │       │   ├── price_stats.py        # Pure price statistics (window, average, change, lowest)
 │       │   ├── product_service.py    # Product CRUD, dashboard, detail & AI extraction
 │       │   ├── store_service.py      # Store lookup/creation by domain & favicon access
@@ -572,7 +573,7 @@ All application settings can be managed through the **Settings** page (`/setting
 
 ### Tracking a Product in Several Stores
 
-- **Add a store** from the product page (**Stores** card → **Add store**): paste the other store's URL; its store and currency are extracted, and its first price arrives with the next daily check.
+- **Add a store** from the product page (**Stores** card → **Add store**): paste the other store's URL; its store and currency are extracted, and its first price is checked right away (see [Prices of New Stores](#prices-of-new-stores)).
 - Or, in the **Add product** dialog, pick the product in **Same product as…**: the URL is added as another store of that product instead of a new product.
 - Already added the same item twice? Open one of them and use **⋯ → Merge with…** to combine both (stores and price histories), choosing whose name, category, priority and description to keep.
 - From a store's menu you can edit its URL, **unlink** it into its own product, or remove it (a product always keeps at least one store).
@@ -648,6 +649,15 @@ Example: with 10 offers and a quota that allows 5 calls, the analysis-hour run s
 Runs never overlap: each run holds an exclusive lock (`backend/db/cronjob.lock`), so a tick that fires while a long check is still running just exits.
 
 A quota error is recognized from the message Stagehand raises (`You exceeded your current quota … Quota exceeded for metric …`, i.e. Gemini's HTTP 429 `RESOURCE_EXHAUSTED`). Stagehand already retries each model call a few times before raising.
+
+### Prices of New Stores
+
+A store does not wait for the daily check to get its first price: right after a product is created, a store is added to a product, or a store's URL changes, the API checks that store's price in the background, and the app refreshes the product when the price arrives (it keeps trying for up to 3 minutes).
+
+- Added **before** the analysis hour: the daily check skips it that day, since it already has its price for the day.
+- Added **after** the day's check started: it counts in that day's total, and if the Gemini quota runs out it joins the pending retries.
+- After a **URL change**, the new price replaces the day's price of the old URL (if the check fails, the old one stays).
+- These checks send no Telegram alerts. Other failures (an invalid price, a page that does not load) leave the store for the next daily check.
 
 ---
 

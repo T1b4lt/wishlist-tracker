@@ -193,7 +193,9 @@ stores under `src/stores/` (one file per store, tests beside them):
   `fetchDetail` keeps a product's previously-loaded `data` in place while
   re-fetching (only `status` flips to `'loading'`), so the product page
   shows a loading skeleton only on the very first load, not on every
-  revisit.
+  revisit. After `create`, `addOffer` or `updateOffer`, the product is
+  polled (`_watchPriceCheck`, every 5 s for up to 3 minutes) until that
+  store gets the price the backend checks in the background.
 - `categoriesStore.js`: the categories `items` list, with `fetch`, `create`,
   `update` and `remove` actions.
 - `dailyCheckStore.js`: today's daily check status (`GET /daily-check/`),
