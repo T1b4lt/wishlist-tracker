@@ -192,7 +192,7 @@ docker-stop:
 docker-logs:
     docker logs -f {{ container }}
 
-# Build and push the image to Docker Hub as <version> and latest (needs DOCKERHUB_USERNAME)
+# Build and push the image to Docker Hub as <version> and latest (needs DOCKERHUB_USERNAME and DOCKERHUB_TOKEN)
 [group('docker')]
 docker-release version="":
     ./scripts/docker-release.sh {{ quote(version) }}

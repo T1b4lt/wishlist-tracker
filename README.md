@@ -455,11 +455,11 @@ Inside the container:
 
 #### Publishing to Docker Hub
 
-`just docker-release [version]` runs [`scripts/docker-release.sh`](scripts/docker-release.sh), which builds the image and pushes it to Docker Hub tagged both as `<version>` and as `latest`. Without a version, the short git commit hash is used. It refuses to release uncommitted changes (override with `ALLOW_DIRTY=1`).
+`just docker-release [version]` runs [`scripts/docker-release.sh`](scripts/docker-release.sh), which builds the image and pushes it to Docker Hub tagged both as `<version>` and as `latest`. Without a version, the short git commit hash is used. `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are required: if either is missing, the script stops before building. It also refuses to release uncommitted changes (override with `ALLOW_DIRTY=1`).
 
 ```bash
 export DOCKERHUB_USERNAME=your_user
-export DOCKERHUB_TOKEN=dckr_pat_...   # Personal access token (Read & Write); optional if already `docker login`-ed
+export DOCKERHUB_TOKEN=dckr_pat_...   # Personal access token (Read & Write)
 just docker-release 1.0.0             # Pushes your_user/wishlist-tracker:1.0.0 and :latest
 ```
 
