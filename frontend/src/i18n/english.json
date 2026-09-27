@@ -324,10 +324,12 @@
         "tooltip": {
           "price": "Price",
           "change": "Change",
-          "stock": "Stock"
+          "stock": "Stock",
+          "store": "Store"
         },
         "empty": "Tracking started {{date}}. The chart fills in as prices are checked.",
-        "emptyRange": "Not enough data in this range. Pick a longer range to see the chart."
+        "emptyRange": "Not enough data in this range. Pick a longer range to see the chart.",
+        "legendLabel": "Stores"
       },
       "description": {
         "title": "Description",

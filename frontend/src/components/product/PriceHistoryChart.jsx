@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
-import { Box, Card, Flex, Heading, Text } from '@chakra-ui/react';
+import { Box, Card, Flex, Heading, HStack, Text } from '@chakra-ui/react';
 import { useReducedMotion } from 'motion/react';
 import {
   CartesianGrid,
   Line,
   LineChart,
-  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -14,18 +13,20 @@ import {
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { StoreBadge } from '@/components/common';
 import { formatDate, formatPercent, formatPrice } from '@/lib/format';
 import { durationSeconds } from '@/theme/motion';
 import { RANGE_ALL, RANGE_OPTIONS } from '@/lib/productHistory';
 
 /**
- * The chart's custom tooltip: date, price, change versus the previous point
- * and stock status, per the brief (no legend, this is the only place stock
- * per-point is surfaced on the chart).
+ * The chart's custom tooltip for the hovered store's point: store (when
+ * there are several), date, price, change versus the previous point and
+ * stock status.
  */
-const ChartTooltip = ({ active, payload, currency, locale, t }) => {
+const ChartTooltip = ({ active, payload, currency, locale, t, showStore }) => {
   if (!active || !payload || payload.length === 0) return null;
-  const point = payload[0].payload;
+  const entry = payload[0];
+  const point = entry.payload;
 
   return (
     <Box
@@ -37,6 +38,11 @@ const ChartTooltip = ({ active, payload, currency, locale, t }) => {
       boxShadow="md"
       fontSize="sm"
     >
+      {showStore && (
+        <Text>
+          {t('pages.product.chart.tooltip.store')}: {entry.name}
+        </Text>
+      )}
       <Text fontWeight="semibold" mb={1}>
         {formatDate(point.timestamp, locale)}
       </Text>
@@ -64,20 +70,20 @@ const ChartTooltip = ({ active, payload, currency, locale, t }) => {
 
 /**
  * The product detail page's price history chart card: a day-range selector,
- * the line chart itself (or a "tracking just started" message when there is
- * not enough history yet) with a dashed average reference line, a
- * timestamp-keyed marker for the range's lowest price, and shaded bands for
- * out-of-stock periods. No legend (the tooltip and the stats row above
- * already carry that context). All chart inputs are pre-computed by the
- * caller from `src/lib/productHistory.js` so this component stays about
- * rendering, not math.
+ * the chart itself (or a "tracking just started" message when there is
+ * not enough history yet): one stepped line per store, dashed while that
+ * store is out of stock, with a dashed average reference line (of the best
+ * store) and a timestamp-keyed marker for the range's lowest price. With
+ * more than one store, a legend (favicon + name) names each line. All chart
+ * inputs are pre-computed by the caller from `src/lib/offerChart.js` and
+ * `src/lib/productHistory.js` so this component stays about rendering, not
+ * math.
  *
  * @param {object} props
  * @param {string} props.range - The selected range (`RANGE_OPTIONS` value or `RANGE_ALL`).
  * @param {(range: string) => void} props.onRangeChange
- * @param {Array<{timestamp: number, price: number, isInStock: boolean, changePercent: number|null}>} props.chartPoints
+ * @param {object[]} props.series - One entry per store, see `buildOfferSeries`.
  * @param {[number, number]|['auto','auto']} props.yDomain
- * @param {Array<{x1: number, x2: number}>} props.outOfStockBands
  * @param {number|null} props.average - Average of the range's in-stock
  *   records other than the current one (see `computeRangeStats`).
  * @param {{price: number, timestamp: number}|null} props.lowest
@@ -94,9 +100,8 @@ const ChartTooltip = ({ active, payload, currency, locale, t }) => {
 export const PriceHistoryChart = ({
   range,
   onRangeChange,
-  chartPoints,
+  series,
   yDomain,
-  outOfStockBands,
   average,
   lowest,
   hasEnoughHistory,
@@ -151,10 +156,7 @@ export const PriceHistoryChart = ({
         {hasEnoughHistory ? (
           <Box height="300px" width="100%">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartPoints}
-                margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-              >
+              <LineChart margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
@@ -164,6 +166,7 @@ export const PriceHistoryChart = ({
                   dataKey="timestamp"
                   type="number"
                   domain={['dataMin', 'dataMax']}
+                  allowDuplicatedCategory={false}
                   axisLine={false}
                   tickLine={false}
                   tick={{
@@ -187,21 +190,16 @@ export const PriceHistoryChart = ({
                   width={80}
                 />
                 <Tooltip
+                  shared={false}
                   content={
-                    <ChartTooltip currency={currency} locale={locale} t={t} />
+                    <ChartTooltip
+                      currency={currency}
+                      locale={locale}
+                      t={t}
+                      showStore={series.length > 1}
+                    />
                   }
                 />
-                {outOfStockBands.map((band) => (
-                  <ReferenceArea
-                    key={`${band.x1}-${band.x2}`}
-                    x1={band.x1}
-                    x2={band.x2}
-                    fill="var(--chakra-colors-stock-out)"
-                    fillOpacity={0.12}
-                    stroke="none"
-                    ifOverflow="visible"
-                  />
-                ))}
                 {average !== null && (
                   <ReferenceLine
                     y={average}
@@ -231,17 +229,41 @@ export const PriceHistoryChart = ({
                     }}
                   />
                 )}
-                {/* Prices change at discrete checks, so draw steps rather than a smoothed curve. */}
-                <Line
-                  type="stepAfter"
-                  dataKey="price"
-                  stroke="var(--chakra-colors-fg)"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 5, strokeWidth: 0 }}
-                  isAnimationActive={!shouldReduceMotion}
-                  animationDuration={durationSeconds.normal * 1000}
-                />
+                {/* Prices change at discrete checks, so draw steps rather
+                    than a smoothed curve; each store gets a solid line while
+                    in stock and a dashed one while out of stock. */}
+                {series.flatMap((s) => [
+                  <Line
+                    key={`${s.offerId}-in`}
+                    data={s.points}
+                    name={s.storeName ?? ''}
+                    type="stepAfter"
+                    dataKey="inStockPrice"
+                    stroke={s.color}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                    connectNulls={false}
+                    isAnimationActive={!shouldReduceMotion}
+                    animationDuration={durationSeconds.normal * 1000}
+                  />,
+                  <Line
+                    key={`${s.offerId}-out`}
+                    data={s.points}
+                    name={s.storeName ?? ''}
+                    type="stepAfter"
+                    dataKey="outOfStockPrice"
+                    stroke={s.color}
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    strokeOpacity={0.6}
+                    dot={false}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                    connectNulls={false}
+                    isAnimationActive={!shouldReduceMotion}
+                    animationDuration={durationSeconds.normal * 1000}
+                  />
+                ])}
               </LineChart>
             </ResponsiveContainer>
           </Box>
@@ -255,6 +277,28 @@ export const PriceHistoryChart = ({
                     : '-'
                 })}
           </Text>
+        )}
+
+        {hasEnoughHistory && series.length > 1 && (
+          <HStack
+            as="ul"
+            aria-label={t('pages.product.chart.legendLabel')}
+            gap={4}
+            wrap="wrap"
+            mt={3}
+            listStyleType="none"
+          >
+            {series.map((s) => (
+              <HStack as="li" key={s.offerId} gap={1.5}>
+                <Box w="12px" h="2px" bg={s.color} aria-hidden="true" />
+                <StoreBadge
+                  storeId={s.storeId}
+                  name={s.storeName}
+                  hasFavicon={s.hasFavicon}
+                />
+              </HStack>
+            ))}
+          </HStack>
         )}
       </Card.Body>
     </Card.Root>

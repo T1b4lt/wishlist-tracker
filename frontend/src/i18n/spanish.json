@@ -324,10 +324,12 @@
         "tooltip": {
           "price": "Precio",
           "change": "Cambio",
-          "stock": "Existencias"
+          "stock": "Existencias",
+          "store": "Tienda"
         },
         "empty": "El seguimiento comenzó el {{date}}. El gráfico se completa a medida que se comprueban los precios.",
-        "emptyRange": "No hay suficientes datos en este rango. Elige un rango más amplio para ver el gráfico."
+        "emptyRange": "No hay suficientes datos en este rango. Elige un rango más amplio para ver el gráfico.",
+        "legendLabel": "Tiendas"
       },
       "description": {
         "title": "Descripción",

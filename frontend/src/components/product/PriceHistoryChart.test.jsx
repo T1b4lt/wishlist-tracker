@@ -1,10 +1,29 @@
 import { cloneElement } from 'react';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { spyOnConsoleError } from '@/test/consoleErrors';
+import { buildOfferSeries } from '@/lib/offerChart';
+import { RANGE_ALL } from '@/lib/productHistory';
+import {
+  buildMultiStoreDetail,
+  buildProductDetail
+} from '../../../e2e/fixtures/products';
 import { PriceHistoryChart } from './PriceHistoryChart';
+
+const record = (price, isInStock, timestamp) => ({
+  price,
+  is_in_stock: isInStock,
+  timestamp
+});
+
+/** One store's series from `(price, inStock, timestamp)` records. */
+const singleSeries = (records) =>
+  buildOfferSeries(
+    [{ id: 1, store_name: 'Amazon', price_history: records }],
+    RANGE_ALL
+  );
 
 // jsdom never gives `ResponsiveContainer` a non-zero measured size (there is
 // no real layout, and the `ResizeObserver` stub in `src/test/setup.js` never
@@ -25,12 +44,8 @@ vi.mock('recharts', async (importOriginal) => {
 const BASE_PROPS = {
   range: '60',
   onRangeChange: vi.fn(),
-  chartPoints: [
-    { timestamp: 1, price: 10, isInStock: true, changePercent: null },
-    { timestamp: 2, price: 12, isInStock: true, changePercent: 20 }
-  ],
+  series: singleSeries([record(10, true, 1), record(12, true, 2)]),
   yDomain: [9, 13],
-  outOfStockBands: [],
   average: 11,
   lowest: { price: 10, timestamp: 1 },
   hasEnoughHistory: true,
@@ -71,7 +86,7 @@ describe('PriceHistoryChart', () => {
     renderWithProviders(
       <PriceHistoryChart
         {...BASE_PROPS}
-        chartPoints={[]}
+        series={[]}
         hasEnoughHistory={false}
         average={null}
         lowest={null}
@@ -90,7 +105,7 @@ describe('PriceHistoryChart', () => {
     renderWithProviders(
       <PriceHistoryChart
         {...BASE_PROPS}
-        chartPoints={[]}
+        series={[]}
         hasEnoughHistory={false}
         hasEnoughTotalHistory
         average={null}
@@ -111,7 +126,7 @@ describe('PriceHistoryChart', () => {
     renderWithProviders(
       <PriceHistoryChart
         {...BASE_PROPS}
-        chartPoints={[]}
+        series={[]}
         hasEnoughHistory={false}
         average={null}
         lowest={null}
@@ -126,62 +141,51 @@ describe('PriceHistoryChart', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders a visible, non-zero-width out-of-stock reference area for a closed run', () => {
+  it('draws an out-of-stock stretch as a dashed segment of the same line', () => {
     const { container } = renderWithProviders(
       <PriceHistoryChart
         {...BASE_PROPS}
-        chartPoints={[
-          { timestamp: 1, price: 10, isInStock: true, changePercent: null },
-          { timestamp: 2, price: 12, isInStock: false, changePercent: 20 },
-          { timestamp: 3, price: 11, isInStock: true, changePercent: -8.3 }
-        ]}
-        outOfStockBands={[{ x1: 2, x2: 3 }]}
+        series={singleSeries([
+          record(10, true, 1),
+          record(12, false, 2),
+          record(11, true, 3)
+        ])}
       />
     );
 
-    const bandRects = container.querySelectorAll(
-      '.recharts-reference-area-rect'
+    const lines = container.querySelectorAll('.recharts-line-curve');
+    expect(lines).toHaveLength(2);
+    // In jsdom Recharts' draw animation overwrites `stroke-dasharray` on
+    // every line, so the out-of-stock line is told apart by its opacity.
+    const outOfStock = [...lines].filter(
+      (line) => line.getAttribute('stroke-opacity') === '0.6'
     );
-    expect(bandRects).toHaveLength(1);
-    const width = Number(bandRects[0].getAttribute('width'));
-    expect(width).toBeGreaterThan(0);
+    expect(outOfStock).toHaveLength(1);
   });
 
-  it('renders a visible, non-zero-width band for a trailing single-sample out-of-stock run, entirely inside the plotted X range', () => {
-    // Shaped exactly like what `computeOutOfStockBands` now returns for a
-    // single trailing out-of-stock sample: extended *backward* from the
-    // last point (`x2`), never past it, so it stays inside the chart's
-    // `['dataMin', 'dataMax']` X domain instead of being clipped.
-    const { container } = renderWithProviders(
+  it('shows a legend with every store when there is more than one', () => {
+    renderWithProviders(
       <PriceHistoryChart
         {...BASE_PROPS}
-        chartPoints={[
-          { timestamp: 1, price: 10, isInStock: true, changePercent: null },
-          { timestamp: 2, price: 10, isInStock: true, changePercent: 0 },
-          { timestamp: 3, price: 10, isInStock: false, changePercent: 0 }
-        ]}
-        yDomain={[9, 11]}
-        outOfStockBands={[{ x1: 2.5, x2: 3 }]}
+        series={buildOfferSeries(buildMultiStoreDetail().offers, RANGE_ALL)}
       />
     );
 
-    const bandRects = container.querySelectorAll(
-      '.recharts-reference-area-rect'
+    const legend = screen.getByRole('list', { name: 'Stores' });
+    expect(within(legend).getByText('Amazon')).toBeInTheDocument();
+    expect(within(legend).getByText('Thomann')).toBeInTheDocument();
+  });
+
+  it('has no legend for a single store', () => {
+    renderWithProviders(
+      <PriceHistoryChart
+        {...BASE_PROPS}
+        series={buildOfferSeries(buildProductDetail().offers, RANGE_ALL)}
+      />
     );
-    expect(bandRects).toHaveLength(1);
 
-    const rect = bandRects[0];
-    const x = Number(rect.getAttribute('x'));
-    const width = Number(rect.getAttribute('width'));
-    expect(width).toBeGreaterThan(0);
-
-    // "Inside the plot area": the band's right edge must not exceed the
-    // chart's own plotted width (i.e. it was not pushed past `dataMax`,
-    // which would fall in the margin and be clipped).
-    const surface = container.querySelector('.recharts-surface');
-    expect(surface).toBeTruthy();
-    const chartWidth = Number(surface.getAttribute('width'));
-    expect(x).toBeGreaterThanOrEqual(0);
-    expect(x + width).toBeLessThanOrEqual(chartWidth);
+    expect(
+      screen.queryByRole('list', { name: 'Stores' })
+    ).not.toBeInTheDocument();
   });
 });

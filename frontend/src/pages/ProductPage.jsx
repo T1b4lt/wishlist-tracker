@@ -45,11 +45,9 @@ import {
   selectBestOffer
 } from '@/lib/bestOffer';
 import { staleOffers } from '@/lib/staleness';
+import { buildOfferSeries, seriesYDomain } from '@/lib/offerChart';
 import {
-  buildChartPoints,
-  computeOutOfStockBands,
   computeRangeStats,
-  computeYDomain,
   filterPriceHistoryByRange,
   getCurrentRecord,
   getTrackingStartTimestamp,
@@ -158,24 +156,18 @@ const ProductPage = () => {
     () => filterPriceHistoryByRange(rawHistory, range),
     [rawHistory, range]
   );
-  const chartPoints = useMemo(
-    () => buildChartPoints(filteredHistory),
-    [filteredHistory]
+  // One line per store; the chart plots when any store has 2+ points in
+  // the range. The total history decides which message replaces it: "not
+  // enough data in this range" when a longer range would plot, "tracking
+  // started" otherwise.
+  const series = useMemo(
+    () => buildOfferSeries(offers, range),
+    [offers, range]
   );
-  // Gated on the *filtered* points (what the chart would actually plot),
-  // not the product's total lifetime history, so a narrow range with too few
-  // points in it never renders an empty/broken-looking chart. The total
-  // history decides which message replaces it: "not enough data in this
-  // range" when a longer range would plot, "tracking started" otherwise.
-  const hasEnoughHistory = hasEnoughHistoryPoints(chartPoints);
-  const hasEnoughTotalHistory = hasEnoughHistoryPoints(rawHistory);
-  const yDomain = useMemo(
-    () => computeYDomain(filteredHistory),
-    [filteredHistory]
-  );
-  const outOfStockBands = useMemo(
-    () => computeOutOfStockBands(filteredHistory),
-    [filteredHistory]
+  const yDomain = useMemo(() => seriesYDomain(series), [series]);
+  const hasEnoughHistory = series.some((s) => hasEnoughHistoryPoints(s.points));
+  const hasEnoughTotalHistory = offers.some((offer) =>
+    hasEnoughHistoryPoints(offer.price_history)
   );
   const currentRecord = useMemo(
     () => getCurrentRecord(rawHistory),
@@ -189,10 +181,12 @@ const ProductPage = () => {
     () => computeLowestAcrossOffers(offers, range),
     [offers, range]
   );
-  const trackingStartDate = useMemo(
-    () => getTrackingStartTimestamp(rawHistory),
-    [rawHistory]
-  );
+  const trackingStartDate = useMemo(() => {
+    const starts = offers
+      .map((offer) => getTrackingStartTimestamp(offer.price_history))
+      .filter((value) => value !== null);
+    return starts.length === 0 ? null : Math.min(...starts);
+  }, [offers]);
 
   const handleDeleteConfirm = async () => {
     if (!product) return;
@@ -436,9 +430,8 @@ const ProductPage = () => {
         <PriceHistoryChart
           range={range}
           onRangeChange={handleRangeChange}
-          chartPoints={chartPoints}
+          series={series}
           yDomain={yDomain}
-          outOfStockBands={outOfStockBands}
           average={average}
           lowest={lowest}
           hasEnoughHistory={hasEnoughHistory}
