@@ -24,12 +24,12 @@
 
 ## 🧠 Introduction
 
-**Wishlist Tracker AI** is a full-stack application designed to help users keep track of products they wish to buy. Unlike traditional wishlists, this project leverages an **AI agent** ([Stagehand](https://github.com/browserbase/stagehand) + Google Gemini) to autonomously visit product pages, extract pricing and stock data, and build a historical record over time.
+**Wishlist Tracker AI** is a full-stack application designed to help users keep track of products they wish to buy. Unlike traditional wishlists, this project leverages an **AI agent** ([Stagehand](https://github.com/browserbase/stagehand) + Google Gemini or a self-hosted Ollama model) to autonomously visit product pages, extract pricing and stock data, and build a historical record over time.
 
 Key highlights:
 
 - **Any product from any website** — the AI agent can navigate and extract data from virtually any e-commerce page.
-- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out are retried every 10 minutes until they are checked. A newly added product or store gets its first price right away.
+- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out or the Ollama instance could not be reached are retried every 10 minutes until they are checked. A newly added product or store gets its first price right away.
 - **Instant Telegram alerts** — get notified the moment a price drops or an item is back in stock.
 - **Complete price history** — visualize how prices evolve over time with interactive charts.
 - **Multi-language support** — the UI is fully translated in English and Spanish (i18n).
@@ -41,11 +41,11 @@ Key highlights:
 | Feature                    | Description                                                                                                                                                                                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                                                                                                                                                     |
-| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini.                                                                                                                                                                              |
+| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini (Google AI Studio) or a model on your own Ollama instance.                                                                                                                                                                              |
 | **Store Detection**        | Each store a product is tracked in records its name (AI-extracted) and favicon (downloaded from the page), shown on the dashboard and detail page. |
 | **Multiple Stores per Product** | Track the same product in several stores. It counts once on the dashboard, valued by its best offer (the cheapest store in stock). Add stores from the product page or the "New product" dialog ("Same product as…"), merge two products into one, or unlink a store back into its own product. Each store keeps its own price history, stock, outdated warning and Telegram alerts. |
 | **Price Tracking**         | One price check per store per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                      |
-| **Gemini Quota Handling**  | When the Gemini quota runs out, the products left are retried every 10 minutes for the rest of the day, least recently checked first; the dashboard shows when the limit was reached and how many products are still pending. |
+| **AI Provider Outages**    | When the Gemini quota runs out or the Ollama instance cannot be reached, the products left are retried every 10 minutes for the rest of the day, least recently checked first; the dashboard shows when it happened and how many products are still pending, and Telegram tells you when Ollama is unreachable and when it is back. |
 | **Outdated Price Warning** | Products whose price has not been updated for 3 days or more (the store may be down, the product may have been removed, or the page may be blocking the agent) get a badge on the dashboard, a warning on their detail page, a count in the summary strip and their own filter. |
 | **Interactive Dashboard**  | Overview of all products with current price, price change vs. the window's average (%), sparkline, stock status, and category indicators.                                                                                                                                                                                  |
 | **Search & Filters**       | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops, lowest price and outdated price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading. |
@@ -87,6 +87,7 @@ Key highlights:
 | [SQLite](https://www.sqlite.org/)                                  | Lightweight embedded database     |
 | [Stagehand v4](https://github.com/browserbase/stagehand)           | AI browser agent for web scraping |
 | [Google Gemini](https://ai.google.dev/)                            | LLM powering the AI extraction    |
+| [Ollama](https://ollama.com/)                                      | Optional self-hosted LLM for the AI extraction |
 | [python-telegram-bot](https://python-telegram-bot.readthedocs.io/) | Telegram Bot API integration      |
 | [python-dotenv](https://pypi.org/project/python-dotenv/)           | Environment variable management   |
 
@@ -243,19 +244,22 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 8 tables. A 
 │ day_start          │ (Unix seconds, start of the local day)
 └────────────────────┘
 
-┌────────────────────┐
-│   DailyCheckRun    │
-├────────────────────┤
-│ day_start (PK)     │ (Unix seconds, start of the local day)
-│ started_at         │
-│ total_offers       │
-│ limit_reached_at   │ (nullable, first Gemini quota error)
-│ pending_at_limit   │ (nullable)
-│ report_sent        │
-└────────────────────┘
+┌────────────────────────┐
+│     DailyCheckRun      │
+├────────────────────────┤
+│ day_start (PK)         │ (Unix seconds, start of the local day)
+│ started_at             │
+│ total_offers           │
+│ limit_reached_at       │ (nullable, first provider-wide stop)
+│ pending_at_limit       │ (nullable)
+│ limit_reason           │ (nullable, "quota" | "unavailable")
+│ report_sent            │
+│ unavailable_alert_sent │
+│ recovered_alert_sent   │
+└────────────────────────┘
 ```
 
-`Offer.product_id` and `OfferHist.offer_id` cascade on delete, and `OfferHist.timestamp` is in Unix seconds. `PendingStatusRetry` holds the offers whose daily check hit the Gemini quota; the cronjob retries them every 10 minutes for the rest of that local day. `DailyCheckRun` keeps one summary row per local day: when the daily check started, how many offers (prices) it covered, and the first Gemini quota error (time and prices left), shown on the dashboard (see [What the Cronjob Does](#what-the-cronjob-does)).
+`Offer.product_id` and `OfferHist.offer_id` cascade on delete, and `OfferHist.timestamp` is in Unix seconds. `PendingStatusRetry` holds the offers whose daily check was stopped by the AI provider (Gemini quota reached or provider unavailable); the cronjob retries them every 10 minutes for the rest of that local day. `DailyCheckRun` keeps one summary row per local day: when the daily check started, how many offers (prices) it covered, the first provider-wide stop (time, prices left and reason), shown on the dashboard, and whether the Telegram "provider unavailable" / "back online" alerts were sent (see [What the Cronjob Does](#what-the-cronjob-does)).
 
 **Config keys** stored in the `Config` table:
 
@@ -265,11 +269,14 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 8 tables. A 
 | `hist_window_size`      | `60`      | Days of history used for price trends, averages and lowest prices (30, 60, 90 or 180) |
 | `is_price_drop_alert`   | `false`   | Enable Telegram alerts on price drops                                                 |
 | `is_stock_change_alert` | `false`   | Enable Telegram alerts on stock changes                                               |
-| `daily_check_report`    | `limit_days` | Telegram daily check report: `off`, `limit_days` (only on days the Gemini limit was reached) or `every_day` |
+| `daily_check_report`    | `limit_days` | Telegram daily check report: `off`, `limit_days` (only on days the Gemini limit was reached or the AI provider was unavailable) or `every_day` |
 | `telegram_bot_token`    | `""`      | Telegram Bot API token                                                                |
 | `telegram_bot_chat_id`  | `""`      | Telegram chat ID for notifications                                                    |
 | `selected_language`     | `english` | UI language (`english` / `spanish`)                                                   |
 | `google_api_key`        | `""`      | Google API key for Gemini (used by Stagehand)                                         |
+| `ai_provider`           | `google_ai_studio` | AI provider behind Stagehand: `google_ai_studio` or `ollama`                  |
+| `ollama_url`            | `""`      | Base URL of the Ollama instance, e.g. `http://192.168.1.20:11434`                     |
+| `ollama_model`          | `""`      | Ollama model tag, e.g. `qwen3.8:latest`                                               |
 
 **How price statistics are computed** (dashboard and product detail):
 
@@ -346,13 +353,14 @@ Offers are linked to a store resolved from their URL's domain on create and on U
 | Method | Endpoint               | Description                                                    |
 | ------ | ---------------------- | -------------------------------------------------------------- |
 | `GET`  | `/stores/{id}/favicon` | Store favicon image (cached for a week; 404 if none was found) |
-| `GET`  | `/daily-check/` | Today's daily check: full-run snapshot (start, total products, Gemini limit time and products left then; nulls before it runs) and products still pending |
+| `GET`  | `/daily-check/` | Today's daily check: full-run snapshot (start, total products, time the AI provider stopped it, products left then and `limit_reason`: `quota` or `unavailable`; nulls before it runs) and products still pending |
 
 ### AI Extraction
 
 | Method | Endpoint                 | Description                                                                                                                |
 | ------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/extract-product-info/` | AI-extract product info from a given URL, including its `store` (created with its favicon the first time a domain is seen) |
+| `POST` | `/extract-product-info/` | AI-extract product info from a given URL, including its `store` (created with its favicon the first time a domain is seen). 503 if the AI provider cannot be reached |
+| `GET`  | `/ai/ollama/models?url=…` | Models installed on an Ollama instance, with their size and whether they are under 20B parameters. 502 if it cannot be reached |
 
 ### Telegram
 
@@ -372,7 +380,7 @@ Offers are linked to a store resolved from their URL's domain on create and on U
 - **Python 3.12+** and [uv](https://github.com/astral-sh/uv)
 - **Node.js 24+** and **npm**
 - **Google Chrome** installed on the system (required by Stagehand v4 for local browser scraping)
-- A **Google API key** with access to Gemini models
+- A **Google API key** with access to Gemini models, **or** an [Ollama](https://ollama.com/) instance reachable from the backend (models of 20B+ parameters recommended; smaller ones don't guarantee good results)
 - _(Optional)_ A **Telegram Bot** token for notifications
 
 ### 1. Clone the Repository
@@ -589,7 +597,7 @@ All application settings can be managed through the **Settings** page (`/setting
 
 | Setting                 | Description                                                              |
 | ----------------------- | ------------------------------------------------------------------------ |
-| **Google API Key**      | Required for AI-powered product extraction (Gemini).                     |
+| **AI Provider**         | Google AI Studio (Gemini, with your API key) or Ollama (the URL of your instance and one of its models, picked from a list; models under 20B parameters show a warning). |
 | **Analysis Hour**       | Hour of the day (0–23) when the daily check starts (first run at or after it). |
 | **History Window**      | Days used for price trends, averages and lowest prices (30, 60, 90 or 180). |
 | **Language**            | Switch between English and Spanish.                                      |
@@ -657,7 +665,7 @@ All application settings can be managed through the **Settings** page (`/setting
 
 ## ⏰ Cronjob Setup
 
-The price tracking runs via the script `backend/src/product_status_cronjob.py`. It is designed to be **executed every 10 minutes** — it decides internally whether to start the day's check (first run at or after the configured `analysis_hour`) or to retry the products left by a Gemini quota error.
+The price tracking runs via the script `backend/src/product_status_cronjob.py`. It is designed to be **executed every 10 minutes** — it decides internally whether to start the day's check (first run at or after the configured `analysis_hour`) or to retry the products left when the AI provider stopped the check (Gemini quota error or Ollama unreachable).
 
 ### Linux (crontab)
 
@@ -673,30 +681,38 @@ crontab -e
 
 1. The first run at or after the configured **analysis hour** each day starts the daily check (once per day, even if the container was stopped at that hour) and records it in `DailyCheckRun`.
 2. It iterates over all offers (a product in one store) not yet checked today — least recently checked first (never-checked ones at the front), so if the daily quota cannot cover every offer, the ones left out one day go first the next — and:
-   - Opens each offer URL via the AI agent (Stagehand + Gemini).
+   - Opens each offer URL via the AI agent (Stagehand + the configured AI provider).
    - Extracts the current price and stock status.
    - Stores a new `OfferHist` record in the database.
 3. Compares current values with the previous record:
    - If the price dropped → sends a **price drop alert** via Telegram (if enabled), naming the store.
    - If the item is back in stock → sends a **stock alert** via Telegram (if enabled), naming the store.
-4. If the **Gemini quota** runs out (requests per minute or per day), the run stops right away — every later call would fail too — and the offers left are saved in `PendingStatusRetry`.
-5. At every later run that day (every 10 minutes), it retries only today's pending offers (same steps 2–3), stopping again at the next quota error, until all of them have their record:
+4. If the **Gemini quota** runs out (requests per minute or per day) or the **AI provider cannot be reached** (e.g. the Ollama instance is switched off; checked with a cheap `GET /api/tags` preflight before each run, so Chrome is not launched just to fail), the run stops right away — every later call would fail too — and the offers left are saved in `PendingStatusRetry`.
+5. At every later run that day (every 10 minutes), it retries only today's pending offers (same steps 2–3), stopping again at the next quota error or outage, until all of them have their record:
    - An offer leaves the list once it is stored, or if it fails for another reason (e.g. an invalid price or a page that does not load), so it does not keep spending quota.
    - Pending offers are dropped when the local day ends; the next analysis-hour run checks everything again.
-6. After each run, sends the **daily check report** on Telegram once per day (setting `daily_check_report`): ✅ as soon as no price is pending (with how many were recorded and how many failed), or ⚠️ on the 23:50 run with the count the Gemini limit left unchecked. `limit_days` only reports days the Gemini limit was reached, `every_day` reports every day, `off` never. A failed send is retried by the next run.
+6. When the AI provider cannot be reached, sends a Telegram alert asking you to switch the instance on or check it, and another once it answers again and nothing is pending — at most once each per day, whenever Telegram is configured (independently of the alert switches and of `daily_check_report`).
+7. After each run, sends the **daily check report** on Telegram once per day (setting `daily_check_report`): ✅ as soon as no price is pending (with how many were recorded and how many failed), or ⚠️ on the 23:50 run with the count the Gemini limit (or the provider outage) left unchecked. `limit_days` only reports days the Gemini limit was reached or the provider was unavailable, `every_day` reports every day, `off` never. A failed send is retried by the next run.
 
 Example: with 10 offers and a quota that allows 5 calls, the analysis-hour run stores 5 records and leaves 5 pending; the next run retries those 5, and so on until none are left.
 
 Runs never overlap: each run holds an exclusive lock (`backend/db/cronjob.lock`), so a tick that fires while a long check is still running just exits.
 
-A quota error is recognized from the message Stagehand raises (`You exceeded your current quota … Quota exceeded for metric …`, i.e. Gemini's HTTP 429 `RESOURCE_EXHAUSTED`). Stagehand already retries each model call a few times before raising.
+A quota error is recognized from the message Stagehand raises (`You exceeded your current quota … Quota exceeded for metric …`, i.e. Gemini's HTTP 429 `RESOURCE_EXHAUSTED`). Stagehand already retries each model call a few times before raising. An Ollama outage is a connection error, a timeout, an HTTP 5xx, or the configured model missing from the instance; any other error (e.g. a small model answering invalid JSON) only fails that offer.
+
+### Using Ollama
+
+Stagehand v4 has no Ollama provider and no `base_url` option, so the backend plugs Ollama in through Stagehand's *bring-your-own-LLM* callback (`backend/src/ai/ollama.py`): every inference request is forwarded to Ollama's `POST /api/chat` with the JSON schema as `format` (structured outputs). Ollama cannot parse the `\d` regex shorthand Stagehand uses in its schemas, so it is rewritten as `[0-9]` before sending.
+
+- The instance must be reachable **from the backend**: in Docker, use its LAN IP (e.g. `http://192.168.1.20:11434`), not `localhost`.
+- Models under 20B parameters don't guarantee good results; `qwen3.8` has proven reliable.
 
 ### Prices of New Stores
 
 A store does not wait for the daily check to get its first price: right after a product is created, a store is added to a product, or a store's URL changes, the API checks that store's price in the background, and the app refreshes the product when the price arrives (it keeps trying for up to 3 minutes).
 
 - Added **before** the analysis hour: the daily check skips it that day, since it already has its price for the day.
-- Added **after** the day's check started: it counts in that day's total, and if the Gemini quota runs out it joins the pending retries.
+- Added **after** the day's check started: it counts in that day's total, and if the Gemini quota runs out or the AI provider cannot be reached it joins the pending retries.
 - After a **URL change**, the new price replaces the day's price of the old URL (if the check fails, the old one stays).
 - These checks send no Telegram alerts. Other failures (an invalid price, a page that does not load) leave the store for the next daily check.
 
