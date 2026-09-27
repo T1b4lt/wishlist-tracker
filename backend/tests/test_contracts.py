@@ -16,9 +16,11 @@ from src.core.config import (
 from src.schemas.config import ConfigUpdate
 from src.schemas.daily_check import DailyCheckStatusResponse
 from src.schemas.product import (
+    OfferDetail,
+    OfferHistResponse,
+    OfferSummary,
     ProductDashboardSummary,
     ProductDetailResponse,
-    ProductHistResponse,
 )
 from tests.contract_utils import load_contract
 
@@ -76,8 +78,10 @@ API_FIELDS = load_contract("api-fields.json")
     "schema",
     [
         ProductDashboardSummary,
+        OfferSummary,
         ProductDetailResponse,
-        ProductHistResponse,
+        OfferDetail,
+        OfferHistResponse,
         DailyCheckStatusResponse,
     ],
     ids=lambda schema: schema.__name__,

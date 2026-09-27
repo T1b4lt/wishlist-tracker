@@ -8,7 +8,7 @@ class DailyCheckStatusResponse(BaseModel):
 
     day_start: int
     started_at: int | None
-    total_products: int | None
+    total_offers: int | None
     limit_reached_at: int | None
     pending_at_limit: int | None
     pending_now: int

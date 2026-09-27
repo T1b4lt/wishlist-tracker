@@ -6,7 +6,7 @@ Pure functions, no database access. The same rules are implemented in
 by ``contracts/price-stats-cases.json`` (see ``contracts/README.md``).
 
 Records are any objects exposing ``price``, ``is_in_stock`` and
-``timestamp`` (Unix seconds), e.g. ``ProductHist`` rows.
+``timestamp`` (Unix seconds), e.g. ``OfferHist`` rows.
 
 Definitions:
     * current: the newest record of the full history.

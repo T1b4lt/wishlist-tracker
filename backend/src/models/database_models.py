@@ -33,21 +33,38 @@ class Store(SQLModel, table=True):
 
 
 class Product(SQLModel, table=True):
+    """What the user wants to buy; tracked in one or more stores (offers)."""
+
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
-    url: str
     priority: str = Field(index=True)  # high, medium, low
     category_id: int | None = Field(default=None, foreign_key="category.id")
     description: str
-    currency: str
-    store_id: int | None = Field(default=None, foreign_key="store.id", index=True)
 
 
-class ProductHist(SQLModel, table=True):
+class Offer(SQLModel, table=True):
+    """A product in one store: its URL, store and currency.
+
+    Every product has at least one offer, and all offers of a product share
+    its currency. Each offer has its own price history and daily check.
+    """
+
     id: int | None = Field(default=None, primary_key=True)
     product_id: int = Field(
         sa_column=Column(
             Integer, ForeignKey("product.id", ondelete="CASCADE"), index=True
+        ),
+    )
+    url: str
+    store_id: int | None = Field(default=None, foreign_key="store.id", index=True)
+    currency: str
+
+
+class OfferHist(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    offer_id: int = Field(
+        sa_column=Column(
+            Integer, ForeignKey("offer.id", ondelete="CASCADE"), index=True
         ),
     )
     price: float
@@ -56,17 +73,17 @@ class ProductHist(SQLModel, table=True):
 
 
 class PendingStatusRetry(SQLModel, table=True):
-    """A product whose daily status check hit the Gemini quota.
+    """An offer whose daily status check hit the Gemini quota.
 
-    The hourly cronjob retries these products later the same local day until
-    each one gets its record. Rows from a previous day are stale: they are
+    The cronjob retries these offers later the same local day until each one
+    gets its record. Rows from a previous day are stale: they are
     discarded, since the next analysis-hour run checks every product again.
     """
 
-    product_id: int = Field(
+    offer_id: int = Field(
         sa_column=Column(
             Integer,
-            ForeignKey("product.id", ondelete="CASCADE"),
+            ForeignKey("offer.id", ondelete="CASCADE"),
             primary_key=True,
         ),
     )
@@ -79,12 +96,12 @@ class DailyCheckRun(SQLModel, table=True):
     ``limit_reached_at`` / ``pending_at_limit`` are the snapshot of the first
     Gemini quota error of the day (null when the quota never ran out); they
     are never overwritten by the retries. ``PendingStatusRetry`` holds the
-    live list of products still pending.
+    live list of offers still pending.
     """
 
     day_start: int = Field(primary_key=True)  # Unix seconds, local day start
     started_at: int  # Unix seconds
-    total_products: int
+    total_offers: int
     limit_reached_at: int | None = None  # Unix seconds
     pending_at_limit: int | None = None
     report_sent: bool = False

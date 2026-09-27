@@ -12,16 +12,16 @@ from sqlmodel import Session, func, select
 from src.core.local_day import local_day_bounds
 from src.models.database_models import (
     DailyCheckRun,
+    Offer,
+    OfferHist,
     PendingStatusRetry,
-    Product,
-    ProductHist,
 )
 from src.schemas.daily_check import DailyCheckStatusResponse
 
 
 @dataclass(frozen=True)
 class DailyCounts:
-    """Products recorded today and products still pending a quota retry."""
+    """Offers recorded today and offers still pending a quota retry."""
 
     recorded: int
     pending: int
@@ -42,7 +42,7 @@ def get_today_run(session: Session, now: datetime) -> DailyCheckRun | None:
 
 
 def count_today(session: Session, now: datetime) -> DailyCounts:
-    """Count existing products recorded today and today's pending retries.
+    """Count existing offers recorded today and today's pending retries.
 
     Args:
         session (Session): Active database session.
@@ -53,9 +53,9 @@ def count_today(session: Session, now: datetime) -> DailyCounts:
     """
     day_start, day_end = local_day_bounds(now)
     recorded = session.exec(
-        select(func.count(func.distinct(ProductHist.product_id)))
-        .join(Product, Product.id == ProductHist.product_id)
-        .where(ProductHist.timestamp >= day_start, ProductHist.timestamp < day_end)
+        select(func.count(func.distinct(OfferHist.offer_id)))
+        .join(Offer, Offer.id == OfferHist.offer_id)
+        .where(OfferHist.timestamp >= day_start, OfferHist.timestamp < day_end)
     ).one()
     pending = session.exec(
         select(func.count())
@@ -76,7 +76,7 @@ def get_status(
 
     Returns:
         DailyCheckStatusResponse: The snapshot (null before the full run)
-            and the live number of pending products.
+            and the live number of pending offers.
     """
     now = now or datetime.now()
     day_start, _ = local_day_bounds(now)
@@ -84,7 +84,7 @@ def get_status(
     return DailyCheckStatusResponse(
         day_start=day_start,
         started_at=run.started_at if run else None,
-        total_products=run.total_products if run else None,
+        total_offers=run.total_offers if run else None,
         limit_reached_at=run.limit_reached_at if run else None,
         pending_at_limit=run.pending_at_limit if run else None,
         pending_now=count_today(session, now).pending,

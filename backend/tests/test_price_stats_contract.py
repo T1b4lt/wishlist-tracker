@@ -8,10 +8,11 @@ so the two implementations cannot drift apart silently.
 from types import SimpleNamespace
 
 import pytest
-from src.models.database_models import Category, Config, Product, ProductHist
+from src.models.database_models import Category, Config, OfferHist
 from src.services import product_service
 from src.services.price_stats import compute_price_stats
 from tests.contract_utils import load_contract
+from tests.factories import make_offer, make_product
 
 CONTRACT = load_contract("price-stats-cases.json")
 TOLERANCE = CONTRACT["tolerance"]
@@ -68,18 +69,10 @@ def test_dashboard_summary_follows_the_price_stats_contract(session, case):
     session.add(category)
     session.add(Config(key="hist_window_size", value=str(case["window_days"])))
     session.commit()
-    product = Product(
-        name="Contract product",
-        url="https://example.com/contract",
-        priority="low",
-        category_id=category.id,
-        description="",
-        currency="EUR",
-    )
-    session.add(product)
-    session.commit()
+    product = make_product(session, category.id, name="Contract product")
+    offer = make_offer(session, product.id, url="https://example.com/contract")
     for record in case["history"]:
-        session.add(ProductHist(product_id=product.id, **record))
+        session.add(OfferHist(offer_id=offer.id, **record))
     session.commit()
     expected = case["expected"]
 

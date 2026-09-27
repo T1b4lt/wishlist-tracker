@@ -4,13 +4,13 @@ Product router — CRUD, dashboard summary, detail, and AI extraction endpoints.
 
 from fastapi import APIRouter
 from src.core.database import SessionDep
-from src.models.database_models import Product
 from src.schemas.product import (
     ProductCreate,
     ProductDashboardSummary,
     ProductDetailResponse,
     ProductInfoRequest,
     ProductInfoResponse,
+    ProductResponse,
     ProductUpdate,
 )
 from src.services import product_service
@@ -33,13 +33,13 @@ async def extract_product_info(
 
 
 @router.post("/products/")
-def create_product(payload: ProductCreate, session: SessionDep) -> Product:
+def create_product(payload: ProductCreate, session: SessionDep) -> ProductResponse:
     """Create a new product."""
     return product_service.create(session, payload)
 
 
 @router.get("/products/")
-def read_products(session: SessionDep) -> list[Product]:
+def read_products(session: SessionDep) -> list[ProductResponse]:
     """List all products."""
     return product_service.get_all(session)
 
@@ -61,12 +61,12 @@ def get_product_detail(product_id: int, session: SessionDep) -> ProductDetailRes
 @router.patch("/products/{product_id}")
 def update_product(
     product_id: int, payload: ProductUpdate, session: SessionDep
-) -> Product:
+) -> ProductResponse:
     """Partially update a product."""
     return product_service.update(session, product_id, payload)
 
 
 @router.delete("/products/{product_id}")
 def delete_product(product_id: int, session: SessionDep) -> dict:
-    """Delete a product (history is cascade-deleted)."""
+    """Delete a product (offers and history are cascade-deleted)."""
     return product_service.delete(session, product_id)

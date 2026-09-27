@@ -2,47 +2,62 @@
   "ProductDashboardSummary": [
     "id",
     "name",
-    "url",
     "category_id",
     "category_name",
     "category_color",
     "priority",
+    "currency",
     "current_price",
     "price_change_pct",
     "is_in_stock",
     "is_at_lowest",
-    "currency",
+    "recent_prices",
+    "best_offer_id",
+    "offers"
+  ],
+  "OfferSummary": [
+    "id",
+    "url",
     "store_id",
     "store_name",
     "store_domain",
     "store_has_favicon",
-    "recent_prices",
+    "current_price",
+    "is_in_stock",
     "last_checked_at"
   ],
   "ProductDetailResponse": [
     "id",
     "name",
-    "url",
     "priority",
     "category_id",
     "category_name",
     "category_color",
     "description",
-    "current_price",
-    "is_in_stock",
-    "price_history",
     "currency",
+    "offers"
+  ],
+  "OfferDetail": [
+    "id",
+    "url",
     "store_id",
     "store_name",
     "store_domain",
     "store_has_favicon",
-    "last_checked_at"
+    "current_price",
+    "is_in_stock",
+    "last_checked_at",
+    "price_history"
   ],
-  "ProductHistResponse": ["price", "is_in_stock", "timestamp"],
+  "OfferHistResponse": [
+    "price",
+    "is_in_stock",
+    "timestamp"
+  ],
   "DailyCheckStatusResponse": [
     "day_start",
     "started_at",
-    "total_products",
+    "total_offers",
     "limit_reached_at",
     "pending_at_limit",
     "pending_now"

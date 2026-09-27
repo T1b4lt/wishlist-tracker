@@ -47,21 +47,17 @@ def test_list_categories_reports_product_count_for_associated_products(client, s
     session.add(
         Product(
             name="Item One",
-            url="https://example.com/1",
             priority="low",
             category_id=with_products.id,
             description="desc",
-            currency="USD",
         )
     )
     session.add(
         Product(
             name="Item Two",
-            url="https://example.com/2",
             priority="low",
             category_id=with_products.id,
             description="desc",
-            currency="USD",
         )
     )
     session.commit()

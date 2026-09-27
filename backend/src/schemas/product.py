@@ -1,30 +1,74 @@
-"""Request and response schemas for products."""
+"""Request and response schemas for products and their offers."""
+
+from typing import Literal
 
 from pydantic import BaseModel
 from src.schemas.store import StoreResponse
 
 
-class ProductCreate(BaseModel):
-    """Payload for creating a new product."""
+class OfferCreate(BaseModel):
+    """Payload for a new offer (a product in one store)."""
 
-    name: str
     url: str
-    priority: str
-    category_id: int
-    description: str
     currency: str
     store_id: int | None = None
 
 
+class OfferUpdate(BaseModel):
+    """Payload for changing an offer's URL."""
+
+    url: str
+
+
+class ProductCreate(BaseModel):
+    """Payload for creating a product together with its first offer."""
+
+    name: str
+    priority: str
+    category_id: int
+    description: str
+    offer: OfferCreate
+
+
 class ProductUpdate(BaseModel):
-    """Partial update payload for a product."""
+    """Partial update of a product's shared fields."""
 
     name: str | None = None
-    url: str | None = None
     priority: str | None = None
     category_id: int | None = None
     description: str | None = None
-    currency: str | None = None
+
+
+class ProductMergeRequest(BaseModel):
+    """Merge ``source_product_id`` into the target product.
+
+    ``keep`` picks whose shared fields (name, category, priority,
+    description) the merged product keeps.
+    """
+
+    source_product_id: int
+    keep: Literal["target", "source"] = "target"
+
+
+class OfferResponse(BaseModel):
+    """An offer as stored."""
+
+    id: int
+    product_id: int
+    url: str
+    store_id: int | None
+    currency: str
+
+
+class ProductResponse(BaseModel):
+    """A product's shared fields and its offers."""
+
+    id: int
+    name: str
+    priority: str
+    category_id: int | None
+    description: str
+    offers: list[OfferResponse]
 
 
 class ProductInfoRequest(BaseModel):
@@ -43,35 +87,21 @@ class ProductInfoResponse(BaseModel):
     store: StoreResponse
 
 
-class ProductDashboardSummary(BaseModel):
-    """Summary of a product for the dashboard view.
-
-    Price statistics follow ``src/services/price_stats.py`` over the
-    configured historical window (in days). Field names are pinned by
-    ``contracts/api-fields.json``.
-    """
+class OfferSummary(BaseModel):
+    """An offer's store and latest status. Pinned by ``contracts/api-fields.json``."""
 
     id: int
-    name: str
     url: str
-    category_id: int
-    category_name: str
-    category_color: str
-    priority: str
-    current_price: float | None
-    price_change_pct: float | None
-    is_in_stock: bool | None
-    is_at_lowest: bool
-    currency: str
     store_id: int | None
     store_name: str | None
     store_domain: str | None
     store_has_favicon: bool
-    recent_prices: list[float]
+    current_price: float | None
+    is_in_stock: bool | None
     last_checked_at: int | None
 
 
-class ProductHistResponse(BaseModel):
+class OfferHistResponse(BaseModel):
     """Single price-history data point."""
 
     price: float
@@ -79,27 +109,49 @@ class ProductHistResponse(BaseModel):
     timestamp: int
 
 
-class ProductDetailResponse(BaseModel):
-    """Full product detail including the whole price history.
+class OfferDetail(OfferSummary):
+    """An offer with its full price history (chronological)."""
 
-    Range statistics are computed by the frontend from ``price_history``.
-    Field names are pinned by ``contracts/api-fields.json``.
+    price_history: list[OfferHistResponse]
+
+
+class ProductDashboardSummary(BaseModel):
+    """A product on the dashboard, valued by its best offer.
+
+    Rules in ``src/services/best_offer.py``; price statistics of the best
+    offer follow ``src/services/price_stats.py``. Field names are pinned by
+    ``contracts/api-fields.json``.
     """
 
     id: int
     name: str
-    url: str
+    category_id: int
+    category_name: str
+    category_color: str
+    priority: str
+    currency: str
+    current_price: float | None
+    price_change_pct: float | None
+    is_in_stock: bool | None
+    is_at_lowest: bool
+    recent_prices: list[float]
+    best_offer_id: int | None
+    offers: list[OfferSummary]
+
+
+class ProductDetailResponse(BaseModel):
+    """Full product detail with every offer and its history.
+
+    Range statistics are computed by the frontend. Field names are pinned
+    by ``contracts/api-fields.json``.
+    """
+
+    id: int
+    name: str
     priority: str
     category_id: int
     category_name: str
     category_color: str
     description: str
-    current_price: float | None
-    is_in_stock: bool | None
-    price_history: list[ProductHistResponse]
     currency: str
-    store_id: int | None
-    store_name: str | None
-    store_domain: str | None
-    store_has_favicon: bool
-    last_checked_at: int | None
+    offers: list[OfferDetail]

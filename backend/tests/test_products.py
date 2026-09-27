@@ -9,57 +9,25 @@ import time
 
 import pytest
 from sqlalchemy import event
-from src.models.database_models import (
-    Category,
-    Config,
-    Product,
-    ProductHist,
-    Store,
-)
-from src.services import product_service
+from sqlmodel import select
+from src.models.database_models import Config, Offer, OfferHist, Store
+from src.services import offer_service, product_service
+from tests.factories import add_history, make_category, make_offer, make_product
 
 DAY = 60 * 60 * 24
 
 
-def _make_category(session, name="Electronics", color="#FF0000"):
-    category = Category(name=name, color=color)
-    session.add(category)
-    session.commit()
-    session.refresh(category)
-    return category
-
-
 def _make_product(session, category_id, name="Widget", currency="USD"):
-    product = Product(
-        name=name,
-        url="https://example.com/widget",
-        priority="medium",
-        category_id=category_id,
-        description="A widget",
-        currency=currency,
-    )
-    session.add(product)
-    session.commit()
-    session.refresh(product)
+    """Create a product with a single offer (the common case in these tests)."""
+    product = make_product(session, category_id, name=name)
+    make_offer(session, product.id, currency=currency)
     return product
 
 
 def _add_history(session, product_id, entries):
-    """Insert ProductHist rows.
-
-    Args:
-        entries: iterable of (price, is_in_stock, timestamp) tuples.
-    """
-    for price, is_in_stock, timestamp in entries:
-        session.add(
-            ProductHist(
-                product_id=product_id,
-                price=price,
-                is_in_stock=is_in_stock,
-                timestamp=timestamp,
-            )
-        )
-    session.commit()
+    """Insert history for the only offer of ``product_id``."""
+    (offer,) = offer_service.offers_of(session, product_id)
+    add_history(session, offer.id, entries)
 
 
 def _set_hist_window_size(session, value):
@@ -73,7 +41,7 @@ def _set_hist_window_size(session, value):
 def test_dashboard_summary_empty_history_has_empty_recent_prices_and_no_last_checked(
     client, session
 ):
-    category = _make_category(session)
+    category = make_category(session)
     _make_product(session, category.id)
 
     response = client.get("/products/dashboard-summary")
@@ -81,24 +49,24 @@ def test_dashboard_summary_empty_history_has_empty_recent_prices_and_no_last_che
     assert response.status_code == 200
     data = response.json()[0]
     assert data["recent_prices"] == []
-    assert data["last_checked_at"] is None
+    assert data["offers"][0]["last_checked_at"] is None
     assert data["price_change_pct"] is None
     assert data["is_at_lowest"] is False
 
 
-def test_dashboard_summary_includes_product_url(client, session):
-    category = _make_category(session)
-    product = _make_product(session, category.id)
+def test_dashboard_summary_includes_the_offer_url(client, session):
+    category = make_category(session)
+    _make_product(session, category.id)
 
     response = client.get("/products/dashboard-summary")
     data = response.json()[0]
 
-    assert data["url"] == product.url
+    assert data["offers"][0]["url"] == "https://example.com/widget"
 
 
 def test_dashboard_summary_recent_prices_follow_the_day_window(client, session):
     now = int(time.time())
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
     _add_history(
         session,
@@ -119,7 +87,7 @@ def test_dashboard_summary_recent_prices_follow_the_day_window(client, session):
 
 def test_dashboard_summary_recent_prices_are_not_capped(client, session):
     now = int(time.time())
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
     _add_history(
         session,
@@ -135,7 +103,7 @@ def test_dashboard_summary_recent_prices_are_not_capped(client, session):
 
 def test_dashboard_summary_price_change_and_at_lowest(client, session):
     now = int(time.time())
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
     _add_history(
         session,
@@ -156,7 +124,7 @@ def test_dashboard_summary_price_change_and_at_lowest(client, session):
 
 def test_dashboard_summary_current_out_of_stock(client, session):
     now = int(time.time())
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
     _add_history(
         session,
@@ -175,7 +143,7 @@ def test_dashboard_summary_current_out_of_stock(client, session):
 def test_dashboard_summary_history_older_than_the_window(client, session):
     # Review focus: the cron stopped weeks ago.
     now = int(time.time())
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
     old_timestamp = now - 100 * DAY
     _add_history(session, product.id, [(50.0, True, old_timestamp)])
@@ -185,7 +153,7 @@ def test_dashboard_summary_history_older_than_the_window(client, session):
 
     assert data["current_price"] == 50.0
     assert data["is_in_stock"] is True
-    assert data["last_checked_at"] == old_timestamp
+    assert data["offers"][0]["last_checked_at"] == old_timestamp
     assert data["recent_prices"] == []
     assert data["price_change_pct"] is None
     assert data["is_at_lowest"] is False
@@ -210,13 +178,14 @@ def _count_queries(session, action):
 def _seed_products(session, count, start=0):
     now = int(time.time())
     for index in range(start, start + count):
-        category = _make_category(session, name=f"Category {index}")
+        category = make_category(session, name=f"Category {index}")
         store = Store(domain=f"store{index}.com", name=f"Store {index}")
         session.add(store)
         session.commit()
         product = _make_product(session, category.id, name=f"Product {index}")
-        product.store_id = store.id
-        session.add(product)
+        (offer,) = offer_service.offers_of(session, product.id)
+        offer.store_id = store.id
+        session.add(offer)
         session.commit()
         _add_history(
             session,
@@ -244,35 +213,35 @@ def test_dashboard_summary_query_count_does_not_grow_with_products(session):
 
 
 def test_product_detail_last_checked_at_none_when_no_history(client, session):
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
 
     response = client.get(f"/products/{product.id}")
 
     assert response.status_code == 200
-    assert response.json()["last_checked_at"] is None
+    assert response.json()["offers"][0]["last_checked_at"] is None
 
 
 def test_product_detail_last_checked_at_is_newest_history_timestamp(client, session):
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
     _add_history(session, product.id, [(10.0, True, 100), (20.0, True, 200)])
 
     response = client.get(f"/products/{product.id}")
 
     assert response.status_code == 200
-    assert response.json()["last_checked_at"] == 200
+    assert response.json()["offers"][0]["last_checked_at"] == 200
 
 
 def test_product_detail_has_no_min_price(client, session):
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
     _add_history(session, product.id, [(10.0, True, 100)])
 
     data = client.get(f"/products/{product.id}").json()
 
     assert "min_price" not in data
-    assert data["price_history"] == [
+    assert data["offers"][0]["price_history"] == [
         {"price": 10.0, "is_in_stock": True, "timestamp": 100}
     ]
 
@@ -281,7 +250,7 @@ def test_product_detail_has_no_min_price(client, session):
 
 
 def test_update_product_description(client, session):
-    category = _make_category(session)
+    category = make_category(session)
     product = _make_product(session, category.id)
 
     response = client.patch(
@@ -290,3 +259,134 @@ def test_update_product_description(client, session):
 
     assert response.status_code == 200
     assert response.json()["description"] == "Updated description"
+
+
+# --- Offers: dashboard summary and detail ---
+
+NOW = 10_000_000
+
+
+def test_dashboard_counts_a_product_with_two_offers_once_at_its_best_price(
+    client, session
+):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    amazon = make_offer(session, product.id, url="https://amazon.es/w")
+    thomann = make_offer(session, product.id, url="https://thomann.es/w")
+    add_history(session, amazon.id, [(700.0, True, NOW - DAY), (689.0, True, NOW)])
+    add_history(session, thomann.id, [(690.0, True, NOW)])
+
+    (summary,) = product_service.get_dashboard_summary(session, now=NOW)
+
+    assert summary.best_offer_id == amazon.id
+    assert summary.current_price == 689.0
+    assert summary.recent_prices == [700.0, 689.0]
+    assert [offer.id for offer in summary.offers] == [amazon.id, thomann.id]
+    assert summary.offers[1].current_price == 690.0
+
+
+def test_best_offer_follows_the_prices(session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    first = make_offer(session, product.id, url="https://a.es/w")
+    second = make_offer(session, product.id, url="https://b.es/w")
+    add_history(session, first.id, [(100.0, True, NOW - DAY)])
+    add_history(session, second.id, [(120.0, True, NOW - DAY), (90.0, True, NOW)])
+
+    (summary,) = product_service.get_dashboard_summary(session, now=NOW)
+
+    assert summary.best_offer_id == second.id
+    assert summary.recent_prices == [120.0, 90.0]
+
+
+def test_dashboard_product_is_in_stock_if_any_offer_is(session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    out = make_offer(session, product.id, url="https://a.es/w")
+    in_stock = make_offer(session, product.id, url="https://b.es/w")
+    add_history(session, out.id, [(80.0, False, NOW)])
+    add_history(session, in_stock.id, [(95.0, True, NOW)])
+
+    (summary,) = product_service.get_dashboard_summary(session, now=NOW)
+
+    assert summary.is_in_stock is True
+    assert summary.best_offer_id == in_stock.id
+
+
+def test_new_offer_without_history_is_listed_but_not_best(session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    checked = make_offer(session, product.id, url="https://a.es/w")
+    new = make_offer(session, product.id, url="https://b.es/w")
+    add_history(session, checked.id, [(100.0, True, NOW)])
+
+    (summary,) = product_service.get_dashboard_summary(session, now=NOW)
+
+    assert summary.best_offer_id == checked.id
+    new_summary = next(offer for offer in summary.offers if offer.id == new.id)
+    assert new_summary.current_price is None
+    assert new_summary.last_checked_at is None
+
+
+def test_detail_lists_every_offer_with_its_history(client, session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    first = make_offer(session, product.id, url="https://a.es/w", currency="EUR")
+    second = make_offer(session, product.id, url="https://b.es/w", currency="EUR")
+    add_history(session, first.id, [(100.0, True, NOW - DAY), (90.0, True, NOW)])
+    add_history(session, second.id, [(95.0, False, NOW)])
+
+    body = client.get(f"/products/{product.id}").json()
+
+    assert body["currency"] == "EUR"
+    assert [offer["id"] for offer in body["offers"]] == [first.id, second.id]
+    assert [r["price"] for r in body["offers"][0]["price_history"]] == [100.0, 90.0]
+    assert body["offers"][1]["is_in_stock"] is False
+
+
+def test_create_product_creates_its_first_offer(client, session):
+    category = make_category(session)
+
+    response = client.post(
+        "/products/",
+        json={
+            "name": "Drum kit",
+            "priority": "high",
+            "category_id": category.id,
+            "description": "",
+            "offer": {"url": "https://www.thomann.es/kit.htm", "currency": "eur"},
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"] == "Drum kit"
+    (offer,) = body["offers"]
+    assert offer["url"] == "https://www.thomann.es/kit.htm"
+    assert offer["currency"] == "EUR"
+    assert offer["store_id"] is not None
+
+
+def test_update_changes_only_shared_fields(client, session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    make_offer(session, product.id)
+
+    response = client.patch(f"/products/{product.id}", json={"name": "Renamed"})
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Renamed"
+    assert response.json()["offers"][0]["url"] == "https://example.com/widget"
+
+
+def test_delete_product_deletes_offers_and_history(client, session):
+    category = make_category(session)
+    product = make_product(session, category.id)
+    offer_id = make_offer(session, product.id).id
+    add_history(session, offer_id, [(1.0, True, NOW)])
+
+    assert client.delete(f"/products/{product.id}").status_code == 200
+
+    session.expire_all()
+    assert session.get(Offer, offer_id) is None
+    assert session.exec(select(OfferHist)).all() == []
