@@ -27,6 +27,8 @@ from contextlib import contextmanager
 from datetime import datetime
 
 from sqlmodel import Session, delete, func, select
+from src.ai.base import AIProvider
+from src.ai.factory import load_ai_provider
 from src.core.config import get_config_value, get_daily_check_report
 from src.core.database import engine
 from src.core.local_day import format_local_time, is_end_of_day, local_day_bounds
@@ -94,7 +96,7 @@ def _current_timestamp() -> int:
 async def _check_offers(
     session: Session,
     offers: list[Offer],
-    google_api_key: str,
+    provider: AIProvider,
     now: datetime,
 ) -> tuple[list[int], int | None]:
     """Check offers in order, stopping at the first Gemini quota error.
@@ -105,7 +107,7 @@ async def _check_offers(
     Args:
         session (Session): Active database session.
         offers (list[Offer]): The offers to check, in order.
-        google_api_key (str): Google API key for Stagehand.
+        provider (AIProvider): The active AI provider.
         now (datetime): Naive local time of the run.
 
     Returns:
@@ -129,7 +131,7 @@ async def _check_offers(
     pending_ids: list[int] = []
     limit_reached_at: int | None = None
     for index, offer in enumerate(offers):
-        outcome = await check_offer(session, offer, google_api_key, tg, now)
+        outcome = await check_offer(session, offer, provider, tg, now)
         counts[outcome] += 1
         if outcome is CheckOutcome.RATE_LIMITED:
             limit_reached_at = _current_timestamp()
@@ -203,9 +205,9 @@ async def fetch_and_store_product_status(now: datetime | None = None):
     logger.info("Starting product status fetch process...")
 
     with Session(engine) as session:
-        google_api_key = get_config_value(session, "google_api_key")
-        if not google_api_key:
-            logger.error("Google API key not configured in database. Exiting.")
+        provider = load_ai_provider(session)
+        if not provider.is_configured():
+            logger.error(f"{provider.label} not configured in database. Exiting.")
             return
 
         # This run checks every offer, so older retries are superseded.
@@ -228,7 +230,7 @@ async def fetch_and_store_product_status(now: datetime | None = None):
         session.commit()
 
         pending_ids, limit_reached_at = await _check_offers(
-            session, offers, google_api_key, now
+            session, offers, provider, now
         )
 
         for offer_id in pending_ids:
@@ -272,14 +274,14 @@ async def retry_rate_limited_products(now: datetime | None = None):
             logger.info("No pending retries for today.")
             return
 
-        google_api_key = get_config_value(session, "google_api_key")
-        if not google_api_key:
-            logger.error("Google API key not configured in database. Exiting.")
+        provider = load_ai_provider(session)
+        if not provider.is_configured():
+            logger.error(f"{provider.label} not configured in database. Exiting.")
             return
 
         logger.info(f"Retrying {len(offers)} rate-limited offer(s)")
         # The day's snapshot of the first quota error is never overwritten.
-        still_pending, _ = await _check_offers(session, offers, google_api_key, now)
+        still_pending, _ = await _check_offers(session, offers, provider, now)
 
         session.exec(
             delete(PendingStatusRetry).where(

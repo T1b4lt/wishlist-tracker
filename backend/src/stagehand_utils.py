@@ -1,8 +1,9 @@
 """AI-powered product scraping helpers built on the Stagehand v4 Python SDK.
 
 Each public function launches a local headless Chrome, attaches a Stagehand
-instance driven by Gemini 3.1 Flash-Lite, visits the product page, dismisses
-pop-ups and extracts structured data validated by a Pydantic model.
+instance driven by the active AI provider (see ``src.ai``), visits the
+product page, dismisses pop-ups and extracts structured data validated by a
+Pydantic model.
 Product-info extraction can also download the store favicon from the loaded
 page.
 """
@@ -16,9 +17,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from pydantic import BaseModel, Field
-from src.ai.google_ai_studio import MODEL_NAME, QUOTA_ERROR_PATTERN
+from src.ai.base import AIProvider
 from stagehand import Page, Stagehand, local_browser
-from stagehand.rpc_client import RPCError
 
 # Instruction used to dismiss cookie banners and pop-ups before extracting.
 DISMISS_POPUPS_INSTRUCTION = "Close any pop-ups or cookies consent banners if present"
@@ -191,28 +191,12 @@ def parse_favicon_payload(raw: object) -> FaviconData | None:
     return FaviconData(content=content, mime=detected_mime)
 
 
-def is_rate_limit_error(error: BaseException) -> bool:
-    """Whether a Stagehand call failed because the Gemini quota was exhausted.
-
-    Covers both the per-minute and the per-day limits. Stagehand already
-    retries the model call a few times before raising, so a quota error that
-    reaches Python means the limit is still in effect.
-
-    Args:
-        error (BaseException): The exception raised by a Stagehand call.
-
-    Returns:
-        bool: True for a Stagehand ``RPCError`` reporting a quota error.
-    """
-    return isinstance(error, RPCError) and bool(QUOTA_ERROR_PATTERN.search(str(error)))
-
-
 # --- Internal helpers ---
 
 
 @asynccontextmanager
 async def _open_product_page(
-    google_api_key: str, url: str
+    provider: AIProvider, url: str
 ) -> AsyncIterator[tuple[Stagehand, Page]]:
     """Launch a local browser, attach Stagehand and open the given URL.
 
@@ -223,7 +207,7 @@ async def _open_product_page(
     (e.g. ``/usr/bin/chromium`` in Docker); if unset, Stagehand auto-detects it.
 
     Args:
-        google_api_key (str): The Google API key for the Gemini model.
+        provider (AIProvider): The AI provider Stagehand runs its inference on.
         url (str): The URL of the product page.
 
     Yields:
@@ -237,9 +221,7 @@ async def _open_product_page(
     )
     try:
         stagehand = await Stagehand.create(
-            browser=browser,
-            model=MODEL_NAME,
-            model_api_key=google_api_key,
+            browser=browser, **provider.stagehand_options()
         )
         try:
             page = (await browser.context.pages())[0]
@@ -278,7 +260,7 @@ async def _fetch_favicon(page: Page) -> FaviconData | None:
 
 
 async def get_product_info(
-    google_api_key: str,
+    provider: AIProvider,
     url: str,
     language: str,
     categories: list[str],
@@ -287,7 +269,7 @@ async def get_product_info(
     """Fetch the product information (and store favicon) from the given URL.
 
     Args:
-        google_api_key (str): The Google API key for the AI model.
+        provider (AIProvider): The AI provider to extract with.
         url (str): The URL of the product page.
         language (str): The language to use for the extraction output.
         categories (list[str]): List of possible product categories to choose from.
@@ -300,7 +282,7 @@ async def get_product_info(
     Raises:
         pydantic.ValidationError: If the extracted data doesn't match the schema.
     """
-    async with _open_product_page(google_api_key, url) as (stagehand, page):
+    async with _open_product_page(provider, url) as (stagehand, page):
         result = await stagehand.extract(
             (
                 f"Extract the product name, category, currency, description and store name. "
@@ -319,11 +301,11 @@ async def get_product_info(
     return ProductInfoResult(info=result.data, favicon=favicon)
 
 
-async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtraction:
+async def get_product_status(provider: AIProvider, url: str) -> ProductStatusExtraction:
     """Fetch the price and stock status of a product from the given URL using Stagehand.
 
     Args:
-        google_api_key (str): The Google API key for the AI model.
+        provider (AIProvider): The AI provider to extract with.
         url (str): The URL of the product page.
 
     Returns:
@@ -332,7 +314,7 @@ async def get_product_status(google_api_key: str, url: str) -> ProductStatusExtr
     Raises:
         pydantic.ValidationError: If the extracted data doesn't match the schema.
     """
-    async with _open_product_page(google_api_key, url) as (stagehand, page):
+    async with _open_product_page(provider, url) as (stagehand, page):
         result = await stagehand.extract(
             "Extract the price of the product as a float number and if it's in stock as boolean",
             ProductStatusExtraction,
@@ -351,9 +333,9 @@ if __name__ == "__main__":
     test_url = "https://fpvcapital.store/emisora-radiomaster-pocket-elrs/"
     test_language = "english"
     test_categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]
-    google_api_key = os.getenv("ASD_GOOGLE")
+    from src.ai.google_ai_studio import GoogleAIStudioProvider
 
-    asyncio.run(
-        get_product_info(google_api_key, test_url, test_language, test_categories)
-    )
-    asyncio.run(get_product_status(google_api_key, test_url))
+    provider = GoogleAIStudioProvider(os.getenv("ASD_GOOGLE", ""))
+
+    asyncio.run(get_product_info(provider, test_url, test_language, test_categories))
+    asyncio.run(get_product_status(provider, test_url))

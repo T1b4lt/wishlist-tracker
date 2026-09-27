@@ -12,6 +12,7 @@ from collections import defaultdict
 from fastapi import HTTPException
 from sqlalchemy import and_, func
 from sqlmodel import Session, col, select
+from src.ai.factory import load_ai_provider
 from src.core.config import (
     RANGE_KEYS,
     get_config_value,
@@ -511,7 +512,7 @@ async def extract_product_info(
 ) -> ProductInfoResponse:
     """Use Stagehand to extract product information from a URL.
 
-    Reads the Google API key, language, and category list from the
+    Reads the active AI provider, language, and category list from the
     database and delegates to ``stagehand_utils.get_product_info``. When
     the URL's domain is not a known store yet, the store is created with
     the extracted name and the favicon downloaded from the page.
@@ -524,7 +525,7 @@ async def extract_product_info(
         ProductInfoResponse: AI-extracted product information.
 
     Raises:
-        HTTPException: 400 if Google key or categories are missing,
+        HTTPException: 400 if the AI provider or categories are missing,
             422 if the URL has no hostname.
     """
     # Validate the URL before any database or browser work.
@@ -543,18 +544,15 @@ async def extract_product_info(
     # Language preference
     selected_language = get_config_value(session, "selected_language", "english")
 
-    # Google API key
-    google_api_key = get_config_value(session, "google_api_key")
-    if not google_api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="Google API key not configured. Please set it in Settings.",
-        )
+    # Active AI provider
+    provider = load_ai_provider(session)
+    if not provider.is_configured():
+        raise HTTPException(status_code=400, detail=provider.not_configured_message)
 
     # Delegate to Stagehand; the favicon is only downloaded for new stores.
     existing_store = store_service.get_by_domain(session, domain)
     result = await get_product_info(
-        google_api_key,
+        provider,
         request.url,
         selected_language,
         category_names,

@@ -5,7 +5,9 @@ import base64
 import json
 
 import pytest
+from sqlmodel import delete
 from src import stagehand_utils
+from src.ai.google_ai_studio import GoogleAIStudioProvider
 from src.models.database_models import Category, Config, Store
 from src.services import product_service, store_service
 from src.stagehand_utils import (
@@ -13,10 +15,8 @@ from src.stagehand_utils import (
     FaviconData,
     ProductInfoExtraction,
     ProductInfoResult,
-    is_rate_limit_error,
     parse_favicon_payload,
 )
-from stagehand.rpc_client import RPCError, _JSONRPCError
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
 ICO = b"\x00\x00\x01\x00" + b"\x00" * 8
@@ -100,7 +100,7 @@ def extraction_setup(session, monkeypatch):
     calls = []
 
     async def fake_get_product_info(
-        google_api_key, url, language, categories, fetch_favicon=True
+        provider, url, language, categories, fetch_favicon=True
     ):
         calls.append({"url": url, "fetch_favicon": fetch_favicon})
         return ProductInfoResult(
@@ -167,6 +167,61 @@ def test_extract_invalid_url_returns_422_without_scraping(client, extraction_set
     assert extraction_setup == []
 
 
+def test_extract_without_ollama_settings_returns_400(client, session, extraction_setup):
+    session.add(Config(key="ai_provider", value="ollama"))
+    session.commit()
+
+    response = client.post(
+        "/extract-product-info/", json={"url": "https://www.amazon.es/dp/1"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Ollama is not configured. Please set its URL and model in Settings."
+    )
+    assert extraction_setup == []
+
+
+def test_extract_without_google_key_keeps_the_original_message(
+    client, session, extraction_setup
+):
+    session.exec(delete(Config).where(Config.key == "google_api_key"))
+    session.commit()
+
+    response = client.post(
+        "/extract-product-info/", json={"url": "https://www.amazon.es/dp/1"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Google API key not configured. Please set it in Settings."
+    )
+
+
+def test_extract_passes_the_active_provider(client, session, monkeypatch):
+    session.add(Category(name="Electronics", color="#000"))
+    session.add(Config(key="google_api_key", value="key"))
+    session.commit()
+    seen = []
+
+    async def fake_get_product_info(provider, url, language, categories, fetch_favicon):
+        seen.append(provider)
+        return ProductInfoResult(
+            info=ProductInfoExtraction(
+                name="W",
+                category="Electronics",
+                currency="EUR",
+                description="d",
+                store_name="S",
+            )
+        )
+
+    monkeypatch.setattr(product_service, "get_product_info", fake_get_product_info)
+    client.post("/extract-product-info/", json={"url": "https://www.amazon.es/dp/1"})
+
+    assert isinstance(seen[0], GoogleAIStudioProvider)
+
+
 # --- _fetch_favicon ---
 
 
@@ -185,48 +240,3 @@ def test_fetch_favicon_times_out_to_none(monkeypatch):
     )
 
     assert result is None
-
-
-# --- is_rate_limit_error ---
-
-# Message raised by Stagehand when Gemini answers 429 RESOURCE_EXHAUSTED
-# (captured from a real free-tier quota error).
-QUOTA_MESSAGE = (
-    "Failed after 3 attempts. Last error: AI_APICallError: You exceeded your "
-    "current quota, please check your plan and billing details. For more "
-    "information on this error, head to: "
-    "https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current "
-    "usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: "
-    "generativelanguage.googleapis.com/generate_content_free_tier_requests, "
-    "limit: 5, model: gemini-2.5-flash\nPlease retry in 10.598793198s."
-)
-
-
-def _rpc_error(message):
-    return RPCError(
-        _JSONRPCError(code=-32603, message=message, data={"name": "AI_RetryError"})
-    )
-
-
-@pytest.mark.parametrize(
-    "message",
-    [
-        QUOTA_MESSAGE,
-        "AI_APICallError: 429 Too Many Requests",
-        "AI_APICallError: RESOURCE_EXHAUSTED",
-    ],
-)
-def test_quota_errors_are_rate_limit_errors(message):
-    assert is_rate_limit_error(_rpc_error(message))
-
-
-@pytest.mark.parametrize(
-    "error",
-    [
-        _rpc_error("Failed after 3 attempts. Last error: AI_APICallError: timeout"),
-        RuntimeError(QUOTA_MESSAGE),  # Not raised by Stagehand's RPC layer.
-        ValueError("price must be a float"),
-    ],
-)
-def test_other_errors_are_not_rate_limit_errors(error):
-    assert not is_rate_limit_error(error)

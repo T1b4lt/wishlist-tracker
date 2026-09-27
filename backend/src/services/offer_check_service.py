@@ -16,6 +16,8 @@ from enum import Enum
 
 from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlmodel import Session, delete, select
+from src.ai.base import AIProvider, ProviderErrorKind
+from src.ai.factory import load_ai_provider
 from src.core.config import get_config_value
 from src.core.database import engine
 from src.core.local_day import local_day_bounds
@@ -27,7 +29,7 @@ from src.models.database_models import (
     Store,
 )
 from src.services import daily_check_service
-from src.stagehand_utils import get_product_status, is_rate_limit_error
+from src.stagehand_utils import get_product_status
 from src.telegram_utils import send_price_drop_alert, send_stock_alert
 
 logger = logging.getLogger(__name__)
@@ -212,7 +214,7 @@ def _last_record(session: Session, offer_id: int, in_stock_only: bool = False):
 async def check_offer(
     session: Session,
     offer: Offer,
-    google_api_key: str,
+    provider: AIProvider,
     tg: dict,
     now: datetime,
     replace_today: bool = False,
@@ -222,7 +224,7 @@ async def check_offer(
     Args:
         session (Session): Active database session.
         offer (Offer): The offer (a product in one store) to check.
-        google_api_key (str): Google API key for Stagehand.
+        provider (AIProvider): The active AI provider.
         tg (dict): Telegram settings from ``load_telegram_settings``, or
             ``NO_ALERTS``.
         now (datetime): Naive local time of the check.
@@ -254,7 +256,7 @@ async def check_offer(
             return CheckOutcome.SKIPPED
 
         logger.info(f"Fetching product status for: {label}")
-        product_status = await get_product_status(google_api_key, offer.url)
+        product_status = await get_product_status(provider, offer.url)
 
         if not _is_valid_price(product_status.price):
             logger.error(
@@ -323,7 +325,7 @@ async def check_offer(
         return CheckOutcome.STORED
 
     except Exception as e:
-        if is_rate_limit_error(e):
+        if provider.classify_error(e) is ProviderErrorKind.QUOTA_EXHAUSTED:
             logger.warning(f"Gemini quota exhausted while checking {label}: {str(e)}")
             return CheckOutcome.RATE_LIMITED
         logger.error(f"Error processing {label}: {str(e)}")
@@ -355,9 +357,11 @@ async def check_offer_now(
         offer = session.get(Offer, offer_id)
         if offer is None:
             return
-        google_api_key = get_config_value(session, "google_api_key")
-        if not google_api_key:
-            logger.info("Google API key not configured; offer left for the daily run")
+        provider = load_ai_provider(session)
+        if not provider.is_configured():
+            logger.info(
+                f"{provider.label} not configured; offer left for the daily run"
+            )
             return
 
         daily_run = daily_check_service.get_today_run(session, now)
@@ -367,7 +371,7 @@ async def check_offer_now(
             session.commit()
 
         outcome = await check_offer(
-            session, offer, google_api_key, NO_ALERTS, now, replace_today=url_changed
+            session, offer, provider, NO_ALERTS, now, replace_today=url_changed
         )
 
         if outcome is CheckOutcome.RATE_LIMITED and daily_run is not None:
