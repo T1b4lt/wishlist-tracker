@@ -16,35 +16,6 @@ const SUMMARY_WINDOW_DAYS = 60;
  */
 
 /**
- * A single dashboard-summary row.
- * @param {object} [overrides]
- * @returns {object}
- */
-export function buildDashboardProduct(overrides = {}) {
-  return {
-    id: 1,
-    name: 'Wireless Headphones',
-    url: 'https://example.com/headphones',
-    category_id: 1,
-    category_name: 'Electronics',
-    category_color: '#3B82F6',
-    priority: 'High',
-    current_price: 199.99,
-    price_change_pct: -5.2,
-    is_in_stock: true,
-    is_at_lowest: true,
-    currency: 'USD',
-    store_id: 1,
-    store_name: 'Amazon',
-    store_domain: 'amazon.com',
-    store_has_favicon: true,
-    recent_prices: [219.99, 209.99, 199.99],
-    last_checked_at: nowSeconds() - 3600,
-    ...overrides
-  };
-}
-
-/**
  * A single price-history record.
  * @param {object} [overrides]
  * @returns {object}
@@ -59,28 +30,33 @@ export function buildHistoryPoint(overrides = {}) {
 }
 
 /**
- * A full product detail record.
+ * A dashboard offer summary (`OfferSummary`).
  * @param {object} [overrides]
  * @returns {object}
  */
-export function buildProductDetail(overrides = {}) {
+export function buildOfferSummary(overrides = {}) {
   return {
     id: 1,
-    name: 'Wireless Headphones',
     url: 'https://example.com/headphones',
-    priority: 'High',
-    category_id: 1,
-    category_name: 'Electronics',
-    category_color: '#3B82F6',
-    description: 'Over-ear headphones with active noise cancellation.',
-    current_price: 199.99,
-    is_in_stock: true,
-    currency: 'USD',
     store_id: 1,
     store_name: 'Amazon',
     store_domain: 'amazon.com',
     store_has_favicon: true,
+    current_price: 199.99,
+    is_in_stock: true,
     last_checked_at: nowSeconds() - 3600,
+    ...overrides
+  };
+}
+
+/**
+ * A product-detail offer (`OfferDetail`), with its price history.
+ * @param {object} [overrides]
+ * @returns {object}
+ */
+export function buildOfferDetail(overrides = {}) {
+  return {
+    ...buildOfferSummary(),
     price_history: [
       buildHistoryPoint({
         price: 219.99,
@@ -92,6 +68,97 @@ export function buildProductDetail(overrides = {}) {
   };
 }
 
+/**
+ * A single dashboard-summary row (one store by default).
+ * @param {object} [overrides]
+ * @returns {object}
+ */
+export function buildDashboardProduct(overrides = {}) {
+  return {
+    id: 1,
+    name: 'Wireless Headphones',
+    category_id: 1,
+    category_name: 'Electronics',
+    category_color: '#3B82F6',
+    priority: 'High',
+    currency: 'USD',
+    current_price: 199.99,
+    price_change_pct: -5.2,
+    is_in_stock: true,
+    is_at_lowest: true,
+    recent_prices: [219.99, 209.99, 199.99],
+    best_offer_id: 1,
+    offers: [buildOfferSummary()],
+    ...overrides
+  };
+}
+
+/**
+ * A full product detail record (one store by default).
+ * @param {object} [overrides]
+ * @returns {object}
+ */
+export function buildProductDetail(overrides = {}) {
+  return {
+    id: 1,
+    name: 'Wireless Headphones',
+    priority: 'High',
+    category_id: 1,
+    category_name: 'Electronics',
+    category_color: '#3B82F6',
+    description: 'Over-ear headphones with active noise cancellation.',
+    currency: 'USD',
+    offers: [buildOfferDetail()],
+    ...overrides
+  };
+}
+
+/** The same headphones in two stores: Amazon (best, 199.99) and Thomann (209.99). */
+export function buildMultiStoreProduct(overrides = {}) {
+  return buildDashboardProduct({
+    id: 3,
+    best_offer_id: 1,
+    offers: [
+      buildOfferSummary(),
+      buildOfferSummary({
+        id: 2,
+        url: 'https://thomann.de/headphones',
+        store_id: 2,
+        store_name: 'Thomann',
+        store_domain: 'thomann.de',
+        current_price: 209.99
+      })
+    ],
+    ...overrides
+  });
+}
+
+/** Detail of `buildMultiStoreProduct`. */
+export function buildMultiStoreDetail(overrides = {}) {
+  return buildProductDetail({
+    id: 3,
+    offers: [
+      buildOfferDetail(),
+      buildOfferDetail({
+        id: 2,
+        url: 'https://thomann.de/headphones',
+        store_id: 2,
+        store_name: 'Thomann',
+        store_domain: 'thomann.de',
+        current_price: 209.99,
+        price_history: [
+          buildHistoryPoint({
+            price: 214.99,
+            timestamp: nowSeconds() - 5 * DAY_SECONDS
+          }),
+          buildHistoryPoint({ price: 209.99, timestamp: nowSeconds() - 3600 })
+        ]
+      })
+    ],
+    ...overrides
+  });
+}
+
 /** A product detail record with exactly one history point ("just started
  * tracking"): the chart must show the "tracking started" message instead
  * of plotting a line. */
@@ -100,9 +167,14 @@ export function buildSinglePointDetail(overrides = {}) {
   return buildProductDetail({
     id: 2,
     name: 'Just Added Gadget',
-    current_price: 49.99,
-    last_checked_at: ts,
-    price_history: [buildHistoryPoint({ price: 49.99, timestamp: ts })],
+    offers: [
+      buildOfferDetail({
+        id: 2,
+        current_price: 49.99,
+        last_checked_at: ts,
+        price_history: [buildHistoryPoint({ price: 49.99, timestamp: ts })]
+      })
+    ],
     ...overrides
   });
 }
@@ -174,7 +246,6 @@ export function buildManyProducts(count = 25, { historyPoints = 180 } = {}) {
     return buildDashboardProduct({
       id: i + 1,
       name: `Product ${String(i + 1).padStart(2, '0')}`,
-      url: `https://example.com/product-${i + 1}`,
       category_id: (i % 2) + 1,
       category_name: i % 2 === 0 ? 'Electronics' : 'Books',
       category_color: i % 2 === 0 ? '#3B82F6' : '#22C55E',
@@ -184,15 +255,24 @@ export function buildManyProducts(count = 25, { historyPoints = 180 } = {}) {
       is_in_stock: current.is_in_stock,
       is_at_lowest: stats.isAtLowest,
       recent_prices: window.map((point) => point.price),
-      last_checked_at: current.timestamp,
-      ...(i % 2 === 0
-        ? {}
-        : {
-            store_id: 2,
-            store_name: 'Decathlon',
-            store_domain: 'decathlon.com',
-            store_has_favicon: false
-          })
+      best_offer_id: i + 1,
+      offers: [
+        buildOfferSummary({
+          id: i + 1,
+          url: `https://example.com/product-${i + 1}`,
+          current_price: current.price,
+          is_in_stock: current.is_in_stock,
+          last_checked_at: current.timestamp,
+          ...(i % 2 === 0
+            ? {}
+            : {
+                store_id: 2,
+                store_name: 'Decathlon',
+                store_domain: 'decathlon.com',
+                store_has_favicon: false
+              })
+        })
+      ]
     });
   });
 }
@@ -214,9 +294,14 @@ export function buildLongHistoryDetail(id, points = 180) {
   return buildProductDetail({
     id,
     name: `Product ${String(id).padStart(2, '0')}`,
-    price_history: history,
-    current_price: current.price,
-    is_in_stock: current.is_in_stock,
-    last_checked_at: current.timestamp
+    offers: [
+      buildOfferDetail({
+        id,
+        price_history: history,
+        current_price: current.price,
+        is_in_stock: current.is_in_stock,
+        last_checked_at: current.timestamp
+      })
+    ]
   });
 }

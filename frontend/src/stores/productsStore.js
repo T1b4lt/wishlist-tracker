@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { products as productsApi } from '@/lib/api';
+import { offers as offersApi, products as productsApi } from '@/lib/api';
 import { toStoreError } from './storeError';
 
 /**
@@ -82,6 +82,76 @@ export const useProductsStore = create((set, get) => ({
   async remove(id) {
     await productsApi.remove(id);
     await get().fetchSummary();
+  },
+
+  /**
+   * Add a store to a product, then refresh the summary and its detail.
+   * @param {number|string} productId
+   * @param {{ url: string, currency: string, store_id?: number }} data
+   * @returns {Promise<object>} The created offer.
+   */
+  async addOffer(productId, data) {
+    const offer = await offersApi.add(productId, data);
+    await get().fetchSummary();
+    await get()._refreshDetailSilently(productId);
+    return offer;
+  },
+
+  /**
+   * Change an offer's URL, then refresh the summary and the product detail.
+   * @param {number|string} productId
+   * @param {number|string} offerId
+   * @param {{ url: string }} data
+   * @returns {Promise<object>} The updated offer.
+   */
+  async updateOffer(productId, offerId, data) {
+    const offer = await offersApi.update(offerId, data);
+    await get().fetchSummary();
+    await get()._refreshDetailSilently(productId);
+    return offer;
+  },
+
+  /**
+   * Move an offer into a new product, then refresh.
+   * @param {number|string} productId - The product the offer leaves.
+   * @param {number|string} offerId
+   * @returns {Promise<object>} The new product.
+   */
+  async unlinkOffer(productId, offerId) {
+    const product = await offersApi.unlink(offerId);
+    await get().fetchSummary();
+    await get()._refreshDetailSilently(productId);
+    return product;
+  },
+
+  /**
+   * Delete an offer, then refresh.
+   * @param {number|string} productId
+   * @param {number|string} offerId
+   */
+  async removeOffer(productId, offerId) {
+    await offersApi.remove(offerId);
+    await get().fetchSummary();
+    await get()._refreshDetailSilently(productId);
+  },
+
+  /**
+   * Merge another product into `targetId`. The response is the merged
+   * detail, cached directly; the source product's cached detail is dropped.
+   * @param {number|string} targetId
+   * @param {{ source_product_id: number, keep: 'target'|'source' }} data
+   * @returns {Promise<object>} The merged product's detail.
+   */
+  async merge(targetId, data) {
+    const detail = await productsApi.merge(targetId, data);
+    set((state) => {
+      const details = { ...state.details };
+      delete details[data.source_product_id];
+      details[targetId] = { status: 'success', error: null, data: detail };
+      return { details };
+    });
+    await get().fetchSummary();
+    return detail;
   },
 
   /**

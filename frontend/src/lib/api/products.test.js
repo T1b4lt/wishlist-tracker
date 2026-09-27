@@ -58,4 +58,14 @@ describe('products api module', () => {
       signal: 'sig'
     });
   });
+
+  it('merge posts to /products/:id/merge', () => {
+    const data = { source_product_id: 2, keep: 'target' };
+    products.merge(1, data, 'sig');
+    expect(request).toHaveBeenCalledWith('/products/1/merge', {
+      method: 'POST',
+      body: data,
+      signal: 'sig'
+    });
+  });
 });

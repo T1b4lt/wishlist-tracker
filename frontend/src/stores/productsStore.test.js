@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { products as productsApi } from '@/lib/api';
+import { offers as offersApi, products as productsApi } from '@/lib/api';
 import { useProductsStore, initialProductsState } from './productsStore';
 
 vi.mock('@/lib/api', () => ({
@@ -8,7 +8,14 @@ vi.mock('@/lib/api', () => ({
     create: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
-    get: vi.fn()
+    get: vi.fn(),
+    merge: vi.fn()
+  },
+  offers: {
+    add: vi.fn(),
+    update: vi.fn(),
+    unlink: vi.fn(),
+    remove: vi.fn()
   }
 }));
 
@@ -306,5 +313,70 @@ describe('useProductsStore', () => {
       expect(state.details[1].data).toEqual({ id: 1 });
       expect(state.details[2].data).toEqual({ id: 2 });
     });
+  });
+});
+
+describe('offer actions', () => {
+  it('addOffer refreshes the summary and the product detail', async () => {
+    offersApi.add.mockResolvedValue({ id: 9 });
+    productsApi.dashboardSummary.mockResolvedValue([]);
+    productsApi.get.mockResolvedValue({ id: 1, offers: [] });
+
+    const offer = await useProductsStore
+      .getState()
+      .addOffer(1, { url: 'https://a.es/x', currency: 'EUR' });
+
+    expect(offer).toEqual({ id: 9 });
+    expect(offersApi.add).toHaveBeenCalledWith(1, {
+      url: 'https://a.es/x',
+      currency: 'EUR'
+    });
+    expect(productsApi.dashboardSummary).toHaveBeenCalled();
+    expect(useProductsStore.getState().details[1].data).toEqual({
+      id: 1,
+      offers: []
+    });
+  });
+
+  it('updateOffer and removeOffer refresh the product detail', async () => {
+    offersApi.update.mockResolvedValue({ id: 3 });
+    offersApi.remove.mockResolvedValue({ ok: true });
+    productsApi.dashboardSummary.mockResolvedValue([]);
+    productsApi.get.mockResolvedValue({ id: 1, offers: [] });
+
+    await useProductsStore
+      .getState()
+      .updateOffer(1, 3, { url: 'https://b.es/x' });
+    await useProductsStore.getState().removeOffer(1, 3);
+
+    expect(offersApi.update).toHaveBeenCalledWith(3, { url: 'https://b.es/x' });
+    expect(offersApi.remove).toHaveBeenCalledWith(3);
+    expect(productsApi.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('merge drops the source detail from the cache', async () => {
+    useProductsStore.setState({
+      details: { 2: { status: 'success', error: null, data: { id: 2 } } }
+    });
+    productsApi.merge.mockResolvedValue({ id: 1, offers: [] });
+    productsApi.dashboardSummary.mockResolvedValue([]);
+
+    await useProductsStore
+      .getState()
+      .merge(1, { source_product_id: 2, keep: 'target' });
+
+    const { details } = useProductsStore.getState();
+    expect(details[2]).toBeUndefined();
+    expect(details[1].data).toEqual({ id: 1, offers: [] });
+  });
+
+  it('unlinkOffer returns the new product', async () => {
+    offersApi.unlink.mockResolvedValue({ id: 7 });
+    productsApi.dashboardSummary.mockResolvedValue([]);
+    productsApi.get.mockResolvedValue({ id: 1, offers: [] });
+
+    await expect(
+      useProductsStore.getState().unlinkOffer(1, 3)
+    ).resolves.toEqual({ id: 7 });
   });
 });

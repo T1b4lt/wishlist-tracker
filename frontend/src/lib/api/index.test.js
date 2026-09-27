@@ -6,6 +6,7 @@ describe('api barrel', () => {
     expect(typeof api.request).toBe('function');
     expect(typeof api.ApiError).toBe('function');
     expect(typeof api.products.list).toBe('function');
+    expect(typeof api.offers.add).toBe('function');
     expect(typeof api.categories.list).toBe('function');
     expect(typeof api.config.get).toBe('function');
     expect(typeof api.telegram.getChatId).toBe('function');

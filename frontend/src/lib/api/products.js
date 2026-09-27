@@ -25,8 +25,8 @@ export const dashboardSummary = (signal) =>
 export const get = (id, signal) => request(`/products/${id}`, { signal });
 
 /**
- * Create a new product.
- * @param {object} data
+ * Create a new product together with its first store (offer).
+ * @param {{ name: string, priority: string, category_id: number, description: string, offer: { url: string, currency: string, store_id?: number } }} data
  * @param {AbortSignal} [signal]
  * @returns {Promise<object>} The created product.
  */
@@ -61,3 +61,13 @@ export const remove = (id, signal) =>
  */
 export const extractInfo = (url, signal) =>
   request('/extract-product-info/', { method: 'POST', body: { url }, signal });
+
+/**
+ * Merge another product (and its stores) into product `id`.
+ * @param {number|string} id - The product that remains.
+ * @param {{ source_product_id: number, keep: 'target'|'source' }} data
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<object>} The merged product's detail.
+ */
+export const merge = (id, data, signal) =>
+  request(`/products/${id}/merge`, { method: 'POST', body: data, signal });

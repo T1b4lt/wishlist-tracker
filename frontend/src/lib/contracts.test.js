@@ -9,6 +9,8 @@ import {
 import {
   buildDashboardProduct,
   buildHistoryPoint,
+  buildOfferDetail,
+  buildOfferSummary,
   buildProductDetail
 } from '../../e2e/fixtures/products';
 import { buildDailyCheck } from '../../e2e/fixtures/dailyCheck';
@@ -63,9 +65,21 @@ describe('api-fields contract', () => {
     );
   });
 
+  it('matches the offer summary fields', () => {
+    expect(sortedKeys(buildOfferSummary())).toEqual(
+      [...API_FIELDS.OfferSummary].sort()
+    );
+  });
+
+  it('matches the offer detail fields', () => {
+    expect(sortedKeys(buildOfferDetail())).toEqual(
+      [...API_FIELDS.OfferDetail].sort()
+    );
+  });
+
   it('matches the price history record fields', () => {
     expect(sortedKeys(buildHistoryPoint())).toEqual(
-      [...API_FIELDS.ProductHistResponse].sort()
+      [...API_FIELDS.OfferHistResponse].sort()
     );
   });
 

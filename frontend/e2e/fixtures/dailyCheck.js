@@ -12,7 +12,7 @@ export function buildDailyCheck(overrides = {}) {
   return {
     day_start: 0,
     started_at: null,
-    total_products: null,
+    total_offers: null,
     limit_reached_at: null,
     pending_at_limit: null,
     pending_now: 0,
