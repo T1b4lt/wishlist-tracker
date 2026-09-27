@@ -89,4 +89,41 @@ describe('DailyCheckNotice', () => {
 
     await waitFor(() => expect(dailyCheckApi.get).toHaveBeenCalledTimes(2));
   });
+
+  it('names Ollama on an unavailable day', async () => {
+    dailyCheckApi.get.mockResolvedValue(
+      status({ limit_reason: 'unavailable' })
+    );
+    renderWithProviders(<DailyCheckNotice locale="en-GB" timeZone="UTC" />);
+
+    expect(
+      await screen.findByText(
+        'Ollama unavailable since 12:03 with 15 prices left to check today.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the Gemini text on a quota day', async () => {
+    dailyCheckApi.get.mockResolvedValue(status({ limit_reason: 'quota' }));
+    renderWithProviders(<DailyCheckNotice locale="en-GB" timeZone="UTC" />);
+
+    expect(
+      await screen.findByText(
+        'Gemini limit reached at 12:03 with 15 prices left to check today.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('says all were checked after an outage', async () => {
+    dailyCheckApi.get.mockResolvedValue(
+      status({ limit_reason: 'unavailable', pending_now: 0 })
+    );
+    renderWithProviders(<DailyCheckNotice locale="en-GB" timeZone="UTC" />);
+
+    expect(
+      await screen.findByText(
+        'Ollama was unavailable at 12:03; all prices were checked by retrying.'
+      )
+    ).toBeInTheDocument();
+  });
 });

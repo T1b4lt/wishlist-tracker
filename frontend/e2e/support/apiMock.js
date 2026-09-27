@@ -53,6 +53,8 @@ export class ApiMock {
   constructor(page) {
     this.page = page;
     this.config = null;
+    /** `GET /ai/ollama/models` response. */
+    this.ollamaModels = { models: [], small_model_threshold_b: 20 };
     this.categories = [];
     this.products = [];
     this.details = {};
@@ -71,6 +73,11 @@ export class ApiMock {
      * @type {Array<{method: string, url: string}>}
      */
     this.unmatchedRequests = [];
+  }
+
+  /** @param {object} response A full `OllamaModelsResponse`-shaped object. */
+  setOllamaModels(response) {
+    this.ollamaModels = response;
   }
 
   /** @param {object} config A full `ConfigResponse`-shaped object. */
@@ -155,6 +162,12 @@ export class ApiMock {
       }
       return this._recordUnmatched(route);
     });
+
+    await page.route(`${API_URL}/ai/ollama/models?*`, (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ json: this.ollamaModels })
+        : this._recordUnmatched(route)
+    );
 
     await page.route(`${API_URL}/daily-check/`, (route) =>
       route.request().method() === 'GET'

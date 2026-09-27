@@ -93,4 +93,51 @@ test.describe('Settings', () => {
       page.getByRole('heading', { name: 'Ajustes', level: 1 })
     ).toBeVisible();
   });
+
+  test('saves Ollama as the AI provider', async ({
+    page,
+    apiMock
+  }, testInfo) => {
+    apiMock.setConfig(CONFIG_NOT_CONFIGURED);
+    apiMock.setCategories([]);
+    apiMock.setProducts([]);
+    apiMock.setOllamaModels({
+      models: [
+        {
+          name: 'gemma4:e4b',
+          parameter_size: '8.0B',
+          parameter_billions: 8,
+          is_small: true
+        },
+        {
+          name: 'qwen3.8:latest',
+          parameter_size: '27.3B',
+          parameter_billions: 27.3,
+          is_small: false
+        }
+      ],
+      small_model_threshold_b: 20
+    });
+    await page.goto('/settings');
+
+    // The provider is a segmented control from `sm` up and a select below.
+    if (testInfo.project.name === 'mobile') {
+      await page.getByRole('combobox', { name: 'Provider' }).click();
+      await page.getByRole('option', { name: 'Ollama' }).click();
+    } else {
+      await page
+        .getByText('Ollama', { exact: true })
+        .filter({ visible: true })
+        .click();
+    }
+    await page.getByLabel('Ollama URL').fill('192.168.1.20:11434');
+    await page.getByRole('combobox', { name: 'Model' }).click();
+    await page.getByRole('option', { name: 'gemma4:e4b · 8.0B' }).click();
+    await expect(page.getByText(/Models under 20B parameters/)).toBeVisible();
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await expect.poll(() => apiMock.config.ai_provider).toBe('ollama');
+    expect(apiMock.config.ollama_url).toBe('192.168.1.20:11434');
+    expect(apiMock.config.ollama_model).toBe('gemma4:e4b');
+  });
 });

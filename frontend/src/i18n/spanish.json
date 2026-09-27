@@ -289,7 +289,10 @@
         "limitReached_other": "Límite de Gemini alcanzado a las {{time}} con {{count}} precios pendientes de revisar hoy.",
         "stillPending_one": "Queda {{count}} pendiente, se reintenta cada 10 minutos.",
         "stillPending_other": "Quedan {{count}} pendientes, se reintenta cada 10 minutos.",
-        "allChecked": "Límite de Gemini alcanzado a las {{time}}; todos los precios se revisaron con reintentos."
+        "allChecked": "Límite de Gemini alcanzado a las {{time}}; todos los precios se revisaron con reintentos.",
+        "unavailable_one": "Ollama no disponible desde las {{time}} con {{count}} precio pendiente de revisar hoy.",
+        "unavailable_other": "Ollama no disponible desde las {{time}} con {{count}} precios pendientes de revisar hoy.",
+        "allCheckedUnavailable": "Ollama no estaba disponible a las {{time}}; todos los precios se revisaron con reintentos."
       },
       "offers": {
         "moreStores_one": "+{{count}} tienda",

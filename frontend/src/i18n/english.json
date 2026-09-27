@@ -289,7 +289,10 @@
         "limitReached_other": "Gemini limit reached at {{time}} with {{count}} prices left to check today.",
         "stillPending_one": "{{count}} still pending, retrying every 10 minutes.",
         "stillPending_other": "{{count}} still pending, retrying every 10 minutes.",
-        "allChecked": "Gemini limit reached at {{time}}; all prices were checked by retrying."
+        "allChecked": "Gemini limit reached at {{time}}; all prices were checked by retrying.",
+        "unavailable_one": "Ollama unavailable since {{time}} with {{count}} price left to check today.",
+        "unavailable_other": "Ollama unavailable since {{time}} with {{count}} prices left to check today.",
+        "allCheckedUnavailable": "Ollama was unavailable at {{time}}; all prices were checked by retrying."
       },
       "offers": {
         "moreStores_one": "+{{count}} store",

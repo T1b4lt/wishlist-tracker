@@ -5,8 +5,8 @@ import { formatTime } from '@/lib/format';
 import { useDailyCheckStore } from '@/stores/dailyCheckStore';
 
 /**
- * Dashboard notice for days the Gemini quota ran out during the daily price
- * check: when it happened and how many products were left, plus how many
+ * Dashboard notice for days the daily price check was stopped by the AI
+ * provider (Gemini quota reached or Ollama unavailable): when it happened and how many products were left, plus how many
  * are still pending the 10-minute retries (or that all were checked).
  * Renders nothing on a normal day, before today's check or if the status
  * cannot be loaded. Refetched on mount and whenever the window regains focus.
@@ -32,6 +32,9 @@ export const DailyCheckNotice = ({ locale, timeZone }) => {
 
   const time = formatTime(data.limit_reached_at, locale, timeZone);
   const isPending = data.pending_now > 0;
+  const isUnavailable = data.limit_reason === 'unavailable';
+  const pendingKey = isUnavailable ? 'unavailable' : 'limitReached';
+  const doneKey = isUnavailable ? 'allCheckedUnavailable' : 'allChecked';
 
   return (
     <Alert.Root status={isPending ? 'warning' : 'success'} mb={6}>
@@ -40,7 +43,7 @@ export const DailyCheckNotice = ({ locale, timeZone }) => {
         {isPending ? (
           <>
             <Alert.Title>
-              {t('pages.dashboard.dailyCheck.limitReached', {
+              {t(`pages.dashboard.dailyCheck.${pendingKey}`, {
                 time,
                 count: data.pending_at_limit
               })}
@@ -53,7 +56,7 @@ export const DailyCheckNotice = ({ locale, timeZone }) => {
           </>
         ) : (
           <Alert.Title>
-            {t('pages.dashboard.dailyCheck.allChecked', { time })}
+            {t(`pages.dashboard.dailyCheck.${doneKey}`, { time })}
           </Alert.Title>
         )}
       </Alert.Content>
