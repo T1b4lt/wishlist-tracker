@@ -174,7 +174,7 @@ wishlist-tracker/
         ├── lib/
         │   ├── api/                  # Typed-by-JSDoc API client (config, categories, products, telegram)
         │   ├── format.js             # Locale-aware price, percent and date formatting
-        │   ├── productHistory.js     # Chart ranges, stats and out-of-stock bands
+        │   ├── productHistory.js     # Chart points, window filter and Y domain (stats come from the backend)
         │   ├── productFilters.js     # Dashboard search, filters, sort and their URL params
         │   └── ...                   # Dashboard summary, settings draft, priority visuals, utils
         ├── components/
