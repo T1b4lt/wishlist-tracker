@@ -35,6 +35,11 @@ from src.telegram_utils import send_price_drop_alert, send_stock_alert
 logger = logging.getLogger(__name__)
 
 
+# Why a pass stopped early (``DailyCheckRun.limit_reason``).
+LIMIT_REASON_QUOTA = "quota"
+LIMIT_REASON_UNAVAILABLE = "unavailable"
+
+
 class CheckOutcome(Enum):
     """Result of checking one offer."""
 
@@ -42,6 +47,20 @@ class CheckOutcome(Enum):
     SKIPPED = "skipped"  # The offer already had a record today (or is gone).
     FAILED = "failed"  # Invalid price or non-quota error; nothing stored.
     RATE_LIMITED = "rate_limited"  # The Gemini quota ran out.
+    PROVIDER_UNAVAILABLE = "provider_unavailable"  # The AI provider is unreachable.
+
+    @property
+    def limit_reason(self) -> str | None:
+        """The ``DailyCheckRun.limit_reason`` this outcome stops a pass with."""
+        return {
+            CheckOutcome.RATE_LIMITED: LIMIT_REASON_QUOTA,
+            CheckOutcome.PROVIDER_UNAVAILABLE: LIMIT_REASON_UNAVAILABLE,
+        }.get(self)
+
+    @property
+    def stops_run(self) -> bool:
+        """Whether every later check would fail too, so the pass must stop."""
+        return self.limit_reason is not None
 
 
 async def _check_price_drop(
@@ -325,9 +344,15 @@ async def check_offer(
         return CheckOutcome.STORED
 
     except Exception as e:
-        if provider.classify_error(e) is ProviderErrorKind.QUOTA_EXHAUSTED:
+        kind = provider.classify_error(e)
+        if kind is ProviderErrorKind.QUOTA_EXHAUSTED:
             logger.warning(f"Gemini quota exhausted while checking {label}: {str(e)}")
             return CheckOutcome.RATE_LIMITED
+        if kind is ProviderErrorKind.UNAVAILABLE:
+            logger.warning(
+                f"{provider.describe()} unavailable while checking {label}: {str(e)}"
+            )
+            return CheckOutcome.PROVIDER_UNAVAILABLE
         logger.error(f"Error processing {label}: {str(e)}")
         return CheckOutcome.FAILED
 
@@ -343,8 +368,9 @@ async def check_offer_now(
     belongs to another page.
 
     When today's daily run has already started, a new offer is added to its
-    ``total_offers``, and an offer that hits the Gemini quota becomes a
-    pending retry for today (before the daily run, that run covers it).
+    ``total_offers``, and an offer that hits a provider-wide stop (Gemini
+    quota or provider unavailable) becomes a pending retry for today (before
+    the daily run, that run covers it).
 
     Args:
         offer_id (int): The offer to check.
@@ -374,7 +400,7 @@ async def check_offer_now(
             session, offer, provider, NO_ALERTS, now, replace_today=url_changed
         )
 
-        if outcome is CheckOutcome.RATE_LIMITED and daily_run is not None:
+        if outcome.stops_run and daily_run is not None:
             day_start, _ = local_day_bounds(now)
             session.merge(PendingStatusRetry(offer_id=offer_id, day_start=day_start))
             session.commit()

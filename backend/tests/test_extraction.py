@@ -7,7 +7,9 @@ import json
 import pytest
 from sqlmodel import delete
 from src import stagehand_utils
+from src.ai.base import ProviderUnavailableError
 from src.ai.google_ai_studio import GoogleAIStudioProvider
+from src.ai.ollama import OllamaProvider
 from src.models.database_models import Category, Config, Store
 from src.services import product_service, store_service
 from src.stagehand_utils import (
@@ -220,6 +222,31 @@ def test_extract_passes_the_active_provider(client, session, monkeypatch):
     client.post("/extract-product-info/", json={"url": "https://www.amazon.es/dp/1"})
 
     assert isinstance(seen[0], GoogleAIStudioProvider)
+
+
+def test_extract_with_ollama_down_returns_503(client, session, monkeypatch):
+    session.add(Category(name="Electronics", color="#000"))
+    for key, value in {
+        "ai_provider": "ollama",
+        "ollama_url": "http://ollama.local:11434",
+        "ollama_model": "qwen3.8:latest",
+    }.items():
+        session.add(Config(key=key, value=value))
+    session.commit()
+
+    async def down(self):
+        raise ProviderUnavailableError("Could not reach Ollama")
+
+    monkeypatch.setattr(OllamaProvider, "preflight", down)
+
+    response = client.post(
+        "/extract-product-info/", json={"url": "https://www.amazon.es/dp/1"}
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Could not reach Ollama at http://ollama.local:11434 (model qwen3.8:latest)"
+    )
 
 
 # --- _fetch_favicon ---

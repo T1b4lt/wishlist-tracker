@@ -12,6 +12,7 @@ from collections import defaultdict
 from fastapi import HTTPException
 from sqlalchemy import and_, func
 from sqlmodel import Session, col, select
+from src.ai.base import ProviderErrorKind, ProviderUnavailableError
 from src.ai.factory import load_ai_provider
 from src.core.config import (
     RANGE_KEYS,
@@ -526,7 +527,8 @@ async def extract_product_info(
 
     Raises:
         HTTPException: 400 if the AI provider or categories are missing,
-            422 if the URL has no hostname.
+            422 if the URL has no hostname, 503 if the AI provider cannot be
+            reached.
     """
     # Validate the URL before any database or browser work.
     domain = store_service.normalize_domain(request.url)
@@ -549,15 +551,28 @@ async def extract_product_info(
     if not provider.is_configured():
         raise HTTPException(status_code=400, detail=provider.not_configured_message)
 
+    unavailable = HTTPException(
+        status_code=503, detail=f"Could not reach {provider.describe()}"
+    )
+    try:
+        await provider.preflight()
+    except ProviderUnavailableError as error:
+        raise unavailable from error
+
     # Delegate to Stagehand; the favicon is only downloaded for new stores.
     existing_store = store_service.get_by_domain(session, domain)
-    result = await get_product_info(
-        provider,
-        request.url,
-        selected_language,
-        category_names,
-        fetch_favicon=existing_store is None,
-    )
+    try:
+        result = await get_product_info(
+            provider,
+            request.url,
+            selected_language,
+            category_names,
+            fetch_favicon=existing_store is None,
+        )
+    except Exception as error:
+        if provider.classify_error(error) is ProviderErrorKind.UNAVAILABLE:
+            raise unavailable from error
+        raise
     product_info = result.info
 
     store = existing_store or store_service.get_or_create(

@@ -73,7 +73,7 @@ class OfferHist(SQLModel, table=True):
 
 
 class PendingStatusRetry(SQLModel, table=True):
-    """An offer whose daily status check hit the Gemini quota.
+    """An offer whose daily status check hit a provider-wide stop (Gemini quota or provider unavailable).
 
     The cronjob retries these offers later the same local day until each one
     gets its record. Rows from a previous day are stale: they are
@@ -93,10 +93,13 @@ class PendingStatusRetry(SQLModel, table=True):
 class DailyCheckRun(SQLModel, table=True):
     """Summary of one local day's price check, created by its full run.
 
-    ``limit_reached_at`` / ``pending_at_limit`` are the snapshot of the first
-    Gemini quota error of the day (null when the quota never ran out); they
-    are never overwritten by the retries. ``PendingStatusRetry`` holds the
-    live list of offers still pending.
+    ``limit_reached_at`` / ``pending_at_limit`` / ``limit_reason`` are the
+    snapshot of the day's first provider-wide stop (null when it never
+    happened): ``"quota"`` (the Gemini quota ran out) or ``"unavailable"``
+    (the provider, e.g. Ollama, could not be reached). They are never
+    overwritten by the retries. ``PendingStatusRetry`` holds the live list of
+    offers still pending. The ``*_alert_sent`` flags make the Telegram
+    "provider unavailable" / "back online" alerts go out at most once a day.
     """
 
     day_start: int = Field(primary_key=True)  # Unix seconds, local day start
@@ -104,4 +107,7 @@ class DailyCheckRun(SQLModel, table=True):
     total_offers: int
     limit_reached_at: int | None = None  # Unix seconds
     pending_at_limit: int | None = None
+    limit_reason: str | None = None  # "quota" | "unavailable"
     report_sent: bool = False
+    unavailable_alert_sent: bool = False
+    recovered_alert_sent: bool = False

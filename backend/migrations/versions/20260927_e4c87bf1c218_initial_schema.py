@@ -48,7 +48,10 @@ def upgrade() -> None:
         sa.Column("total_offers", sa.Integer(), nullable=False),
         sa.Column("limit_reached_at", sa.Integer(), nullable=True),
         sa.Column("pending_at_limit", sa.Integer(), nullable=True),
+        sa.Column("limit_reason", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("report_sent", sa.Boolean(), nullable=False),
+        sa.Column("unavailable_alert_sent", sa.Boolean(), nullable=False),
+        sa.Column("recovered_alert_sent", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("day_start"),
     )
     op.create_table(

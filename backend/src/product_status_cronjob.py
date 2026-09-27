@@ -6,10 +6,12 @@ This script should be run every 10 minutes via cron. It will:
    ``DailyCheckRun`` row yet), fetch prices for every offer (a product in one
    store) not yet checked today and store them in the database (invalid
    prices are discarded)
-2. If the Gemini quota (requests per minute or per day) runs out during that
-   run, stop and mark the offers left as pending retries
+2. If the AI provider stops that run (the Gemini quota runs out, or the
+   provider, e.g. Ollama, cannot be reached), stop and mark the offers left
+   as pending retries
 3. On every later run that day, retry today's pending offers, stopping
-   again at the next quota error, until each one gets its record for the day
+   again at the next provider-wide stop, until each one gets its record for
+   the day
 4. Send Telegram alerts if price drops or stock changes are detected (if configured)
 5. Send the Telegram daily check report once per day, per ``daily_check_report``
 
@@ -27,7 +29,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 from sqlmodel import Session, delete, func, select
-from src.ai.base import AIProvider
+from src.ai.base import AIProvider, ProviderUnavailableError
 from src.ai.factory import load_ai_provider
 from src.core.config import get_config_value, get_daily_check_report
 from src.core.database import engine
@@ -40,6 +42,7 @@ from src.models.database_models import (
 )
 from src.services import daily_check_service
 from src.services.offer_check_service import (
+    LIMIT_REASON_UNAVAILABLE,
     CheckOutcome,
     check_offer,
     has_record_between,
@@ -98,11 +101,12 @@ async def _check_offers(
     offers: list[Offer],
     provider: AIProvider,
     now: datetime,
-) -> tuple[list[int], int | None]:
-    """Check offers in order, stopping at the first Gemini quota error.
+) -> tuple[list[int], int | None, str | None]:
+    """Check offers in order, stopping at the first provider-wide stop.
 
-    Once the quota runs out every later call would fail too, so the rest of
-    the offers are left for a retry instead of spending more requests.
+    Once the Gemini quota runs out or the provider cannot be reached, every
+    later call would fail too, so the rest of the offers are left for a
+    retry instead of spending more requests.
 
     Args:
         session (Session): Active database session.
@@ -111,11 +115,11 @@ async def _check_offers(
         now (datetime): Naive local time of the run.
 
     Returns:
-        tuple[list[int], int | None]: IDs of the offers still without a
-            record today because of the quota (the one that hit it and every
-            offer after it; offers already checked today are left out), and
-            the Unix time of the quota error, or None if the quota never ran
-            out.
+        tuple[list[int], int | None, str | None]: IDs of the offers still
+            without a record today because of the stop (the one that hit it
+            and every offer after it; offers already checked today are left
+            out), the Unix time of the stop and its reason (``"quota"`` /
+            ``"unavailable"``), or None for both if the pass never stopped.
     """
     tg = load_telegram_settings(session)
     if tg["enabled"]:
@@ -130,11 +134,13 @@ async def _check_offers(
     counts = {outcome: 0 for outcome in CheckOutcome}
     pending_ids: list[int] = []
     limit_reached_at: int | None = None
+    limit_reason: str | None = None
     for index, offer in enumerate(offers):
         outcome = await check_offer(session, offer, provider, tg, now)
         counts[outcome] += 1
-        if outcome is CheckOutcome.RATE_LIMITED:
+        if outcome.stops_run:
             limit_reached_at = _current_timestamp()
+            limit_reason = outcome.limit_reason
             day_start, day_end = local_day_bounds(now)
             pending_ids = [offer.id] + [
                 o.id
@@ -142,7 +148,8 @@ async def _check_offers(
                 if not has_record_between(session, o.id, day_start, day_end)
             ]
             logger.warning(
-                f"Stopping: {len(pending_ids)} offer(s) left for a retry on the next run"
+                f"Stopping ({limit_reason}): {len(pending_ids)} offer(s) left "
+                "for a retry on the next run"
             )
             break
 
@@ -152,7 +159,39 @@ async def _check_offers(
         f"Errors: {counts[CheckOutcome.FAILED]}, "
         f"Pending retry: {len(pending_ids)}"
     )
-    return pending_ids, limit_reached_at
+    return pending_ids, limit_reached_at, limit_reason
+
+
+async def _run_pass(
+    session: Session, offers: list[Offer], provider: AIProvider, now: datetime
+) -> tuple[list[int], int | None, str | None]:
+    """Check ``offers`` after making sure the provider can be reached.
+
+    When the preflight fails (e.g. Ollama is switched off) nothing is
+    scraped, so Chrome is not launched every 10 minutes just to fail: every
+    offer without a record today is left pending.
+
+    Args:
+        session (Session): Active database session.
+        offers (list[Offer]): The offers to check, in order.
+        provider (AIProvider): The active AI provider.
+        now (datetime): Naive local time of the run.
+
+    Returns:
+        tuple[list[int], int | None, str | None]: Same as ``_check_offers``.
+    """
+    try:
+        await provider.preflight()
+    except ProviderUnavailableError as error:
+        logger.warning(f"{provider.describe()} unavailable: {error}")
+        day_start, day_end = local_day_bounds(now)
+        pending_ids = [
+            o.id
+            for o in offers
+            if not has_record_between(session, o.id, day_start, day_end)
+        ]
+        return pending_ids, _current_timestamp(), LIMIT_REASON_UNAVAILABLE
+    return await _check_offers(session, offers, provider, now)
 
 
 def _offers_least_recently_checked_first(session: Session) -> list[Offer]:
@@ -189,13 +228,14 @@ async def fetch_and_store_product_status(now: datetime | None = None):
 
     Offers already checked today are skipped, invalid prices are not
     stored, and Telegram alerts are sent when price drops or stock changes
-    are detected (when configured). If the Gemini quota runs out, the run
-    stops and the offers left are saved as pending retries for today,
-    replacing any previous pending retries.
+    are detected (when configured). If the AI provider stops the run (Gemini
+    quota or provider unavailable), the offers left are saved as pending
+    retries for today, replacing any previous pending retries.
 
     Creates today's ``DailyCheckRun`` (only once an API key and at least one
     offer exist, so a run that cannot start is attempted again on the next
-    tick) and records the first quota error in it.
+    tick) and records the first provider-wide stop (time, offers left and
+    reason) in it.
 
     Args:
         now (datetime | None): Naive local time of the run; defaults to
@@ -229,7 +269,7 @@ async def fetch_and_store_product_status(now: datetime | None = None):
         session.add(daily_run)
         session.commit()
 
-        pending_ids, limit_reached_at = await _check_offers(
+        pending_ids, limit_reached_at, limit_reason = await _run_pass(
             session, offers, provider, now
         )
 
@@ -238,18 +278,19 @@ async def fetch_and_store_product_status(now: datetime | None = None):
         if limit_reached_at is not None:
             daily_run.limit_reached_at = limit_reached_at
             daily_run.pending_at_limit = len(pending_ids)
+            daily_run.limit_reason = limit_reason
             session.add(daily_run)
         session.commit()
 
 
 async def retry_rate_limited_products(now: datetime | None = None):
-    """Retry today's offers whose check hit the Gemini quota.
+    """Retry today's offers whose check hit a provider-wide stop.
 
     Pending retries from a previous day are deleted without retrying them.
     An offer leaves the pending list once it is checked, whether its record
-    is stored or it fails for a reason other than the quota; an offer that
-    hits the quota again stays pending (with every offer after it) until the
-    next run.
+    is stored or it fails for another reason; an offer that hits the quota
+    or finds the provider unavailable again stays pending (with every offer
+    after it) until the next run.
 
     Args:
         now (datetime | None): Naive local time of the run; defaults to
@@ -281,7 +322,7 @@ async def retry_rate_limited_products(now: datetime | None = None):
 
         logger.info(f"Retrying {len(offers)} rate-limited offer(s)")
         # The day's snapshot of the first quota error is never overwritten.
-        still_pending, _ = await _check_offers(session, offers, provider, now)
+        still_pending, _, _ = await _run_pass(session, offers, provider, now)
 
         session.exec(
             delete(PendingStatusRetry).where(
