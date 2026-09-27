@@ -12,16 +12,13 @@ import base64
 import binascii
 import json
 import os
-import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from pydantic import BaseModel, Field
+from src.ai.google_ai_studio import MODEL_NAME, QUOTA_ERROR_PATTERN
 from stagehand import Page, Stagehand, local_browser
 from stagehand.rpc_client import RPCError
-
-# Model used for act() and extract() calls.
-MODEL_NAME = "google/gemini-flash-lite-latest"
 
 # Instruction used to dismiss cookie banners and pop-ups before extracting.
 DISMISS_POPUPS_INSTRUCTION = "Close any pop-ups or cookies consent banners if present"
@@ -33,15 +30,6 @@ CHROME_ARGS = [
     "--disable-gpu",
     "--disable-dev-shm-usage",
 ]
-
-# Markers of a Gemini quota error (HTTP 429 RESOURCE_EXHAUSTED) in the message
-# Stagehand raises. Today only the human-readable text reaches Python
-# ("You exceeded your current quota ... Quota exceeded for metric ..."); the
-# status markers cover SDK versions that forward Google's raw error.
-_RATE_LIMIT_PATTERN = re.compile(
-    r"exceeded your current quota|quota exceeded|resource_exhausted|\b429\b",
-    re.IGNORECASE,
-)
 
 # Largest favicon accepted (bytes); anything bigger is ignored.
 MAX_FAVICON_BYTES = 256 * 1024
@@ -216,7 +204,7 @@ def is_rate_limit_error(error: BaseException) -> bool:
     Returns:
         bool: True for a Stagehand ``RPCError`` reporting a quota error.
     """
-    return isinstance(error, RPCError) and bool(_RATE_LIMIT_PATTERN.search(str(error)))
+    return isinstance(error, RPCError) and bool(QUOTA_ERROR_PATTERN.search(str(error)))
 
 
 # --- Internal helpers ---
