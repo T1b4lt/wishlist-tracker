@@ -50,6 +50,7 @@ from src.services.offer_check_service import (
     check_offer,
     has_record_between,
     load_telegram_settings,
+    record_stop,
 )
 from src.telegram_utils import (
     build_daily_done_message,
@@ -281,9 +282,7 @@ async def fetch_and_store_product_status(now: datetime | None = None):
         for offer_id in pending_ids:
             session.add(PendingStatusRetry(offer_id=offer_id, day_start=day_start))
         if limit_reached_at is not None:
-            daily_run.limit_reached_at = limit_reached_at
-            daily_run.pending_at_limit = len(pending_ids)
-            daily_run.limit_reason = limit_reason
+            record_stop(daily_run, limit_reached_at, limit_reason, len(pending_ids))
             session.add(daily_run)
         session.commit()
 
@@ -326,8 +325,14 @@ async def retry_rate_limited_products(now: datetime | None = None):
             return
 
         logger.info(f"Retrying {len(offers)} rate-limited offer(s)")
-        # The day's snapshot of the first quota error is never overwritten.
-        still_pending, _, _ = await _run_pass(session, offers, provider, now)
+        still_pending, stopped_at, reason = await _run_pass(
+            session, offers, provider, now
+        )
+        daily_run = daily_check_service.get_today_run(session, now)
+        if stopped_at is not None and daily_run is not None:
+            # Keeps the day's first snapshot; notes a new outage for the alert.
+            record_stop(daily_run, stopped_at, reason, len(still_pending))
+            session.add(daily_run)
 
         session.exec(
             delete(PendingStatusRetry).where(
@@ -391,7 +396,7 @@ async def send_provider_alerts_if_due(now: datetime) -> None:
 
     At most one of each per local day, whenever Telegram is configured
     (independently of the alert switches and of ``daily_check_report``):
-    the first when today's run stopped because the provider was unavailable
+    the first once a pass or check today found the provider unavailable
     and offers are still pending; the second once nothing is pending after
     the first was sent. A flag is set only after a successful send, so a
     failed send is retried by the next run.
@@ -411,7 +416,7 @@ async def send_provider_alerts_if_due(now: datetime) -> None:
         lang = get_config_value(session, "selected_language", "english")
 
         if not run.unavailable_alert_sent:
-            if run.limit_reason != LIMIT_REASON_UNAVAILABLE or counts.pending == 0:
+            if run.provider_unavailable_at is None or counts.pending == 0:
                 return
             text = build_provider_unavailable_message(
                 lang, provider.describe(), counts.pending

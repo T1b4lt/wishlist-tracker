@@ -108,6 +108,10 @@ class DailyCheckRun(SQLModel, table=True):
     limit_reached_at: int | None = None  # Unix seconds
     pending_at_limit: int | None = None
     limit_reason: str | None = None  # "quota" | "unavailable"
+    # First time any pass or check found the provider unavailable today
+    # (even after a clean full run or a quota stop): drives the Telegram
+    # "provider unavailable" alert.
+    provider_unavailable_at: int | None = None  # Unix seconds
     report_sent: bool = False
     unavailable_alert_sent: bool = False
     recovered_alert_sent: bool = False

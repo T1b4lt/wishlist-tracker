@@ -293,3 +293,29 @@ def test_non_structured_requests_are_rejected():
     params = type("Params", (), {"response_format": None})()
     with pytest.raises(TypeError):
         asyncio.run(provider.stagehand_options()["model"](params))
+
+
+# --- Malformed URLs and unexpected answers (final review) ---
+
+
+@pytest.mark.parametrize("url", ["192.168.1.20:11434:x", "http://[::1"])
+def test_list_models_with_a_malformed_url_is_unavailable(url):
+    with pytest.raises(ProviderUnavailableError):
+        asyncio.run(list_models(url))
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{"models": None}, {"models": [{"details": {}}]}, ["not", "a", "dict"]],
+)
+def test_list_models_with_an_unexpected_answer_is_unavailable(body):
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json=body))
+    with pytest.raises(ProviderUnavailableError):
+        asyncio.run(list_models(URL, transport=transport))
+
+
+def test_generate_with_a_malformed_url_is_unavailable():
+    provider = OllamaProvider("http://[::1", "m")
+    with pytest.raises(ProviderUnavailableError):
+        asyncio.run(provider.stagehand_options()["model"](_params()))
+    assert provider.classify_error(_rpc_error()) is ProviderErrorKind.UNAVAILABLE

@@ -253,6 +253,7 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 8 tables. A 
 │ limit_reached_at       │ (nullable, first provider-wide stop)
 │ pending_at_limit       │ (nullable)
 │ limit_reason           │ (nullable, "quota" | "unavailable")
+│ provider_unavailable_at│ (nullable, first time the provider was unreachable)
 │ report_sent            │
 │ unavailable_alert_sent │
 │ recovered_alert_sent   │

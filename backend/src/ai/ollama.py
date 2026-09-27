@@ -125,15 +125,26 @@ async def list_models(
         ) as client:
             response = await client.get(f"{url}/api/tags")
         response.raise_for_status()
-        entries = response.json().get("models", [])
-    except (httpx.HTTPError, ValueError, AttributeError) as error:
+        models = []
+        for entry in response.json().get("models", []):
+            size = (entry.get("details") or {}).get("parameter_size") or None
+            models.append(
+                OllamaModel(entry["name"], size, parse_parameter_billions(size))
+            )
+    # A malformed URL (``httpx.InvalidURL``) or an answer that is not an
+    # Ollama tag list (e.g. another service's JSON) means the configured
+    # instance cannot be used: treated like an unreachable one.
+    except (
+        httpx.HTTPError,
+        httpx.InvalidURL,
+        ValueError,
+        AttributeError,
+        TypeError,
+        KeyError,
+    ) as error:
         raise ProviderUnavailableError(
             f"Could not reach Ollama at {url}: {error}"
         ) from error
-    models = []
-    for entry in entries:
-        size = (entry.get("details") or {}).get("parameter_size") or None
-        models.append(OllamaModel(entry["name"], size, parse_parameter_billions(size)))
     return models
 
 
@@ -225,7 +236,7 @@ class OllamaProvider(AIProvider):
                 timeout=GENERATE_TIMEOUT_SECONDS, transport=self._transport
             ) as client:
                 response = await client.post(f"{self._base_url}/api/chat", json=payload)
-        except httpx.HTTPError as error:
+        except (httpx.HTTPError, httpx.InvalidURL) as error:
             raise self._unavailable(f"{error.__class__.__name__}: {error}") from error
         # 404 is "model not found" (removed from the instance): the user must
         # act on the instance, like when it is switched off.

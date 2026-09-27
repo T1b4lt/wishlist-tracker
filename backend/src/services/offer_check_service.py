@@ -16,12 +16,13 @@ from enum import Enum
 
 from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlmodel import Session, delete, select
-from src.ai.base import AIProvider, ProviderErrorKind
+from src.ai.base import AIProvider, ProviderErrorKind, ProviderUnavailableError
 from src.ai.factory import load_ai_provider
 from src.core.config import get_config_value
 from src.core.database import engine
 from src.core.local_day import local_day_bounds
 from src.models.database_models import (
+    DailyCheckRun,
     Offer,
     OfferHist,
     PendingStatusRetry,
@@ -61,6 +62,30 @@ class CheckOutcome(Enum):
     def stops_run(self) -> bool:
         """Whether every later check would fail too, so the pass must stop."""
         return self.limit_reason is not None
+
+
+def record_stop(run: DailyCheckRun, stopped_at: int, reason: str, pending: int) -> None:
+    """Record a provider-wide stop in today's run (the caller commits).
+
+    The first stop of the day is kept as the snapshot (``limit_reached_at``,
+    ``pending_at_limit``, ``limit_reason``) and never overwritten. Separately,
+    the first time the provider is found unavailable is kept in
+    ``provider_unavailable_at``, even when the day's first stop was a quota
+    error or the full run finished cleanly, so the Telegram alert still goes
+    out.
+
+    Args:
+        run (DailyCheckRun): Today's run.
+        stopped_at (int): Unix time of the stop.
+        reason (str): ``LIMIT_REASON_QUOTA`` or ``LIMIT_REASON_UNAVAILABLE``.
+        pending (int): Offers left pending by the stop.
+    """
+    if run.limit_reached_at is None:
+        run.limit_reached_at = stopped_at
+        run.pending_at_limit = pending
+        run.limit_reason = reason
+    if reason == LIMIT_REASON_UNAVAILABLE and run.provider_unavailable_at is None:
+        run.provider_unavailable_at = stopped_at
 
 
 async def _check_price_drop(
@@ -349,10 +374,21 @@ async def check_offer(
             logger.warning(f"Gemini quota exhausted while checking {label}: {str(e)}")
             return CheckOutcome.RATE_LIMITED
         if kind is ProviderErrorKind.UNAVAILABLE:
-            logger.warning(
-                f"{provider.describe()} unavailable while checking {label}: {str(e)}"
+            # A timeout or a runner crash on one heavy page looks like an
+            # outage; if the instance still answers, only this offer failed
+            # (otherwise it would block every later offer all day).
+            try:
+                await provider.preflight()
+            except ProviderUnavailableError:
+                logger.warning(
+                    f"{provider.describe()} unavailable while checking {label}: "
+                    f"{str(e)}"
+                )
+                return CheckOutcome.PROVIDER_UNAVAILABLE
+            logger.error(
+                f"Error processing {label} ({provider.describe()} still up): {str(e)}"
             )
-            return CheckOutcome.PROVIDER_UNAVAILABLE
+            return CheckOutcome.FAILED
         logger.error(f"Error processing {label}: {str(e)}")
         return CheckOutcome.FAILED
 
@@ -403,4 +439,6 @@ async def check_offer_now(
         if outcome.stops_run and daily_run is not None:
             day_start, _ = local_day_bounds(now)
             session.merge(PendingStatusRetry(offer_id=offer_id, day_start=day_start))
+            record_stop(daily_run, int(now.timestamp()), outcome.limit_reason, 1)
+            session.add(daily_run)
             session.commit()

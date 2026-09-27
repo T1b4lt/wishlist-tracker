@@ -15,6 +15,7 @@ from src import product_status_cronjob as cronjob
 from src.ai.base import ProviderUnavailableError
 from src.ai.ollama import OllamaProvider
 from src.models.database_models import (
+    Category,
     Config,
     DailyCheckRun,
     OfferHist,
@@ -327,3 +328,88 @@ def test_main_sends_the_provider_alert(session, ollama, alerts):
     asyncio.run(cronjob.main(now=NOW))
 
     assert any(text.startswith("⚠️ I can't reach Ollama") for text in alerts.sent)
+
+
+# --- Final review fixes ---
+
+
+def test_a_timeout_while_the_instance_is_up_only_fails_that_offer(
+    session, ollama, monkeypatch
+):
+    real = offer_check.get_product_status
+    slow_url = "https://example.com/0"
+
+    async def one_slow_page(provider, url):
+        if url == slow_url:
+            raise provider._unavailable("ReadTimeout: slow")
+        return await real(provider, url)
+
+    monkeypatch.setattr(offer_check, "get_product_status", one_slow_page)
+
+    _run()
+
+    assert _pending_ids(session) == set()
+    assert _run_row(session).limit_reason is None
+    session.expire_all()
+    assert len(session.exec(select(OfferHist)).all()) == 1
+
+
+def test_malformed_url_leaves_the_day_pending_instead_of_crashing(
+    session, ollama, monkeypatch
+):
+    monkeypatch.undo()  # Real preflight against a malformed URL.
+    monkeypatch.setattr(cronjob, "engine", session.get_bind())
+    monkeypatch.setattr(offer_check, "engine", session.get_bind())
+    session.exec(
+        select(Config).where(Config.key == "ollama_url")
+    ).one().value = "192.168.1.20:11434:x"
+    session.commit()
+
+    _run()
+
+    assert _pending_ids(session) == set(ollama.offer_ids)
+    assert _run_row(session).limit_reason == "unavailable"
+
+
+def test_outage_after_a_clean_run_sends_the_down_alert(session, ollama, alerts):
+    _run()
+    assert _pending_ids(session) == set()
+    ollama.up = False
+    category_id = session.exec(select(Category)).first().id
+    offer = make_offer(
+        session,
+        make_product(session, category_id, name="New").id,
+        url="https://example.com/new",
+    )
+    session.commit()
+
+    asyncio.run(offer_check.check_offer_now(offer.id, now=NOW + timedelta(hours=1)))
+    _alert(NOW + timedelta(hours=1))
+
+    assert len(alerts.sent) == 1
+    assert alerts.sent[0].startswith("⚠️ I can't reach Ollama")
+
+
+def test_outage_after_a_quota_stop_sends_the_down_alert(session, ollama, alerts):
+    session.add(
+        DailyCheckRun(
+            day_start=DAY_START,
+            started_at=DAY_START,
+            total_offers=2,
+            limit_reached_at=DAY_START + 60,
+            pending_at_limit=2,
+            limit_reason="quota",
+        )
+    )
+    for offer_id in ollama.offer_ids:
+        session.add(PendingStatusRetry(offer_id=offer_id, day_start=DAY_START))
+    session.commit()
+    ollama.up = False
+
+    _retry()
+    _alert(NOW + timedelta(minutes=10))
+
+    assert len(alerts.sent) == 1
+    run = _run_row(session)
+    assert run.limit_reason == "quota"  # The first stop's snapshot is kept.
+    assert run.provider_unavailable_at is not None
