@@ -48,22 +48,12 @@ import {
 } from '@/components/product';
 import { toaster } from '@/components/ui/toaster';
 import { getLocale } from '@/lib/format';
-import {
-  computeLowestAcrossOffers,
-  computeProductOfferStats,
-  selectBestOffer
-} from '@/lib/bestOffer';
 import { buildOfferSeries, seriesYDomain } from '@/lib/offerChart';
 import {
-  computeRangeStats,
-  filterPriceHistoryByRange,
-  getCurrentRecord,
+  RANGE_ALL,
   getTrackingStartTimestamp,
-  hasEnoughHistory as hasEnoughHistoryPoints,
-  resolveDefaultRange
+  hasEnoughHistory as hasEnoughHistoryPoints
 } from '@/lib/productHistory';
-import { DEFAULT_HIST_WINDOW } from '@/lib/histWindow';
-import { useConfigStore } from '@/stores/configStore';
 import { useProductsStore } from '@/stores/productsStore';
 
 const ProductPage = () => {
@@ -72,10 +62,6 @@ const ProductPage = () => {
   const { t, i18n } = useTranslation();
   const [, navigate] = useLocation();
   const locale = useMemo(() => getLocale(i18n.language), [i18n.language]);
-
-  const config = useConfigStore((state) => state.config);
-  const fetchConfig = useConfigStore((state) => state.fetch);
-  const histWindowSize = config?.hist_window_size ?? DEFAULT_HIST_WINDOW;
 
   const detail = useProductsStore((state) => state.details[productId]);
   const fetchDetail = useProductsStore((state) => state.fetchDetail);
@@ -108,12 +94,11 @@ const ProductPage = () => {
   const [isAddOfferOpen, setIsAddOfferOpen] = useState(false);
   const [isMergeOpen, setIsMergeOpen] = useState(false);
 
-  // The range selector defaults to the configured `hist_window_size`
-  // (or the default window when it is not an offered option) until the user picks one
-  // themselves; that choice is reset whenever `productId` changes (a fresh
-  // page for a different product starts from the default again).
-  const [range, setRange] = useState(() => resolveDefaultRange(histWindowSize));
-  const userChangedRangeRef = useRef(false);
+  // The range the user picked, remembered for the product it was picked on:
+  // another product starts from the backend's `default_range` again, while a
+  // refetch of the same product keeps the pick.
+  const [picked, setPicked] = useState({ productId: null, range: null });
+  const pickedRange = picked.productId === productId ? picked.range : null;
 
   useDocumentTitle(
     product?.name ??
@@ -125,72 +110,44 @@ const ProductPage = () => {
   );
 
   useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
-
-  useEffect(() => {
     fetchDetail(productId);
   }, [fetchDetail, productId]);
 
-  useEffect(() => {
-    userChangedRangeRef.current = false;
-  }, [productId]);
+  const handleRangeChange = (value) => setPicked({ productId, range: value });
 
-  useEffect(() => {
-    if (!userChangedRangeRef.current) {
-      setRange(resolveDefaultRange(histWindowSize));
-    }
-  }, [histWindowSize, productId]);
-
-  const handleRangeChange = (value) => {
-    userChangedRangeRef.current = true;
-    setRange(value);
-  };
-
-  // The product is valued by its best offer (see `lib/bestOffer.js`): the
-  // stats row and the chart's average use its history; "lowest in range"
-  // looks at every store.
+  // The backend values the product by its best offer and precomputes every
+  // range's stats (`ProductDetailResponse.ranges`); the page only picks one.
   const offers = useMemo(() => product?.offers ?? [], [product]);
-  const bestOfferId = useMemo(() => selectBestOffer(offers), [offers]);
+  const bestOfferId = product?.best_offer_id ?? null;
   const bestOffer =
     offers.find((offer) => offer.id === bestOfferId) ?? offers[0] ?? null;
-  const productStock = useMemo(
-    () => computeProductOfferStats(offers, range).isInStock,
-    [offers, range]
+  const ranges = useMemo(() => product?.ranges ?? [], [product]);
+  const rangeKeys = useMemo(() => ranges.map((r) => r.key), [ranges]);
+  const range = pickedRange ?? product?.default_range ?? RANGE_ALL;
+  const selectedRange = useMemo(
+    () => ranges.find((r) => r.key === range) ?? null,
+    [ranges, range]
   );
+  const windowStart = selectedRange?.window_start ?? null;
   const isMultiStore = offers.length > 1;
   const storeNameOf = (offerId) =>
     offers.find((offer) => offer.id === offerId)?.store_name ?? null;
-  const rawHistory = useMemo(() => bestOffer?.price_history ?? [], [bestOffer]);
-  const filteredHistory = useMemo(
-    () => filterPriceHistoryByRange(rawHistory, range),
-    [rawHistory, range]
-  );
   // One line per store; the chart plots when any store has 2+ points in
   // the range. The total history decides which message replaces it: "not
   // enough data in this range" when a longer range would plot, "tracking
   // started" otherwise.
   const series = useMemo(
-    () => buildOfferSeries(offers, range),
-    [offers, range]
+    () => buildOfferSeries(offers, windowStart),
+    [offers, windowStart]
   );
   const yDomain = useMemo(() => seriesYDomain(series), [series]);
   const hasEnoughHistory = series.some((s) => hasEnoughHistoryPoints(s.points));
   const hasEnoughTotalHistory = offers.some((offer) =>
     hasEnoughHistoryPoints(offer.price_history)
   );
-  const currentRecord = useMemo(
-    () => getCurrentRecord(rawHistory),
-    [rawHistory]
-  );
-  const { average, currentVsAverage } = useMemo(
-    () => computeRangeStats(filteredHistory, currentRecord),
-    [filteredHistory, currentRecord]
-  );
-  const lowest = useMemo(
-    () => computeLowestAcrossOffers(offers, range),
-    [offers, range]
-  );
+  const average = selectedRange?.average ?? null;
+  const currentVsAverage = selectedRange?.price_change_pct ?? null;
+  const lowest = selectedRange?.lowest ?? null;
   const trackingStartDate = useMemo(() => {
     const starts = offers
       .map((offer) => getTrackingStartTimestamp(offer.price_history))
@@ -396,7 +353,7 @@ const ProductPage = () => {
               color={product.category_color}
             />
             <PriorityBadge priority={product.priority} />
-            <StockStatus inStock={productStock} />
+            <StockStatus inStock={product.is_in_stock} />
           </HStack>
 
           {offers
@@ -424,7 +381,7 @@ const ProductPage = () => {
             }
             lowestStoreName={
               isMultiStore && lowest
-                ? (storeNameOf(lowest.offerId) ?? undefined)
+                ? (storeNameOf(lowest.offer_id) ?? undefined)
                 : undefined
             }
           />
@@ -461,6 +418,7 @@ const ProductPage = () => {
 
       <VStack align="stretch" gap={6}>
         <PriceHistoryChart
+          rangeKeys={rangeKeys}
           range={range}
           onRangeChange={handleRangeChange}
           series={series}

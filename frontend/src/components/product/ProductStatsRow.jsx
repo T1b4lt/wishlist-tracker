@@ -25,9 +25,8 @@ const Stat = ({ label, children }) => (
  * The product detail page's stats row: current price, lowest price in the
  * selected range (with the date it was reached), average price in the
  * selected range, and how the current price compares to that average.
- * Every range-dependent value follows the chart's range selector (its caller
- * recomputes `lowest`/`average`/`currentVsAverage` from the range-filtered
- * history via `src/lib/productHistory.js`).
+ * Every range-dependent value is the backend's statistics of the chart's
+ * selected range (`ProductDetailResponse.ranges`).
  *
  * @param {object} props
  * @param {number|null|undefined} props.currentPrice

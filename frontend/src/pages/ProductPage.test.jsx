@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { Route, Router } from 'wouter';
@@ -44,12 +44,23 @@ vi.mock('@/components/product', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    PriceHistoryChart: ({ hasEnoughHistory, hasEnoughTotalHistory }) => (
+    PriceHistoryChart: ({
+      hasEnoughHistory,
+      hasEnoughTotalHistory,
+      rangeKeys,
+      onRangeChange
+    }) => (
       <div
         data-testid="price-history-chart-stub"
         data-has-enough-history={String(hasEnoughHistory)}
         data-has-enough-total-history={String(hasEnoughTotalHistory)}
-      />
+      >
+        {rangeKeys?.map((key) => (
+          <button key={key} type="button" onClick={() => onRangeChange(key)}>
+            {`range-${key}`}
+          </button>
+        ))}
+      </div>
     )
   };
 });
@@ -265,19 +276,19 @@ describe('ProductPage', () => {
     expect(productsApi.get).toHaveBeenCalledTimes(2);
   });
 
-  it('ignores out-of-stock records in the stats and shows N/A when the current one is out of stock', async () => {
-    const now = Date.now() / 1000;
-    productsApi.get.mockResolvedValue(
-      buildProduct({
-        current_price: 70,
-        is_in_stock: false,
-        price_history: [
-          { timestamp: now - 10 * DAY, price: 100, is_in_stock: true },
-          { timestamp: now - 2 * DAY, price: 80, is_in_stock: true },
-          { timestamp: now - DAY, price: 70, is_in_stock: false }
-        ]
-      })
-    );
+  it("shows the backend's lowest and average, and N/A without a change", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const product = buildProduct();
+    productsApi.get.mockResolvedValue({
+      ...product,
+      default_range: '60',
+      ranges: product.ranges.map((range) => ({
+        ...range,
+        average: 90,
+        price_change_pct: null,
+        lowest: { price: 80, timestamp: now - 2 * DAY, offer_id: 70 }
+      }))
+    });
 
     renderProductPage();
 
@@ -286,6 +297,83 @@ describe('ProductPage', () => {
     expect(await stat('Lowest in range')).toHaveTextContent('$80.00');
     expect(await stat('Average in range')).toHaveTextContent('$90.00');
     expect(await stat('Current vs average')).toHaveTextContent('N/A');
+  });
+
+  const backendRanges = [
+    {
+      key: '30',
+      window_start: 0,
+      average: 111,
+      price_change_pct: -10,
+      lowest: null
+    },
+    {
+      key: '60',
+      window_start: 0,
+      average: 222,
+      price_change_pct: 5,
+      lowest: null
+    },
+    {
+      key: '90',
+      window_start: 0,
+      average: 333,
+      price_change_pct: null,
+      lowest: null
+    },
+    {
+      key: '180',
+      window_start: 0,
+      average: 444,
+      price_change_pct: null,
+      lowest: null
+    },
+    {
+      key: 'all',
+      window_start: null,
+      average: 555,
+      price_change_pct: null,
+      lowest: null
+    }
+  ];
+
+  it('shows the stats of the backend range, starting from its default', async () => {
+    productsApi.get.mockResolvedValue(
+      buildProduct({ default_range: '90', ranges: backendRanges })
+    );
+
+    renderProductPage();
+
+    expect(await screen.findByText('$333.00')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'range-30' }));
+    expect(screen.getByText('$111.00')).toBeInTheDocument();
+  });
+
+  it('keeps the range the user picked when the product is refetched', async () => {
+    productsApi.get.mockResolvedValue(
+      buildProduct({ default_range: '60', ranges: backendRanges })
+    );
+    renderProductPage();
+    await screen.findByText('$222.00');
+    await userEvent.click(screen.getByRole('button', { name: 'range-30' }));
+
+    await act(() => useProductsStore.getState().fetchDetail('7'));
+
+    expect(screen.getByText('$111.00')).toBeInTheDocument();
+  });
+
+  it('names the store of the lowest price the backend found', async () => {
+    const detail = buildMultiStoreDetail();
+    const ranges = detail.ranges.map((range) => ({
+      ...range,
+      lowest: { price: 150, timestamp: range.window_start ?? 0, offer_id: 2 }
+    }));
+    productsApi.get.mockResolvedValue({ ...detail, id: 7, ranges });
+
+    renderProductPage();
+
+    expect(await screen.findByText('$150.00')).toBeInTheDocument();
+    expect(screen.getByText(/at Thomann/i)).toBeInTheDocument();
   });
 
   it('lists every store and values the product by the best one', async () => {

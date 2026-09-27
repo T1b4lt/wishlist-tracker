@@ -16,7 +16,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { StoreBadge } from '@/components/common';
 import { formatDate, formatPercent, formatPrice } from '@/lib/format';
 import { durationSeconds } from '@/theme/motion';
-import { RANGE_ALL, RANGE_OPTIONS } from '@/lib/productHistory';
+import { RANGE_ALL } from '@/lib/productHistory';
 
 /**
  * The chart's custom tooltip for the hovered store's point: store (when
@@ -80,13 +80,16 @@ const ChartTooltip = ({ active, payload, currency, locale, t, showStore }) => {
  * math.
  *
  * @param {object} props
- * @param {string} props.range - The selected range (`RANGE_OPTIONS` value or `RANGE_ALL`).
+ * @param {string[]} props.rangeKeys - The backend's range keys
+ *   (`ProductDetailResponse.ranges[].key`), in display order.
+ * @param {string} props.range - The selected range key.
  * @param {(range: string) => void} props.onRangeChange
  * @param {object[]} props.series - One entry per store, see `buildOfferSeries`.
  * @param {[number, number]|['auto','auto']} props.yDomain
- * @param {number|null} props.average - Average of the range's in-stock
- *   records other than the current one (see `computeRangeStats`).
- * @param {{price: number, timestamp: number}|null} props.lowest
+ * @param {number|null} props.average - The backend's average for the
+ *   selected range (`ranges[].average`).
+ * @param {{price: number, timestamp: number}|null} props.lowest - The
+ *   backend's lowest price of the selected range (`ranges[].lowest`).
  * @param {boolean} props.hasEnoughHistory - Whether the selected range has
  *   enough points to plot.
  * @param {boolean} [props.hasEnoughTotalHistory] - Whether the product's
@@ -98,6 +101,7 @@ const ChartTooltip = ({ active, payload, currency, locale, t, showStore }) => {
  * @param {string} props.locale - An `Intl` locale tag, see `getLocale`.
  */
 export const PriceHistoryChart = ({
+  rangeKeys,
   range,
   onRangeChange,
   series,
@@ -114,14 +118,16 @@ export const PriceHistoryChart = ({
   const shouldReduceMotion = useReducedMotion();
 
   const rangeItems = useMemo(
-    () => [
-      ...RANGE_OPTIONS.map((days) => ({
-        value: days,
-        label: t('pages.product.chart.rangeOption', { days })
-      })),
-      { value: RANGE_ALL, label: t('pages.product.chart.rangeAll') }
-    ],
-    [t]
+    () =>
+      rangeKeys.map((key) =>
+        key === RANGE_ALL
+          ? { value: key, label: t('pages.product.chart.rangeAll') }
+          : {
+              value: key,
+              label: t('pages.product.chart.rangeOption', { days: key })
+            }
+      ),
+    [rangeKeys, t]
   );
 
   return (

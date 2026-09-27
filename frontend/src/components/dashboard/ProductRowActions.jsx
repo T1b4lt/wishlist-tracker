@@ -9,7 +9,7 @@ import {
 } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
-import { findBestOfferSummary } from '@/lib/bestOffer';
+import { findBestOfferSummary } from '@/lib/offers';
 
 /**
  * A product's row/card actions menu (Open, Edit, Open store page, Delete),

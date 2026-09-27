@@ -11,7 +11,7 @@ import {
   StoreFavicon
 } from '@/components/common';
 import { formatPrice } from '@/lib/format';
-import { findBestOfferSummary } from '@/lib/bestOffer';
+import { findBestOfferSummary } from '@/lib/offers';
 import { OfferStores } from './OfferStores';
 import { ProductRowActions } from './ProductRowActions';
 import { useRowActivation } from './useRowActivation';

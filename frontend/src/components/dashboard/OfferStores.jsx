@@ -1,7 +1,7 @@
 import { Badge, HStack, Text, VStack } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@/components/ui/tooltip';
-import { findBestOfferSummary } from '@/lib/bestOffer';
+import { findBestOfferSummary } from '@/lib/offers';
 import { formatPrice } from '@/lib/format';
 
 /**

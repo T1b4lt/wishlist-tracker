@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { buildOfferSeries, SERIES_COLORS, seriesYDomain } from './offerChart';
-import { RANGE_ALL } from './productHistory';
 
 const record = (price, isInStock, timestamp) => ({
   price,
@@ -27,7 +26,7 @@ describe('buildOfferSeries', () => {
           price_history: [record(12, true, 1)]
         }
       ],
-      RANGE_ALL
+      null
     );
 
     expect(series.map((s) => [s.offerId, s.storeName, s.color])).toEqual([
@@ -49,7 +48,7 @@ describe('buildOfferSeries', () => {
           ]
         }
       ],
-      RANGE_ALL
+      null
     );
 
     expect(
@@ -67,9 +66,27 @@ describe('buildOfferSeries', () => {
         { id: 1, price_history: [record(100, true, 1)] },
         { id: 2, price_history: [record(200, true, 1)] }
       ],
-      RANGE_ALL
+      null
     );
 
     expect(seriesYDomain(series)).toEqual([90, 210]);
+  });
+
+  it('keeps only the points at or after the window start', () => {
+    const [series] = buildOfferSeries(
+      [
+        {
+          id: 1,
+          price_history: [
+            record(10, true, 1),
+            record(11, true, 2),
+            record(12, true, 3)
+          ]
+        }
+      ],
+      2
+    );
+
+    expect(series.points.map((p) => p.timestamp)).toEqual([2, 3]);
   });
 });

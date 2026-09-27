@@ -5,7 +5,6 @@ import { vi } from 'vitest';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import { buildOfferSeries } from '@/lib/offerChart';
-import { RANGE_ALL } from '@/lib/productHistory';
 import {
   buildMultiStoreDetail,
   buildProductDetail
@@ -22,7 +21,7 @@ const record = (price, isInStock, timestamp) => ({
 const singleSeries = (records) =>
   buildOfferSeries(
     [{ id: 1, store_name: 'Amazon', price_history: records }],
-    RANGE_ALL
+    null
   );
 
 // jsdom never gives `ResponsiveContainer` a non-zero measured size (there is
@@ -42,6 +41,7 @@ vi.mock('recharts', async (importOriginal) => {
 });
 
 const BASE_PROPS = {
+  rangeKeys: ['30', '60', '90', '180', 'all'],
   range: '60',
   onRangeChange: vi.fn(),
   series: singleSeries([record(10, true, 1), record(12, true, 2)]),
@@ -55,6 +55,18 @@ const BASE_PROPS = {
 };
 
 describe('PriceHistoryChart', () => {
+  it('offers exactly the ranges the backend sends', () => {
+    renderWithProviders(
+      <PriceHistoryChart {...BASE_PROPS} rangeKeys={['30', 'all']} range="30" />
+    );
+
+    expect(screen.getByRole('radio', { name: '30 days' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'All' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: '60 days' })
+    ).not.toBeInTheDocument();
+  });
+
   it('renders the title and every range option, with the selected one checked', () => {
     const getUnexpectedErrors = spyOnConsoleError();
 
@@ -167,7 +179,7 @@ describe('PriceHistoryChart', () => {
     renderWithProviders(
       <PriceHistoryChart
         {...BASE_PROPS}
-        series={buildOfferSeries(buildMultiStoreDetail().offers, RANGE_ALL)}
+        series={buildOfferSeries(buildMultiStoreDetail().offers, null)}
       />
     );
 
@@ -180,7 +192,7 @@ describe('PriceHistoryChart', () => {
     renderWithProviders(
       <PriceHistoryChart
         {...BASE_PROPS}
-        series={buildOfferSeries(buildProductDetail().offers, RANGE_ALL)}
+        series={buildOfferSeries(buildProductDetail().offers, null)}
       />
     );
 

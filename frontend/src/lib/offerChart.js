@@ -10,7 +10,7 @@
 import {
   buildChartPoints,
   computeYDomain,
-  filterPriceHistoryByRange
+  filterPriceHistoryByWindow
 } from './productHistory';
 
 /** Line colors, in offer order (Chakra color tokens as CSS variables). */
@@ -25,14 +25,14 @@ export const SERIES_COLORS = [
 
 /**
  * @param {Array<{ id: number, store_name?: string|null, store_id?: number|null, store_has_favicon?: boolean, price_history: object[] }>} offers
- * @param {string} range - A `RANGE_OPTIONS` value or `RANGE_ALL`.
- * @param {number} [now] - Seconds since epoch.
+ * @param {number|null} windowStart - The selected range's `window_start`
+ *   (`null` keeps every record).
  * @returns {Array<object>} One series per offer, in offer order.
  */
-export function buildOfferSeries(offers, range, now = Date.now() / 1000) {
+export function buildOfferSeries(offers, windowStart) {
   return (offers ?? []).map((offer, index) => {
     const points = buildChartPoints(
-      filterPriceHistoryByRange(offer.price_history, range, now)
+      filterPriceHistoryByWindow(offer.price_history, windowStart)
     );
     return {
       offerId: offer.id,

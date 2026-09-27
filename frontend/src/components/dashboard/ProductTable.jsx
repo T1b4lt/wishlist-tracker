@@ -14,7 +14,7 @@ import {
 } from '@/components/common';
 import { formatPrice } from '@/lib/format';
 import { Sparkline } from './Sparkline';
-import { findBestOfferSummary } from '@/lib/bestOffer';
+import { findBestOfferSummary } from '@/lib/offers';
 import { OfferStores } from './OfferStores';
 import { ProductRowActions } from './ProductRowActions';
 import { useTableRowActivation } from './useRowActivation';

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readContract } from '@/test/contracts';
 import { DEFAULT_HIST_WINDOW, HIST_WINDOW_OPTIONS } from './histWindow';
-import { RANGE_OPTIONS } from './productHistory';
 import {
   DAILY_CHECK_REPORT_OPTIONS,
   DEFAULT_DAILY_CHECK_REPORT
@@ -27,10 +26,6 @@ describe('hist-window contract', () => {
 
   it('pins the default window', () => {
     expect(DEFAULT_HIST_WINDOW).toBe(HIST_WINDOW.default);
-  });
-
-  it('offers exactly the window options as chart ranges', () => {
-    expect(RANGE_OPTIONS.map(Number)).toEqual(HIST_WINDOW.options);
   });
 });
 
