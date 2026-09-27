@@ -11,9 +11,10 @@ from src.models.database_models import (
     Category,
     Config,
     DailyCheckRun,
+    Offer,
+    OfferHist,
     PendingStatusRetry,
     Product,
-    ProductHist,
 )
 from src.telegram_utils import build_daily_done_message, build_daily_unchecked_message
 
@@ -27,33 +28,33 @@ LIMIT_AT = int(datetime(2026, 9, 26, 12, 3).timestamp())
 
 def test_done_message_on_a_normal_day():
     assert build_daily_done_message("english", 40, 40, 0, None, None) == (
-        "✅ Daily check completed: 40 of 40 products recorded."
+        "✅ Daily check completed: 40 of 40 prices recorded."
     )
 
 
 def test_done_message_on_a_limit_day_with_failures():
     assert build_daily_done_message("english", 38, 40, 2, "12:03", 15) == (
-        "✅ Daily check completed: 38 of 40 products recorded (2 failed).\n"
-        "Gemini limit reached at 12:03 with 15 products left; finished by retrying."
+        "✅ Daily check completed: 38 of 40 prices recorded (2 failed).\n"
+        "Gemini limit reached at 12:03 with 15 prices left; finished by retrying."
     )
 
 
 def test_unchecked_message():
     assert build_daily_unchecked_message("english", 12, 40, "12:03", 15) == (
-        "⚠️ 12 of 40 products could not be checked today: the Gemini limit was "
-        "reached at 12:03 with 15 products left. Tomorrow's run will check them first."
+        "⚠️ 12 of 40 prices could not be checked today: the Gemini limit was "
+        "reached at 12:03 with 15 prices left. Tomorrow's run will check them first."
     )
 
 
 def test_messages_in_spanish():
     assert build_daily_done_message("spanish", 38, 40, 2, "12:03", 15) == (
-        "✅ Revisión diaria completada: 38 de 40 productos registrados (2 fallidos).\n"
-        "Límite de Gemini alcanzado a las 12:03 con 15 productos pendientes; "
+        "✅ Revisión diaria completada: 38 de 40 precios registrados (2 fallidos).\n"
+        "Límite de Gemini alcanzado a las 12:03 con 15 precios pendientes; "
         "completada con reintentos."
     )
     assert build_daily_unchecked_message("spanish", 12, 40, "12:03", 15) == (
-        "⚠️ 12 de 40 productos no se han podido revisar hoy: el límite de Gemini se "
-        "alcanzó a las 12:03 con 15 productos pendientes. Mañana se revisarán primero."
+        "⚠️ 12 de 40 precios no se han podido revisar hoy: el límite de Gemini se "
+        "alcanzó a las 12:03 con 15 precios pendientes. Mañana se revisarán primero."
     )
 
 
@@ -79,15 +80,14 @@ def report(session, monkeypatch):
     session.add(category)
     session.commit()
     products = [
-        Product(
-            name=f"P{i}",
-            url=f"https://example.com/{i}",
-            priority="low",
-            category_id=category.id,
-            description="x",
-            currency="EUR",
-        )
+        Product(name=f"P{i}", priority="low", category_id=category.id, description="x")
         for i in range(3)
+    ]
+    session.add_all(products)
+    session.commit()
+    products = [
+        Offer(product_id=p.id, url=f"https://example.com/{i}", currency="EUR")
+        for i, p in enumerate(products)
     ]
     session.add_all(products)
     session.commit()
@@ -116,7 +116,7 @@ def _add_run(session, limit=True, total=3):
         DailyCheckRun(
             day_start=DAY_START,
             started_at=int(NOW.replace(minute=0).timestamp()),
-            total_products=total,
+            total_offers=total,
             limit_reached_at=LIMIT_AT if limit else None,
             pending_at_limit=2 if limit else None,
         )
@@ -126,15 +126,15 @@ def _add_run(session, limit=True, total=3):
 
 def _record(session, product_id):
     session.add(
-        ProductHist(
-            product_id=product_id, price=1.0, is_in_stock=True, timestamp=DAY_START + 60
+        OfferHist(
+            offer_id=product_id, price=1.0, is_in_stock=True, timestamp=DAY_START + 60
         )
     )
     session.commit()
 
 
 def _pending(session, product_id):
-    session.add(PendingStatusRetry(product_id=product_id, day_start=DAY_START))
+    session.add(PendingStatusRetry(offer_id=product_id, day_start=DAY_START))
     session.commit()
 
 

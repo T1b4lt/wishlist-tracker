@@ -169,6 +169,7 @@ async def send_price_drop_alert(
     new_price: float,
     lang: str,
     currency: str,
+    store_name: str | None = None,
 ):
     """
     Send a price drop alert notification to the specified chat ID.
@@ -182,6 +183,7 @@ async def send_price_drop_alert(
         new_price: The new (lower) price
         lang: Language code for localization ("english" or "spanish")
         currency: Currency code (e.g., EUR, USD, GBP)
+        store_name: The offer's store name, shown under the product when given
     """
 
     # Get the currency symbol, default to currency code if not found
@@ -191,6 +193,10 @@ async def send_price_drop_alert(
     price_drop_percentage = ((old_price - new_price) / old_price) * 100
 
     escaped_product_name = escape_markdown(product_name)
+    store_line = {
+        "english": f"Store: {escape_markdown(store_name)}\n" if store_name else "",
+        "spanish": f"Tienda: {escape_markdown(store_name)}\n" if store_name else "",
+    }
 
     # Format prices with proper escaping
     old_price_str = f"{old_price:.2f}{currency_symbol}".replace(".", "\\.").replace(
@@ -208,6 +214,7 @@ async def send_price_drop_alert(
         "english": (
             f"📉 *Price Drop Alert*\\!\n\n"
             f"Product: {escaped_product_name}\n"
+            f"{store_line['english']}"
             f"Old Price: ~{old_price_str}~\n"
             f"New Price: *{new_price_str}* \\({percentage_str}\\)\n"
             f"*Great Deal\\!*"
@@ -215,6 +222,7 @@ async def send_price_drop_alert(
         "spanish": (
             f"📉 *Alerta de Bajada de Precio*\\!\n\n"
             f"Producto: {escaped_product_name}\n"
+            f"{store_line['spanish']}"
             f"Precio Anterior: ~{old_price_str}~\n"
             f"Precio Nuevo: *{new_price_str}* \\({percentage_str}\\)\n"
             f"*¡Gran Oferta\\!*"
@@ -255,6 +263,7 @@ async def send_stock_alert(
     current_price: float,
     lang: str,
     currency: str,
+    store_name: str | None = None,
 ):
     """
     Send a stock availability alert notification to the specified chat ID.
@@ -267,12 +276,17 @@ async def send_stock_alert(
         current_price: The current price of the product
         lang: Language code for localization ("english" or "spanish")
         currency: Currency code (e.g., EUR, USD, GBP)
+        store_name: The offer's store name, shown under the product when given
     """
 
     # Get the currency symbol, default to currency code if not found
     currency_symbol = currency_symbols.get(currency.upper(), currency)
 
     escaped_product_name = escape_markdown(product_name)
+    store_line = {
+        "english": f"Store: {escape_markdown(store_name)}\n" if store_name else "",
+        "spanish": f"Tienda: {escape_markdown(store_name)}\n" if store_name else "",
+    }
 
     # Format price with proper escaping
     price_str = f"{current_price:.2f}{currency_symbol}".replace(".", "\\.").replace(
@@ -284,6 +298,7 @@ async def send_stock_alert(
         "english": (
             f"✅ *Stock Alert*\\!\n\n"
             f"Product: {escaped_product_name}\n"
+            f"{store_line['english']}"
             f"Status: *Back in Stock\\!*\n"
             f"Current Price: *{price_str}*\n"
             f"*Don't miss out\\!*"
@@ -291,6 +306,7 @@ async def send_stock_alert(
         "spanish": (
             f"✅ *Alerta de Stock*\\!\n\n"
             f"Producto: {escaped_product_name}\n"
+            f"{store_line['spanish']}"
             f"Estado: *¡Vuelve a estar en stock\\!*\n"
             f"Precio Actual: *{price_str}*\n"
             f"*¡No te lo pierdas\\!*"
@@ -339,30 +355,30 @@ if __name__ == "__main__":
 
 _DAILY_REPORT_TEXTS = {
     "english": {
-        "done": "✅ Daily check completed: {recorded} of {total} products recorded",
+        "done": "✅ Daily check completed: {recorded} of {total} prices recorded",
         "failed": " ({failed} failed)",
         "done_limit": (
-            "Gemini limit reached at {limit_time} with {pending_at_limit} products "
+            "Gemini limit reached at {limit_time} with {pending_at_limit} prices "
             "left; finished by retrying."
         ),
         "unchecked": (
-            "⚠️ {pending} of {total} products could not be checked today: the Gemini "
-            "limit was reached at {limit_time} with {pending_at_limit} products left. "
+            "⚠️ {pending} of {total} prices could not be checked today: the Gemini "
+            "limit was reached at {limit_time} with {pending_at_limit} prices left. "
             "Tomorrow's run will check them first."
         ),
     },
     "spanish": {
         "done": (
-            "✅ Revisión diaria completada: {recorded} de {total} productos registrados"
+            "✅ Revisión diaria completada: {recorded} de {total} precios registrados"
         ),
         "failed": " ({failed} fallidos)",
         "done_limit": (
             "Límite de Gemini alcanzado a las {limit_time} con {pending_at_limit} "
-            "productos pendientes; completada con reintentos."
+            "precios pendientes; completada con reintentos."
         ),
         "unchecked": (
-            "⚠️ {pending} de {total} productos no se han podido revisar hoy: el límite "
-            "de Gemini se alcanzó a las {limit_time} con {pending_at_limit} productos "
+            "⚠️ {pending} de {total} precios no se han podido revisar hoy: el límite "
+            "de Gemini se alcanzó a las {limit_time} con {pending_at_limit} precios "
             "pendientes. Mañana se revisarán primero."
         ),
     },
@@ -386,11 +402,11 @@ def build_daily_done_message(
 
     Args:
         lang (str): Language code ("english" or "spanish").
-        recorded (int): Products recorded today.
-        total (int): Products when the daily check started.
-        failed (int): Products checked without a record (not pending).
+        recorded (int): Offers (prices) recorded today.
+        total (int): Offers when the daily check started.
+        failed (int): Offers checked without a record (not pending).
         limit_time (str | None): Local ``HH:MM`` of the quota error, if any.
-        pending_at_limit (int | None): Products left at that quota error.
+        pending_at_limit (int | None): Offers left at that quota error.
 
     Returns:
         str: The message text.
@@ -410,14 +426,14 @@ def build_daily_done_message(
 def build_daily_unchecked_message(
     lang: str, pending: int, total: int, limit_time: str, pending_at_limit: int
 ) -> str:
-    """Build the end-of-day "products left unchecked" report.
+    """Build the end-of-day "prices left unchecked" report.
 
     Args:
         lang (str): Language code ("english" or "spanish").
-        pending (int): Products still pending at the end of the day.
-        total (int): Products when the daily check started.
+        pending (int): Offers still pending at the end of the day.
+        total (int): Offers when the daily check started.
         limit_time (str): Local ``HH:MM`` of the first quota error.
-        pending_at_limit (int): Products left at that quota error.
+        pending_at_limit (int): Offers left at that quota error.
 
     Returns:
         str: The message text.

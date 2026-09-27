@@ -7,9 +7,10 @@ from src.core.local_day import local_day_bounds
 from src.models.database_models import (
     Category,
     DailyCheckRun,
+    Offer,
+    OfferHist,
     PendingStatusRetry,
     Product,
-    ProductHist,
 )
 from src.services import daily_check_service
 
@@ -29,15 +30,14 @@ def products(session):
     session.add(category)
     session.commit()
     items = [
-        Product(
-            name=f"P{i}",
-            url=f"https://example.com/{i}",
-            priority="low",
-            category_id=category.id,
-            description="x",
-            currency="EUR",
-        )
+        Product(name=f"P{i}", priority="low", category_id=category.id, description="x")
         for i in range(3)
+    ]
+    session.add_all(items)
+    session.commit()
+    items = [
+        Offer(product_id=p.id, url=f"https://example.com/{i}", currency="EUR")
+        for i, p in enumerate(items)
     ]
     session.add_all(items)
     session.commit()
@@ -50,7 +50,7 @@ def test_status_before_todays_run_has_no_snapshot(session):
     assert status.model_dump() == {
         "day_start": DAY_START,
         "started_at": None,
-        "total_products": None,
+        "total_offers": None,
         "limit_reached_at": None,
         "pending_at_limit": None,
         "pending_now": 0,
@@ -62,18 +62,18 @@ def test_status_on_a_limit_day_reports_the_snapshot_and_live_pending(session, pr
         DailyCheckRun(
             day_start=DAY_START,
             started_at=DAY_START + 12 * 3600,
-            total_products=3,
+            total_offers=3,
             limit_reached_at=DAY_START + 12 * 3600 + 180,
             pending_at_limit=2,
         )
     )
-    session.add(PendingStatusRetry(product_id=products[2], day_start=DAY_START))
+    session.add(PendingStatusRetry(offer_id=products[2], day_start=DAY_START))
     session.commit()
 
     status = daily_check_service.get_status(session, NOW)
 
     assert status.started_at == DAY_START + 12 * 3600
-    assert status.total_products == 3
+    assert status.total_offers == 3
     assert status.limit_reached_at == DAY_START + 12 * 3600 + 180
     assert status.pending_at_limit == 2
     assert status.pending_now == 1
@@ -82,7 +82,7 @@ def test_status_on_a_limit_day_reports_the_snapshot_and_live_pending(session, pr
 def test_a_run_from_another_day_is_not_todays(session):
     session.add(
         DailyCheckRun(
-            day_start=DAY_START - 86400, started_at=DAY_START - 40000, total_products=1
+            day_start=DAY_START - 86400, started_at=DAY_START - 40000, total_offers=1
         )
     )
     session.commit()
@@ -91,7 +91,7 @@ def test_a_run_from_another_day_is_not_todays(session):
 
 
 def test_pending_from_another_day_is_not_counted(session, products):
-    session.add(PendingStatusRetry(product_id=products[0], day_start=DAY_START - 86400))
+    session.add(PendingStatusRetry(offer_id=products[0], day_start=DAY_START - 86400))
     session.commit()
 
     assert daily_check_service.count_today(session, NOW).pending == 0
@@ -100,13 +100,13 @@ def test_pending_from_another_day_is_not_counted(session, products):
 def test_recorded_counts_products_with_a_record_today_once(session, products):
     for timestamp in (DAY_START + 10, DAY_START + 20):
         session.add(
-            ProductHist(
-                product_id=products[0], price=1.0, is_in_stock=True, timestamp=timestamp
+            OfferHist(
+                offer_id=products[0], price=1.0, is_in_stock=True, timestamp=timestamp
             )
         )
     session.add(
-        ProductHist(
-            product_id=products[1], price=1.0, is_in_stock=True, timestamp=DAY_START - 1
+        OfferHist(
+            offer_id=products[1], price=1.0, is_in_stock=True, timestamp=DAY_START - 1
         )
     )
     session.commit()
