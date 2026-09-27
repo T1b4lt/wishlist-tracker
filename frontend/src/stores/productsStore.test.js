@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { offers as offersApi, products as productsApi } from '@/lib/api';
-import { useProductsStore, initialProductsState } from './productsStore';
+import {
+  useProductsStore,
+  initialProductsState,
+  cancelPriceChecks,
+  PRICE_CHECK_POLL_MS,
+  PRICE_CHECK_MAX_POLLS
+} from './productsStore';
 
 vi.mock('@/lib/api', () => ({
   products: {
@@ -35,6 +41,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cancelPriceChecks();
+  vi.useRealTimers();
   consoleErrorSpy.mockRestore();
 });
 
@@ -378,5 +386,110 @@ describe('offer actions', () => {
     await expect(
       useProductsStore.getState().unlinkOffer(1, 3)
     ).resolves.toEqual({ id: 7 });
+  });
+});
+
+describe('price check after adding a store', () => {
+  const detailWith = (lastCheckedAt) => ({
+    id: 1,
+    offers: [{ id: 9, last_checked_at: lastCheckedAt }]
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    productsApi.dashboardSummary.mockResolvedValue([]);
+  });
+
+  it('refetches the product until the new store has a price', async () => {
+    offersApi.add.mockResolvedValue({ id: 9 });
+    productsApi.get
+      .mockResolvedValueOnce(detailWith(null)) // Refresh right after adding.
+      .mockResolvedValueOnce(detailWith(null)) // First poll: not checked yet.
+      .mockResolvedValueOnce(detailWith(1000)); // Second poll: checked.
+
+    await useProductsStore
+      .getState()
+      .addOffer(1, { url: 'https://a.es/x', currency: 'EUR' });
+    expect(productsApi.dashboardSummary).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(PRICE_CHECK_POLL_MS);
+    expect(productsApi.get).toHaveBeenCalledTimes(2);
+    expect(productsApi.dashboardSummary).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(PRICE_CHECK_POLL_MS);
+    expect(productsApi.get).toHaveBeenCalledTimes(3);
+    expect(productsApi.dashboardSummary).toHaveBeenCalledTimes(2);
+    expect(
+      useProductsStore.getState().details[1].data.offers[0].last_checked_at
+    ).toBe(1000);
+
+    await vi.advanceTimersByTimeAsync(PRICE_CHECK_POLL_MS * 5);
+    expect(productsApi.get).toHaveBeenCalledTimes(3);
+  });
+
+  it('stops polling after the last attempt', async () => {
+    offersApi.add.mockResolvedValue({ id: 9 });
+    productsApi.get.mockResolvedValue(detailWith(null));
+
+    await useProductsStore
+      .getState()
+      .addOffer(1, { url: 'https://a.es/x', currency: 'EUR' });
+    await vi.advanceTimersByTimeAsync(
+      PRICE_CHECK_POLL_MS * (PRICE_CHECK_MAX_POLLS + 5)
+    );
+
+    expect(productsApi.get).toHaveBeenCalledTimes(1 + PRICE_CHECK_MAX_POLLS);
+  });
+
+  it('stops polling when the product is gone', async () => {
+    offersApi.add.mockResolvedValue({ id: 9 });
+    productsApi.get
+      .mockResolvedValueOnce(detailWith(null))
+      .mockRejectedValueOnce(new ApiErrorLike('Not found', 404));
+
+    await useProductsStore
+      .getState()
+      .addOffer(1, { url: 'https://a.es/x', currency: 'EUR' });
+    await vi.advanceTimersByTimeAsync(PRICE_CHECK_POLL_MS * 5);
+
+    expect(productsApi.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('create watches the new product until its first store has a price', async () => {
+    productsApi.create.mockResolvedValue({ id: 1, offers: [{ id: 9 }] });
+    productsApi.get.mockResolvedValue(detailWith(1000));
+
+    await useProductsStore.getState().create({ name: 'New' });
+    expect(productsApi.get).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(PRICE_CHECK_POLL_MS);
+    expect(productsApi.get).toHaveBeenCalledTimes(1);
+    expect(productsApi.dashboardSummary).toHaveBeenCalledTimes(2);
+    expect(useProductsStore.getState().details[1].data).toEqual(
+      detailWith(1000)
+    );
+  });
+
+  it('updateOffer waits for a price newer than the one before the edit', async () => {
+    useProductsStore.setState({
+      details: { 1: { status: 'success', error: null, data: detailWith(500) } }
+    });
+    offersApi.update.mockResolvedValue({ id: 9 });
+    productsApi.get
+      .mockResolvedValueOnce(detailWith(500)) // Refresh right after the edit.
+      .mockResolvedValueOnce(detailWith(500)) // First poll: old record.
+      .mockResolvedValueOnce(detailWith(1000)); // Second poll: new record.
+
+    await useProductsStore
+      .getState()
+      .updateOffer(1, 9, { url: 'https://b.es/x' });
+    await vi.advanceTimersByTimeAsync(PRICE_CHECK_POLL_MS);
+    expect(productsApi.dashboardSummary).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(PRICE_CHECK_POLL_MS);
+    expect(productsApi.dashboardSummary).toHaveBeenCalledTimes(2);
+    expect(
+      useProductsStore.getState().details[1].data.offers[0].last_checked_at
+    ).toBe(1000);
   });
 });

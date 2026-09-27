@@ -28,6 +28,49 @@ export const initialProductsState = {
 };
 
 /**
+ * After a store is added or its URL changes, the backend checks its price in
+ * the background. The product is refetched every `PRICE_CHECK_POLL_MS` until
+ * that store gets a new price record, at most `PRICE_CHECK_MAX_POLLS` times
+ * (3 minutes): a check that fails leaves no record, so polling just stops.
+ */
+export const PRICE_CHECK_POLL_MS = 5000;
+export const PRICE_CHECK_MAX_POLLS = 36;
+
+/** Pending poll timers, so `cancelPriceChecks` can stop every watch. */
+const priceCheckTimers = new Set();
+
+/** Stop every pending price-check poll (used by tests between cases). */
+export function cancelPriceChecks() {
+  priceCheckTimers.forEach((timer) => clearTimeout(timer));
+  priceCheckTimers.clear();
+}
+
+/**
+ * Wait for `ms`, as a cancellable poll timer.
+ * @param {number} ms
+ * @returns {Promise<boolean>} True when the wait ended, never settles if cancelled.
+ */
+function pollDelay(ms) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      priceCheckTimers.delete(timer);
+      resolve(true);
+    }, ms);
+    priceCheckTimers.add(timer);
+  });
+}
+
+/**
+ * Find an offer in a product detail record.
+ * @param {{ offers?: Array<{ id: number }> }|null|undefined} detail
+ * @param {number|string} offerId
+ * @returns {object|undefined}
+ */
+function findOffer(detail, offerId) {
+  return detail?.offers?.find((offer) => String(offer.id) === String(offerId));
+}
+
+/**
  * Zustand store for the products list (dashboard summary) and per-product
  * detail records, backed by `src/lib/api/products.js`.
  */
@@ -55,6 +98,8 @@ export const useProductsStore = create((set, get) => ({
   async create(data) {
     const created = await productsApi.create(data);
     await get().fetchSummary();
+    const offerId = created?.offers?.[0]?.id;
+    if (offerId !== undefined) get()._watchPriceCheck(created.id, offerId);
     return created;
   },
 
@@ -94,6 +139,7 @@ export const useProductsStore = create((set, get) => ({
     const offer = await offersApi.add(productId, data);
     await get().fetchSummary();
     await get()._refreshDetailSilently(productId);
+    get()._watchPriceCheck(productId, offer.id);
     return offer;
   },
 
@@ -105,9 +151,14 @@ export const useProductsStore = create((set, get) => ({
    * @returns {Promise<object>} The updated offer.
    */
   async updateOffer(productId, offerId, data) {
+    const previousCheckedAt = findOffer(
+      get().details[productId]?.data,
+      offerId
+    )?.last_checked_at;
     const offer = await offersApi.update(offerId, data);
     await get().fetchSummary();
     await get()._refreshDetailSilently(productId);
+    get()._watchPriceCheck(productId, offerId, previousCheckedAt ?? null);
     return offer;
   },
 
@@ -191,6 +242,42 @@ export const useProductsStore = create((set, get) => ({
           [id]: { status: 'error', error: toStoreError(err), data: null }
         }
       }));
+    }
+  },
+
+  /**
+   * Poll a product until one of its offers gets a price record newer than
+   * `previousCheckedAt` (the backend checks it in the background), then
+   * cache the new detail and refresh the dashboard summary. Stops silently
+   * when the product or offer is gone, or after `PRICE_CHECK_MAX_POLLS`.
+   * Not awaited by the actions that start it.
+   * @param {number|string} productId
+   * @param {number} offerId
+   * @param {number|null} [previousCheckedAt] - The offer's `last_checked_at`
+   *   before the change (null for a new offer).
+   */
+  async _watchPriceCheck(productId, offerId, previousCheckedAt = null) {
+    for (let poll = 0; poll < PRICE_CHECK_MAX_POLLS; poll += 1) {
+      await pollDelay(PRICE_CHECK_POLL_MS);
+      let data;
+      try {
+        data = await productsApi.get(productId);
+      } catch {
+        return;
+      }
+      const offer = findOffer(data, offerId);
+      if (!offer) return;
+      const checkedAt = offer.last_checked_at ?? null;
+      if (checkedAt !== null && checkedAt !== previousCheckedAt) {
+        set((state) => ({
+          details: {
+            ...state.details,
+            [productId]: { status: 'success', error: null, data }
+          }
+        }));
+        await get().fetchSummary();
+        return;
+      }
     }
   },
 
