@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { STALE_AFTER_DAYS, daysSinceCheck, isStale } from './staleness';
+import {
+  STALE_AFTER_DAYS,
+  daysSinceCheck,
+  isProductStale,
+  isStale,
+  oldestCheckedAt,
+  staleOffers
+} from './staleness';
 
 const DAY = 86400;
 const NOW = 1_800_000_000;
@@ -37,5 +44,27 @@ describe('isStale', () => {
   it('is true once the last check is at least the threshold old', () => {
     expect(isStale({ last_checked_at: NOW - 3 * DAY }, NOW)).toBe(true);
     expect(isStale({ last_checked_at: NOW - 10 * DAY }, NOW)).toBe(true);
+  });
+});
+
+describe('product staleness', () => {
+  const fresh = { id: 1, last_checked_at: NOW - 3600 };
+  const stale = { id: 2, last_checked_at: NOW - 4 * DAY };
+  const unchecked = { id: 3, last_checked_at: null };
+
+  it('is stale when any offer is stale', () => {
+    expect(isProductStale({ offers: [fresh, stale] }, NOW)).toBe(true);
+    expect(staleOffers({ offers: [fresh, stale] }, NOW)).toEqual([stale]);
+  });
+
+  it('is not stale when every offer is fresh or unchecked', () => {
+    expect(isProductStale({ offers: [fresh, unchecked] }, NOW)).toBe(false);
+  });
+
+  it('finds the oldest check', () => {
+    expect(oldestCheckedAt([fresh, stale, unchecked])).toBe(
+      stale.last_checked_at
+    );
+    expect(oldestCheckedAt([unchecked])).toBeNull();
   });
 });

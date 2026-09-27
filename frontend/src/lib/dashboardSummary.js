@@ -1,4 +1,4 @@
-import { isStale, nowInSeconds } from './staleness';
+import { isProductStale, nowInSeconds } from './staleness';
 
 /**
  * Pure computations for the dashboard's summary strip. Kept separate from
@@ -10,7 +10,8 @@ import { isStale, nowInSeconds } from './staleness';
  * @property {string|null|undefined} currency
  * @property {number|null|undefined} price_change_pct
  * @property {boolean|undefined} is_at_lowest
- * @property {number|null|undefined} last_checked_at
+ * @property {Array<{last_checked_at?: number|null}>} offers - The product's
+ *   stores; the product is stale when any of them is.
  */
 
 /**
@@ -82,6 +83,7 @@ export function computeDashboardSummary(products, now = nowInSeconds()) {
     })).sort((a, b) => a.currency.localeCompare(b.currency)),
     priceDropCount,
     atLowestCount,
-    staleCount: products.filter((product) => isStale(product, now)).length
+    staleCount: products.filter((product) => isProductStale(product, now))
+      .length
   };
 }

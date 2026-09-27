@@ -105,13 +105,30 @@ describe('computeDashboardSummary', () => {
     const now = 10 * 86400;
     const summary = computeDashboardSummary(
       [
-        product({ last_checked_at: now - 5 * 86400 }),
-        product({ last_checked_at: now - 3 * 86400 }),
-        product({ last_checked_at: now - 86400 }),
-        product({ last_checked_at: null })
+        product({ offers: [{ last_checked_at: now - 5 * 86400 }] }),
+        product({ offers: [{ last_checked_at: now - 3 * 86400 }] }),
+        product({ offers: [{ last_checked_at: now - 86400 }] }),
+        product({ offers: [{ last_checked_at: null }] })
       ],
       now
     );
     expect(summary.staleCount).toBe(2);
+  });
+});
+
+describe('computeDashboardSummary with several stores', () => {
+  it('counts a product once when two of its stores are stale', () => {
+    const now = 100 * 86400;
+    const old = now - 5 * 86400;
+    const { staleCount, itemCount } = computeDashboardSummary(
+      [
+        product({
+          offers: [{ last_checked_at: old }, { last_checked_at: old }]
+        })
+      ],
+      now
+    );
+    expect(itemCount).toBe(1);
+    expect(staleCount).toBe(1);
   });
 });

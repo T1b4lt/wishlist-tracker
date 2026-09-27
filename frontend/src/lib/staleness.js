@@ -46,3 +46,35 @@ export const isStale = (product, now = nowInSeconds()) => {
   const days = daysSinceCheck(product.last_checked_at, now);
   return days !== null && days >= STALE_AFTER_DAYS;
 };
+
+/**
+ * The offers (stores) of a product whose price is stale.
+ *
+ * @param {{ offers?: Array<{ last_checked_at?: number|null }> }} product
+ * @param {number} [now] - Reference Unix time in seconds; defaults to now.
+ * @returns {object[]}
+ */
+export const staleOffers = (product, now = nowInSeconds()) =>
+  (product?.offers ?? []).filter((offer) => isStale(offer, now));
+
+/**
+ * A product is stale when any of its offers is stale.
+ *
+ * @param {{ offers?: object[] }} product
+ * @param {number} [now]
+ * @returns {boolean}
+ */
+export const isProductStale = (product, now = nowInSeconds()) =>
+  staleOffers(product, now).length > 0;
+
+/**
+ * @param {Array<{ last_checked_at?: number|null }>} offers
+ * @returns {number|null} The oldest `last_checked_at` among the offers that
+ *   were checked, or `null` when none was.
+ */
+export const oldestCheckedAt = (offers) => {
+  const checks = (offers ?? [])
+    .map((offer) => offer.last_checked_at)
+    .filter((value) => typeof value === 'number');
+  return checks.length === 0 ? null : Math.min(...checks);
+};
