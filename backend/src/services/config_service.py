@@ -8,12 +8,15 @@ validation rules before persisting changes.
 from fastapi import HTTPException
 from sqlmodel import Session
 from src.core.config import (
+    DAILY_CHECK_REPORT_OPTIONS,
+    HIST_WINDOW_OPTIONS,
     get_config_value,
     get_daily_check_report,
     get_hist_window_size,
     set_config_value,
 )
 from src.schemas.config import ConfigResponse, ConfigUpdate
+from src.services.staleness import STALE_AFTER_DAYS
 
 
 def _compute_telegram_status(token: str | None, chat_id: str | None) -> str:
@@ -66,6 +69,9 @@ def get_all_config(session: Session) -> ConfigResponse:
         selected_language=get_config_value(session, "selected_language", "english"),
         google_api_key=google_key if google_key else None,
         telegram_status=_compute_telegram_status(token, chat_id),
+        hist_window_options=list(HIST_WINDOW_OPTIONS),
+        daily_check_report_options=list(DAILY_CHECK_REPORT_OPTIONS),
+        stale_after_days=STALE_AFTER_DAYS,
     )
 
 

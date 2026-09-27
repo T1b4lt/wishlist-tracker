@@ -76,23 +76,21 @@ def set_config_value(session: Session, key: str, value: str) -> None:
 def get_hist_window_size(session: Session) -> int:
     """Return the configured historical window size, in days.
 
-    A stored value that is not a positive integer (e.g. a corrupted row)
-    falls back to ``DEFAULT_HIST_WINDOW``. A positive value outside
-    ``HIST_WINDOW_OPTIONS`` (saved before the options were enforced) is
-    returned as-is.
+    A stored value that is not one of ``HIST_WINDOW_OPTIONS`` (e.g. a
+    corrupted row) falls back to ``DEFAULT_HIST_WINDOW``.
 
     Args:
         session (Session): The database session.
 
     Returns:
-        int: The window size in days.
+        int: One of ``HIST_WINDOW_OPTIONS``.
     """
     raw = get_config_value(session, "hist_window_size", str(DEFAULT_HIST_WINDOW))
     try:
         value = int(raw)
     except ValueError:
         return DEFAULT_HIST_WINDOW
-    return value if value > 0 else DEFAULT_HIST_WINDOW
+    return value if value in HIST_WINDOW_OPTIONS else DEFAULT_HIST_WINDOW
 
 
 def get_daily_check_report(session: Session) -> str:

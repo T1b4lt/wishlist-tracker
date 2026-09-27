@@ -63,11 +63,19 @@ def test_corrupt_hist_window_size_falls_back_to_default(client, session, stored)
     assert client.get("/config/").json()["hist_window_size"] == 60
 
 
-def test_off_list_stored_hist_window_size_is_used_as_is(session):
-    # Values saved before the options were enforced keep working.
+def test_off_list_stored_hist_window_size_falls_back_to_default(client, session):
     _store_hist_window_size(session, "45")
 
-    assert get_hist_window_size(session) == 45
+    assert get_hist_window_size(session) == 60
+    assert client.get("/config/").json()["hist_window_size"] == 60
+
+
+def test_config_exposes_the_options_and_the_stale_threshold(client):
+    data = client.get("/config/").json()
+
+    assert data["hist_window_options"] == [30, 60, 90, 180]
+    assert data["daily_check_report_options"] == ["off", "limit_days", "every_day"]
+    assert data["stale_after_days"] == 3
 
 
 def test_daily_check_report_defaults_to_limit_days(client):
