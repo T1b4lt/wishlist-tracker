@@ -140,12 +140,26 @@ clean:
 # Database
 # ---------------------------------------------------------------------------
 
-# Create the database tables and default config (no-op if it already exists)
+# Create the database, or back it up and apply pending migrations, plus default config
 [group('db')]
 db-init:
     cd {{ backend }} && uv run python -m src.setup_backend
 
-# Create the database and populate it with demo data
+# Alias of db-init: back up the database and apply the pending migrations
+[group('db')]
+db-migrate: db-init
+
+# Generate a migration from the changes to the models (review it before committing)
+[group('db')]
+db-revision message:
+    cd {{ backend }} && uv run alembic revision --autogenerate -m {{ quote(message) }}
+
+# Show the database revision and the migration history
+[group('db')]
+db-history:
+    cd {{ backend }} && uv run alembic current && uv run alembic history --indicate-current
+
+# Create a new database populated with demo data
 [group('db')]
 db-seed:
     cd {{ backend }} && uv run python -m src.setup_backend --populate

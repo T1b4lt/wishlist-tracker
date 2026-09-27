@@ -5,7 +5,9 @@ echo "Starting deployment entrypoint..."
 
 cd /app/backend
 
-# 1. Initialize the database (no-op if it already exists, e.g. in a mounted volume)
+# 1. Create the database, or upgrade it to this version's schema (backing it up
+#    to db/backups/ first). With `set -e`, a failed migration stops the
+#    container before the API or the cronjob touch the database.
 echo "Initializing database..."
 python -m src.setup_backend
 

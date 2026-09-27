@@ -1,20 +1,24 @@
 """
-Script to set up the backend database and optionally populate it with test data.
+Script to create or upgrade the backend database, optionally with test data.
+
+Creates the database if it is missing, or applies the pending schema
+migrations (backing it up first) if it exists, then adds any missing default
+configuration. The container entrypoint runs it on every start.
 
 Usage (from backend/ directory):
-    python -m src.setup_backend              # Create database and tables only
-    python -m src.setup_backend --populate   # Create database, tables, and add test data
+    python -m src.setup_backend              # Create or upgrade the database
+    python -m src.setup_backend --populate   # Also add test data (new database only)
     python -m src.setup_backend -p           # Short form
 """
 
 import argparse
-import os
 import random
 import sys
 from datetime import datetime, timedelta
 
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, create_engine, select
 from src.core.config import CONFIG_DEFAULTS
+from src.core.migrations import migrate_database
 from src.models.database_models import (
     Category,
     Config,
@@ -23,45 +27,6 @@ from src.models.database_models import (
     Product,
     Store,
 )
-
-
-def check_database_exists(db_path: str) -> bool:
-    """Check if the database file already exists.
-
-    Args:
-        db_path (str): Path to the database file.
-
-    Returns:
-        bool: True if the database file exists, False otherwise.
-    """
-    return os.path.exists(db_path)
-
-
-def create_database_and_tables(db_path: str, sqlite_url: str):
-    """Create the database file and all tables.
-
-    Args:
-        db_path (str): Path to the database file.
-        sqlite_url (str): SQLite database URL.
-
-    Returns:
-        engine: The SQLModel engine connected to the database.
-    """
-    print(f"Creating database at: {db_path}")
-
-    # Ensure the db directory exists
-    db_dir = os.path.dirname(db_path)
-    os.makedirs(db_dir, exist_ok=True)
-
-    # Create engine and tables
-    connect_args = {"check_same_thread": False}
-    engine = create_engine(sqlite_url, connect_args=connect_args)
-
-    print("Creating tables...")
-    SQLModel.metadata.create_all(engine)
-    print("✓ Tables created successfully")
-
-    return engine
 
 
 def initialize_config(engine):
@@ -209,27 +174,22 @@ def main():
 
     print("=== Backend Database Setup ===\n")
 
-    # Check if database already exists
-    if check_database_exists(db_path):
-        print(f"⚠ Database already exists at: {db_path}")
-        print(
-            "If you want to recreate it, please delete the existing database file first."
-        )
-        sys.exit(0)
-
     try:
-        # Create database and tables
-        engine = create_database_and_tables(db_path, sqlite_url)
+        created = migrate_database(db_path)
 
-        # Initialize configuration
+        engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
+        # Idempotent: also adds the config keys introduced by newer versions
         initialize_config(engine)
 
-        # Populate with test data if requested
         if args.populate:
-            populate_test_data(engine)
+            if created:
+                populate_test_data(engine)
+            else:
+                print("\n⚠ Test data not added: the database already existed.")
+                print("To start over with test data, run: just db-reset --populate")
 
         print("\n=== Setup completed successfully! ===")
-        if not args.populate:
+        if created and not args.populate:
             print("\nTo populate with test data, run:")
             print("  python -m src.setup_backend --populate")
         print("\nYou can now start the API with:")

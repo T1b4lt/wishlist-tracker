@@ -14,6 +14,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy import event
 from sqlmodel import Session, create_engine
+from src.core.migrations import is_up_to_date
 
 # --- Database path and engine ---
 
@@ -60,10 +61,11 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 @asynccontextmanager
 async def lifespan(app):
-    """FastAPI lifespan: verify the database file exists on startup.
+    """FastAPI lifespan: verify the database exists and is up to date.
 
-    If the file is missing the process exits with a helpful message
-    pointing the developer to the setup script.
+    If the file is missing, or its schema is behind the latest migration,
+    the process exits with a helpful message pointing the developer to the
+    setup script (which creates or upgrades it).
 
     Yields:
         None
@@ -76,6 +78,12 @@ async def lifespan(app):
         print("  python -m src.setup_backend --populate\n")
         sys.exit(1)
 
-    print(f"✓ Database found at '{SQLITE_FILE_NAME}'")
+    if not is_up_to_date(engine):
+        print(f"\n✗ ERROR: Database at '{SQLITE_FILE_NAME}' has pending migrations")
+        print("\nPlease upgrade it first (a backup is made automatically):")
+        print("  python -m src.setup_backend\n")
+        sys.exit(1)
+
+    print(f"✓ Database found at '{SQLITE_FILE_NAME}' (schema up to date)")
     yield
     # Shutdown hook – nothing needed for now.

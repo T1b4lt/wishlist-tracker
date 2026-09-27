@@ -4,7 +4,7 @@
 
 Tests use [pytest](https://docs.pytest.org) with FastAPI's `TestClient`,
 against an isolated in-memory SQLite database (never the real
-`db/database.db`).
+`db/database.db`; the migration tests use temporary files).
 
 ```bash
 uv run pytest
@@ -33,7 +33,10 @@ quota and the daily run summary, is covered by `test_cronjob.py`; the
 check of a store right after it is added or its URL changes by
 `test_offer_check.py`; the
 Telegram daily check report by `test_daily_report.py`; `GET /daily-check/` by
-`test_daily_check.py`; and the local-day helpers by `test_local_day.py`.
+`test_daily_check.py`; the local-day helpers by `test_local_day.py`; and
+the schema migrations (see [`migrations/README.md`](migrations/README.md)) by
+`test_migrations.py`, which runs them on throwaway database files and fails
+if they do not produce exactly the models' schema.
 
 Shared helpers to create products, offers and price history live in
 `tests/factories.py`.

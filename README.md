@@ -108,13 +108,17 @@ wishlist-tracker/
 │   ├── .env                          # Environment variables (API keys)
 │   ├── pyproject.toml                # Python project & dependencies
 │   ├── uv.lock                       # Locked dependency versions (uv)
+│   ├── alembic.ini                   # Alembic (schema migrations) configuration
+│   ├── migrations/                   # Alembic environment + versions/ (one script per schema change)
 │   ├── db/
-│   │   └── database.db               # SQLite database (auto-generated)
+│   │   ├── database.db               # SQLite database (auto-generated)
+│   │   └── backups/                  # Copies taken before each schema upgrade
 │   ├── tests/                        # pytest suite (in-memory SQLite, never db/database.db)
 │   └── src/
 │       ├── api.py                    # FastAPI app factory (routers + middleware)
 │       ├── core/                     # Shared infrastructure
 │       │   ├── database.py           # DB engine, session, SQLite pragma, lifespan
+│       │   ├── migrations.py         # Create/upgrade the DB schema (Alembic) with backups
 │       │   └── config.py             # Config get/set helpers & default values
 │       ├── models/
 │       │   └── database_models.py    # SQLModel table definitions
@@ -145,7 +149,7 @@ wishlist-tracker/
 │       ├── stagehand_utils.py        # Stagehand v4 AI scraping functions
 │       ├── telegram_utils.py         # Telegram notification helpers
 │       ├── product_status_cronjob.py # Daily price tracking, quota retries & daily report (every 10 min)
-│       └── setup_backend.py          # Database initialization script
+│       └── setup_backend.py          # Database create/upgrade script (+ demo data)
 │
 └── frontend/                         # React frontend (Vite)
     ├── index.html                    # HTML entry point
@@ -389,8 +393,8 @@ source .venv/bin/activate    # Linux/macOS
 # .venv\Scripts\activate     # Windows
 
 # Set up the database
-python -m src.setup_backend           # Create tables only
-python -m src.setup_backend --populate  # Create tables + demo data
+python -m src.setup_backend           # Create the database, or apply pending migrations
+python -m src.setup_backend --populate  # Create a new database with demo data
 
 # Start the API server
 uvicorn src.api:app --reload
@@ -401,7 +405,7 @@ uv run pytest
 
 The API will start at `http://localhost:8000`. See [`backend/README.md`](backend/README.md) for testing details.
 
-> The schema has no migrations. After pulling a change to the database models (such as the split of products into offers per store), recreate the database: `just db-clean && just db-init` (or `just db-seed` for demo data).
+> The schema is versioned with [Alembic](https://alembic.sqlalchemy.org) migrations. After pulling a change to the database models, run `just db-migrate`: it backs up the database to `backend/db/backups/` and upgrades it. The API refuses to start while migrations are pending. To change the models yourself, see [`backend/migrations/README.md`](backend/migrations/README.md).
 
 ### 3. Frontend Setup
 
@@ -450,8 +454,30 @@ Inside the container:
 - **Uvicorn** runs the API on `127.0.0.1:8000` (not exposed outside the container).
 - **Cron** runs the price tracking job every 10 minutes; its output appears in `docker logs wishlist-tracker-app`.
 - The **SQLite database** lives in `/app/backend/db`. It is created on first start and reused afterwards, so mount a volume there (as above) to keep your data across container upgrades.
+- On every start the entrypoint applies the pending **schema migrations** before starting the API and cron (see [Updating](#updating-to-a-new-version)).
 - If the API or Nginx process dies, the container exits so Docker can restart it.
 - **`TZ`** (default `UTC`) sets the local time used for the analysis hour and for "one check per product per day"; set it to your own time zone. `just docker-run` forwards your shell's `TZ`.
+
+#### Updating to a New Version
+
+Pull the new image and recreate the container with the same volume. On start, if the new version changes the database schema, the entrypoint copies the database to `db/backups/database-<old revision>-<date>.db` and then migrates it; the logs (`docker logs wishlist-tracker-app`) show both steps. If a migration fails, the container stops before the app starts.
+
+```bash
+docker pull your_user/wishlist-tracker:2.0.0
+docker rm -f wishlist-tracker-app
+docker run -d ... your_user/wishlist-tracker:2.0.0   # Same options and volume as before
+```
+
+To roll back, run the previous image tag and restore the backup it made (older versions do not understand a newer schema):
+
+```bash
+docker rm -f wishlist-tracker-app
+docker run --rm -v wishlist-tracker-db:/db alpine \
+  sh -c 'ls /db/backups && cp /db/backups/database-<revision>-<date>.db /db/database.db'
+docker run -d ... your_user/wishlist-tracker:1.0.0
+```
+
+Backups are never deleted automatically; remove old ones from `db/backups/` when you no longer need them.
 
 #### Publishing to Docker Hub
 
@@ -503,7 +529,7 @@ just docker-release 1.0.0  # Build and push the image to Docker Hub (also as lat
 | quality | `format`, `lint`, `check`, `pre-commit`                                      |
 | test    | `test`, `test-backend`, `test-frontend`, `test-e2e`                          |
 | dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
-| db      | `db-init`, `db-seed`, `db-clean`, `db-reset`                                 |
+| db      | `db-init`, `db-migrate`, `db-revision`, `db-history`, `db-seed`, `db-clean`, `db-reset` |
 | docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`, `docker-release` |
 
 > `just test-e2e` needs Chromium installed once: `cd frontend && npx playwright install chromium`.
