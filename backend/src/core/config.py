@@ -40,6 +40,11 @@ DAILY_CHECK_REPORT_OPTIONS = ("off", "limit_days", "every_day")
 DEFAULT_DAILY_CHECK_REPORT = "limit_days"
 DailyCheckReport = Literal["off", "limit_days", "every_day"]
 
+# AI provider behind Stagehand. Google AI Studio is the default.
+AI_PROVIDER_OPTIONS = ("google_ai_studio", "ollama")
+DEFAULT_AI_PROVIDER = "google_ai_studio"
+AIProviderName = Literal["google_ai_studio", "ollama"]
+
 # Default configuration values used during initial database setup
 # and as fallback when a key is missing.
 CONFIG_DEFAULTS = {
@@ -52,6 +57,9 @@ CONFIG_DEFAULTS = {
     "telegram_bot_chat_id": "",
     "selected_language": "english",
     "google_api_key": "",
+    "ai_provider": DEFAULT_AI_PROVIDER,
+    "ollama_url": "",
+    "ollama_model": "",
 }
 
 
@@ -122,3 +130,19 @@ def get_daily_check_report(session: Session) -> str:
     """
     value = get_config_value(session, "daily_check_report", DEFAULT_DAILY_CHECK_REPORT)
     return value if value in DAILY_CHECK_REPORT_OPTIONS else DEFAULT_DAILY_CHECK_REPORT
+
+
+def get_ai_provider(session: Session) -> str:
+    """Return the configured AI provider name.
+
+    A missing or unknown stored value falls back to ``DEFAULT_AI_PROVIDER``,
+    so installations from before the setting keep using Google AI Studio.
+
+    Args:
+        session (Session): The database session.
+
+    Returns:
+        str: One of ``AI_PROVIDER_OPTIONS``.
+    """
+    value = get_config_value(session, "ai_provider", DEFAULT_AI_PROVIDER)
+    return value if value in AI_PROVIDER_OPTIONS else DEFAULT_AI_PROVIDER

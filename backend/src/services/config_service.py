@@ -7,9 +7,12 @@ validation rules before persisting changes.
 
 from fastapi import HTTPException
 from sqlmodel import Session
+from src.ai.ollama import normalize_ollama_url
 from src.core.config import (
+    AI_PROVIDER_OPTIONS,
     DAILY_CHECK_REPORT_OPTIONS,
     HIST_WINDOW_OPTIONS,
+    get_ai_provider,
     get_config_value,
     get_daily_check_report,
     get_hist_window_size,
@@ -51,6 +54,8 @@ def get_all_config(session: Session) -> ConfigResponse:
     token = get_config_value(session, "telegram_bot_token")
     chat_id = get_config_value(session, "telegram_bot_chat_id")
     google_key = get_config_value(session, "google_api_key")
+    ollama_url = get_config_value(session, "ollama_url")
+    ollama_model = get_config_value(session, "ollama_model")
 
     return ConfigResponse(
         analysis_hour=int(get_config_value(session, "analysis_hour", "12")),
@@ -68,9 +73,13 @@ def get_all_config(session: Session) -> ConfigResponse:
         telegram_bot_chat_id=chat_id if chat_id else None,
         selected_language=get_config_value(session, "selected_language", "english"),
         google_api_key=google_key if google_key else None,
+        ai_provider=get_ai_provider(session),
+        ollama_url=ollama_url if ollama_url else None,
+        ollama_model=ollama_model if ollama_model else None,
         telegram_status=_compute_telegram_status(token, chat_id),
         hist_window_options=list(HIST_WINDOW_OPTIONS),
         daily_check_report_options=list(DAILY_CHECK_REPORT_OPTIONS),
+        ai_provider_options=list(AI_PROVIDER_OPTIONS),
         stale_after_days=STALE_AFTER_DAYS,
     )
 
@@ -136,6 +145,18 @@ def update_config(session: Session, config_update: ConfigUpdate) -> ConfigRespon
 
     if config_update.google_api_key is not None:
         set_config_value(session, "google_api_key", config_update.google_api_key)
+
+    if config_update.ai_provider is not None:
+        # Already restricted to AI_PROVIDER_OPTIONS by the schema (422).
+        set_config_value(session, "ai_provider", config_update.ai_provider)
+
+    if config_update.ollama_url is not None:
+        set_config_value(
+            session, "ollama_url", normalize_ollama_url(config_update.ollama_url)
+        )
+
+    if config_update.ollama_model is not None:
+        set_config_value(session, "ollama_model", config_update.ollama_model.strip())
 
     session.commit()
 

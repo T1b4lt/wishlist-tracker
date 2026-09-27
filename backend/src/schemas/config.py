@@ -1,7 +1,7 @@
 """Request and response schemas for application configuration."""
 
 from pydantic import BaseModel
-from src.core.config import DailyCheckReport, HistWindowSize
+from src.core.config import AIProviderName, DailyCheckReport, HistWindowSize
 
 
 class ConfigUpdate(BaseModel):
@@ -16,6 +16,9 @@ class ConfigUpdate(BaseModel):
     telegram_bot_chat_id: str | None = None
     selected_language: str | None = None
     google_api_key: str | None = None
+    ai_provider: AIProviderName | None = None
+    ollama_url: str | None = None
+    ollama_model: str | None = None
 
 
 class ConfigResponse(BaseModel):
@@ -35,7 +38,11 @@ class ConfigResponse(BaseModel):
     telegram_bot_chat_id: str | None
     selected_language: str
     google_api_key: str | None
+    ai_provider: AIProviderName
+    ollama_url: str | None
+    ollama_model: str | None
     telegram_status: str
     hist_window_options: list[int]
     daily_check_report_options: list[str]
+    ai_provider_options: list[str]
     stale_after_days: int

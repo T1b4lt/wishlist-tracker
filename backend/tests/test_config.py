@@ -102,3 +102,42 @@ def test_corrupt_daily_check_report_falls_back_to_default(client, session):
     session.commit()
 
     assert client.get("/config/").json()["daily_check_report"] == "limit_days"
+
+
+def test_ai_provider_defaults_to_google_ai_studio(client):
+    body = client.get("/config/").json()
+    assert body["ai_provider"] == "google_ai_studio"
+    assert body["ai_provider_options"] == ["google_ai_studio", "ollama"]
+    assert body["ollama_url"] is None
+    assert body["ollama_model"] is None
+
+
+def test_saves_the_ollama_settings_with_a_normalized_url(client):
+    body = client.patch(
+        "/config/",
+        json={
+            "ai_provider": "ollama",
+            "ollama_url": " 192.168.1.20:11434/ ",
+            "ollama_model": "qwen3.8:latest",
+        },
+    ).json()
+    assert body["ai_provider"] == "ollama"
+    assert body["ollama_url"] == "http://192.168.1.20:11434"
+    assert body["ollama_model"] == "qwen3.8:latest"
+
+
+def test_switching_provider_keeps_the_other_settings(client):
+    client.patch("/config/", json={"google_api_key": "key"})
+    client.patch("/config/", json={"ai_provider": "ollama"})
+    body = client.patch("/config/", json={"ai_provider": "google_ai_studio"}).json()
+    assert body["google_api_key"] == "key"
+
+
+def test_rejects_an_unknown_ai_provider(client):
+    assert client.patch("/config/", json={"ai_provider": "openai"}).status_code == 422
+
+
+def test_corrupt_ai_provider_falls_back_to_google(client, session):
+    session.add(Config(key="ai_provider", value="garbage"))
+    session.commit()
+    assert client.get("/config/").json()["ai_provider"] == "google_ai_studio"
