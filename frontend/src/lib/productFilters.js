@@ -9,8 +9,9 @@
  * @typedef {'name_asc'|'price_asc'|'price_desc'|'change_asc'|'priority_desc'|'stock'|'checked_desc'} SortKey
  *
  * @typedef {object} ProductFilters
- * @property {string} query - Free-text search over product and store name.
- * @property {number[]} stores - Selected store ids (empty = any store).
+ * @property {string} query - Free-text search over product and store names.
+ * @property {number[]} stores - Selected store ids; a product matches when any
+ *   of its stores is selected (empty = any store).
  * @property {number[]} categories - Selected category ids (empty = any).
  * @property {string[]} priorities - Selected lowercase priorities (empty = any).
  * @property {StockFilter} stock
@@ -18,11 +19,11 @@
  * @property {number|null} maxPrice - Inclusive upper bound on `current_price`.
  * @property {boolean} priceDrop - Only products whose `price_change_pct` is negative.
  * @property {boolean} atLowest - Only products the backend flags as at their lowest price (`is_at_lowest`).
- * @property {boolean} stale - Only products whose price has not been updated for a while (see `staleness.js`).
+ * @property {boolean} stale - Only products with a store whose price has not been updated for a while (see `staleness.js`).
  * @property {SortKey} sort
  */
 
-import { isStale, nowInSeconds } from './staleness';
+import { isProductStale, nowInSeconds, oldestCheckedAt } from './staleness';
 
 export const STOCK_FILTERS = ['all', 'in', 'out'];
 export const PRIORITIES = ['high', 'medium', 'low'];
@@ -79,16 +80,17 @@ export function filterProducts(products, filters, now = nowInSeconds()) {
   const query = normalizeText(filters.query.trim());
 
   return products.filter((product) => {
+    const offers = product.offers ?? [];
     if (
       query &&
       !normalizeText(product.name).includes(query) &&
-      !normalizeText(product.store_name).includes(query)
+      !offers.some((offer) => normalizeText(offer.store_name).includes(query))
     ) {
       return false;
     }
     if (
       filters.stores.length > 0 &&
-      !filters.stores.includes(product.store_id)
+      !offers.some((offer) => filters.stores.includes(offer.store_id))
     ) {
       return false;
     }
@@ -123,7 +125,7 @@ export function filterProducts(products, filters, now = nowInSeconds()) {
       return false;
     }
     if (filters.atLowest && product.is_at_lowest !== true) return false;
-    if (filters.stale && !isStale(product, now)) return false;
+    if (filters.stale && !isProductStale(product, now)) return false;
 
     return true;
   });
@@ -159,8 +161,9 @@ const COMPARATORS = {
       1
     ),
   stock: (a, b) => stockRank(a.is_in_stock) - stockRank(b.is_in_stock),
+  // A product is as fresh as its least recently checked store.
   checked_desc: (a, b) =>
-    compareNullable(a.last_checked_at, b.last_checked_at, -1)
+    compareNullable(oldestCheckedAt(a.offers), oldestCheckedAt(b.offers), -1)
 };
 
 const compareNames = (a, b) =>
@@ -171,8 +174,7 @@ const compareNames = (a, b) =>
 /**
  * @param {object[]} products
  * @param {SortKey|string} sort - Unknown keys fall back to name order.
- * @returns {object[]} A new, sorted array. Ties are broken by name so the
- *   same product tracked in several stores stays grouped together.
+ * @returns {object[]} A new, sorted array. Ties are broken by name.
  */
 export function sortProducts(products, sort) {
   const comparator = COMPARATORS[sort] ?? COMPARATORS.name_asc;
@@ -219,11 +221,13 @@ export function getFilterOptions(products) {
   const stores = new Map();
   const categories = new Map();
   for (const product of products) {
-    if (product.store_id != null && product.store_name) {
-      stores.set(product.store_id, {
-        id: product.store_id,
-        name: product.store_name
-      });
+    for (const offer of product.offers ?? []) {
+      if (offer.store_id != null && offer.store_name) {
+        stores.set(offer.store_id, {
+          id: offer.store_id,
+          name: offer.store_name
+        });
+      }
     }
     if (product.category_id != null) {
       categories.set(product.category_id, {

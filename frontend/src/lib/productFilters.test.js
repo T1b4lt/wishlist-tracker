@@ -10,7 +10,14 @@ import {
   sortProducts
 } from './productFilters';
 
-const product = (overrides = {}) => ({
+// Builds a single-store product; `store_id`, `store_name` and
+// `last_checked_at` go into its only offer.
+const product = ({
+  store_id = 1,
+  store_name = 'Amazon',
+  last_checked_at = 1000,
+  ...overrides
+} = {}) => ({
   id: 1,
   name: 'Wireless Headphones',
   category_id: 1,
@@ -22,10 +29,9 @@ const product = (overrides = {}) => ({
   is_at_lowest: false,
   is_in_stock: true,
   currency: 'EUR',
-  store_id: 1,
-  store_name: 'Amazon',
   recent_prices: [100],
-  last_checked_at: 1000,
+  best_offer_id: overrides.id ?? 1,
+  offers: [{ id: overrides.id ?? 1, store_id, store_name, last_checked_at }],
   ...overrides
 });
 
@@ -435,5 +441,71 @@ describe('URL round trip', () => {
         )
       )
     ).toEqual(filters({ stores: [2], priorities: ['high'] }));
+  });
+});
+
+describe('multi-store products', () => {
+  const now = 100 * 86400;
+  const product = {
+    id: 1,
+    name: 'Drum kit',
+    category_id: 1,
+    priority: 'High',
+    current_price: 600,
+    offers: [
+      {
+        id: 1,
+        store_id: 10,
+        store_name: 'Thomann',
+        last_checked_at: now - 3600
+      },
+      {
+        id: 2,
+        store_id: 20,
+        store_name: 'Amazon',
+        last_checked_at: now - 5 * 86400
+      }
+    ]
+  };
+
+  it('matches the store filter on any offer', () => {
+    const filters = { ...DEFAULT_FILTERS, stores: [20] };
+    expect(filterProducts([product], filters, now)).toEqual([product]);
+  });
+
+  it('matches the search on any store name', () => {
+    const filters = { ...DEFAULT_FILTERS, query: 'amazon' };
+    expect(filterProducts([product], filters, now)).toEqual([product]);
+  });
+
+  it('is outdated when any store is outdated', () => {
+    const filters = { ...DEFAULT_FILTERS, stale: true };
+    expect(filterProducts([product], filters, now)).toEqual([product]);
+  });
+
+  it('sorts by the oldest check among stores', () => {
+    const recent = {
+      ...product,
+      id: 2,
+      name: 'Amp',
+      offers: [
+        {
+          id: 3,
+          store_id: 10,
+          store_name: 'Thomann',
+          last_checked_at: now - 60
+        }
+      ]
+    };
+    expect(
+      sortProducts([product, recent], 'checked_desc').map((p) => p.id)
+    ).toEqual([2, 1]);
+  });
+
+  it('offers every store of every product as a filter option', () => {
+    expect(getFilterOptions([product]).stores).toEqual([
+      { id: 20, name: 'Amazon' },
+      { id: 10, name: 'Thomann' }
+    ]);
   });
 });
