@@ -1,8 +1,11 @@
 import {
-  computeRangeStats,
-  filterPriceHistoryByRange,
-  getCurrentRecord
-} from '../../src/lib/productHistory.js';
+  currentRecord,
+  detailFields,
+  offerStaleFields,
+  productStaleFields,
+  windowRecords,
+  windowStats
+} from './backendFields';
 import { DAY_SECONDS, nowSeconds } from './time';
 
 /** The `hist_window_size` of the config fixtures (`./config.js`), which the
@@ -35,7 +38,7 @@ export function buildHistoryPoint(overrides = {}) {
  * @returns {object}
  */
 export function buildOfferSummary(overrides = {}) {
-  return {
+  const offer = {
     id: 1,
     url: 'https://example.com/headphones',
     store_id: 1,
@@ -47,6 +50,7 @@ export function buildOfferSummary(overrides = {}) {
     last_checked_at: nowSeconds() - 3600,
     ...overrides
   };
+  return { ...offerStaleFields(offer.last_checked_at), ...offer };
 }
 
 /**
@@ -55,17 +59,17 @@ export function buildOfferSummary(overrides = {}) {
  * @returns {object}
  */
 export function buildOfferDetail(overrides = {}) {
-  return {
-    ...buildOfferSummary(),
-    price_history: [
+  const {
+    price_history = [
       buildHistoryPoint({
         price: 219.99,
         timestamp: nowSeconds() - 5 * DAY_SECONDS
       }),
       buildHistoryPoint({ price: 199.99, timestamp: nowSeconds() - 3600 })
     ],
-    ...overrides
-  };
+    ...rest
+  } = overrides;
+  return { ...buildOfferSummary(rest), price_history };
 }
 
 /**
@@ -74,7 +78,7 @@ export function buildOfferDetail(overrides = {}) {
  * @returns {object}
  */
 export function buildDashboardProduct(overrides = {}) {
-  return {
+  const product = {
     id: 1,
     name: 'Wireless Headphones',
     category_id: 1,
@@ -91,6 +95,7 @@ export function buildDashboardProduct(overrides = {}) {
     offers: [buildOfferSummary()],
     ...overrides
   };
+  return { ...productStaleFields(product.offers), ...product };
 }
 
 /**
@@ -99,7 +104,7 @@ export function buildDashboardProduct(overrides = {}) {
  * @returns {object}
  */
 export function buildProductDetail(overrides = {}) {
-  return {
+  const detail = {
     id: 1,
     name: 'Wireless Headphones',
     priority: 'High',
@@ -110,6 +115,11 @@ export function buildProductDetail(overrides = {}) {
     currency: 'USD',
     offers: [buildOfferDetail()],
     ...overrides
+  };
+  return {
+    ...productStaleFields(detail.offers),
+    ...detailFields(detail.offers),
+    ...detail
   };
 }
 
@@ -218,9 +228,8 @@ function buildHistorySeries(seed, points = 180) {
  * `count` dashboard-summary rows, each backed by its own realistic
  * `historyPoints`-long price history (`buildHistorySeries`): `current_price`,
  * `price_change_pct`, `is_in_stock`, `is_at_lowest` and `recent_prices` are
- * all derived from that same series with the frontend's mirror of the
- * backend formulas (`src/lib/productHistory.js`, pinned by
- * `contracts/price-stats-cases.json`) over a `SUMMARY_WINDOW_DAYS` window,
+ * all derived from that same series with `./backendFields.js` (a test-only
+ * stand-in of the backend formulas) over a `SUMMARY_WINDOW_DAYS` window,
  * so they are internally consistent the way a real backend response would
  * be. Alternates category/priority so the list is
  * not visually uniform, and alternates the underlying trend direction (see
@@ -236,13 +245,9 @@ export function buildManyProducts(count = 25, { historyPoints = 180 } = {}) {
   const priorities = ['High', 'Medium', 'Low'];
   return Array.from({ length: count }, (_, i) => {
     const history = buildHistorySeries(i, historyPoints);
-    const current = getCurrentRecord(history);
-    const window = filterPriceHistoryByRange(
-      history,
-      String(SUMMARY_WINDOW_DAYS),
-      nowSeconds()
-    );
-    const stats = computeRangeStats(window, current);
+    const current = currentRecord(history);
+    const window = windowRecords(history, SUMMARY_WINDOW_DAYS);
+    const stats = windowStats(window, current);
     return buildDashboardProduct({
       id: i + 1,
       name: `Product ${String(i + 1).padStart(2, '0')}`,
@@ -251,7 +256,7 @@ export function buildManyProducts(count = 25, { historyPoints = 180 } = {}) {
       category_color: i % 2 === 0 ? '#3B82F6' : '#22C55E',
       priority: priorities[i % priorities.length],
       current_price: current.price,
-      price_change_pct: stats.currentVsAverage,
+      price_change_pct: stats.priceChangePct,
       is_in_stock: current.is_in_stock,
       is_at_lowest: stats.isAtLowest,
       recent_prices: window.map((point) => point.price),

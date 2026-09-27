@@ -19,6 +19,9 @@ export function buildConfig(overrides = {}) {
     selected_language: 'english',
     google_api_key: null,
     telegram_status: 'not_configured',
+    hist_window_options: [30, 60, 90, 180],
+    daily_check_report_options: ['off', 'limit_days', 'every_day'],
+    stale_after_days: 3,
     ...overrides
   };
 }

@@ -1,5 +1,6 @@
 import { API_URL } from './constants';
 import { buildDailyCheck } from '../fixtures/dailyCheck';
+import { detailFields } from '../fixtures/backendFields';
 
 const API_ORIGIN = new URL(API_URL).origin;
 
@@ -271,7 +272,9 @@ export class ApiMock {
           store_has_favicon: store?.has_favicon ?? false,
           current_price: null,
           is_in_stock: null,
-          last_checked_at: null
+          last_checked_at: null,
+          days_since_check: null,
+          is_stale: false
         };
 
         this.products = [
@@ -290,7 +293,9 @@ export class ApiMock {
             is_in_stock: null,
             recent_prices: [],
             best_offer_id: null,
-            offers: [offer]
+            offers: [offer],
+            is_stale: false,
+            stale_days: null
           }
         ];
         this.details[id] = {
@@ -302,6 +307,11 @@ export class ApiMock {
           category_color: category?.color ?? '#94A3B8',
           description: body.description,
           currency: body.offer.currency,
+          is_stale: false,
+          stale_days: null,
+          ...detailFields([{ ...offer, price_history: [] }], {
+            defaultRange: String(this.config?.hist_window_size ?? 60)
+          }),
           offers: [{ ...offer, price_history: [] }]
         };
         const { offer: _offer, ...shared } = body;
