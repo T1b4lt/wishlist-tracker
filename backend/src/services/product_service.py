@@ -24,6 +24,7 @@ from src.schemas.product import (
     ProductDetailResponse,
     ProductInfoRequest,
     ProductInfoResponse,
+    ProductMergeRequest,
     ProductResponse,
     ProductUpdate,
 )
@@ -347,6 +348,50 @@ def get_detail(session: Session, product_id: int) -> ProductDetailResponse:
             for offer in offers
         ],
     )
+
+
+# --- Merge ---
+
+
+_SHARED_FIELDS = ("name", "priority", "category_id", "description")
+
+
+def merge(
+    session: Session, target_id: int, payload: ProductMergeRequest
+) -> ProductDetailResponse:
+    """Merge another product into ``target_id``.
+
+    Every source offer (with its history) moves to the target, the target
+    takes the source's shared fields when ``keep == "source"``, and the
+    source product is deleted.
+
+    Raises:
+        HTTPException: 400 when merging a product with itself, 404 for an
+            unknown product, 409 for another currency or a shared URL.
+    """
+    if payload.source_product_id == target_id:
+        raise HTTPException(
+            status_code=400, detail="Cannot merge a product with itself"
+        )
+    target = _get_or_404(session, target_id)
+    source = _get_or_404(session, payload.source_product_id)
+    source_offers = offer_service.offers_of(session, source.id)
+    for offer in source_offers:
+        offer_service.ensure_same_currency(session, target.id, offer.currency)
+        offer_service.ensure_unique_url(session, target.id, offer.url)
+
+    for offer in source_offers:
+        offer.product_id = target.id
+        session.add(offer)
+    if payload.keep == "source":
+        for field in _SHARED_FIELDS:
+            setattr(target, field, getattr(source, field))
+        session.add(target)
+    # Move the offers before deleting the source, or the cascade takes them.
+    session.flush()
+    session.delete(source)
+    session.commit()
+    return get_detail(session, target.id)
 
 
 # --- AI extraction ---

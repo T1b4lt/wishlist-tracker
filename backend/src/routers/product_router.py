@@ -10,6 +10,7 @@ from src.schemas.product import (
     ProductDetailResponse,
     ProductInfoRequest,
     ProductInfoResponse,
+    ProductMergeRequest,
     ProductResponse,
     ProductUpdate,
 )
@@ -64,6 +65,14 @@ def update_product(
 ) -> ProductResponse:
     """Partially update a product."""
     return product_service.update(session, product_id, payload)
+
+
+@router.post("/products/{product_id}/merge")
+def merge_products(
+    product_id: int, payload: ProductMergeRequest, session: SessionDep
+) -> ProductDetailResponse:
+    """Merge another product (and its stores) into this one."""
+    return product_service.merge(session, product_id, payload)
 
 
 @router.delete("/products/{product_id}")
