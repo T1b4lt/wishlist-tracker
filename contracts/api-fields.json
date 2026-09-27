@@ -41,7 +41,11 @@
     "currency",
     "offers",
     "is_stale",
-    "stale_days"
+    "stale_days",
+    "best_offer_id",
+    "is_in_stock",
+    "default_range",
+    "ranges"
   ],
   "OfferDetail": [
     "id",

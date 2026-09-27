@@ -3,6 +3,7 @@
 from typing import Literal
 
 from pydantic import BaseModel
+from src.core.config import RangeKey
 from src.schemas.store import StoreResponse
 
 
@@ -143,11 +144,32 @@ class ProductDashboardSummary(BaseModel):
     stale_days: int | None
 
 
-class ProductDetailResponse(BaseModel):
-    """Full product detail with every offer and its history.
+class LowestPrice(BaseModel):
+    """The cheapest in-stock price of any store inside a range."""
 
-    Range statistics are computed by the frontend. Field names are pinned
-    by ``contracts/api-fields.json``.
+    price: float
+    timestamp: int
+    offer_id: int
+
+
+class RangeStats(BaseModel):
+    """Statistics of one range of the product detail's chart.
+
+    ``average`` and ``price_change_pct`` follow ``src/services/price_stats.py``
+    over the best offer's history; ``lowest`` looks at every store
+    (``best_offer.lowest_across_offers``).
+    """
+
+    key: RangeKey
+    window_start: int | None
+    average: float | None
+    price_change_pct: float | None
+    lowest: LowestPrice | None
+
+
+class ProductDetailResponse(BaseModel):
+    """Full product detail with every offer and its history, plus the
+    precomputed statistics of every chart range.
     """
 
     id: int
@@ -161,3 +183,7 @@ class ProductDetailResponse(BaseModel):
     offers: list[OfferDetail]
     is_stale: bool
     stale_days: int | None
+    best_offer_id: int | None
+    is_in_stock: bool | None
+    default_range: RangeKey
+    ranges: list[RangeStats]

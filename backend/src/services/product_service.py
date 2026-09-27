@@ -12,9 +12,15 @@ from collections import defaultdict
 from fastapi import HTTPException
 from sqlalchemy import and_, func
 from sqlmodel import Session, col, select
-from src.core.config import get_config_value, get_hist_window_size
+from src.core.config import (
+    RANGE_KEYS,
+    get_config_value,
+    get_hist_window_size,
+    range_window_days,
+)
 from src.models.database_models import Category, Offer, OfferHist, Product, Store
 from src.schemas.product import (
+    LowestPrice,
     OfferDetail,
     OfferHistResponse,
     OfferResponse,
@@ -27,10 +33,20 @@ from src.schemas.product import (
     ProductMergeRequest,
     ProductResponse,
     ProductUpdate,
+    RangeStats,
 )
 from src.services import offer_service, store_service
-from src.services.best_offer import OfferHistory, compute_product_offer_stats
-from src.services.price_stats import SECONDS_PER_DAY, compute_window_stats
+from src.services.best_offer import (
+    OfferHistory,
+    compute_product_offer_stats,
+    current_record,
+    lowest_across_offers,
+)
+from src.services.price_stats import (
+    SECONDS_PER_DAY,
+    compute_window_stats,
+    filter_window,
+)
 from src.services.staleness import days_since_check, is_stale, product_stale_days
 from src.stagehand_utils import get_product_info
 
@@ -318,10 +334,57 @@ def get_dashboard_summary(
     return summary_list
 
 
+def _range_stats(
+    offers: list[OfferHistory], best_offer_id: int | None, now: int
+) -> list[RangeStats]:
+    """Compute the statistics of every range of the product detail.
+
+    Args:
+        offers (list[OfferHistory]): Every offer with its full history.
+        best_offer_id (int | None): The offer that values the product.
+        now (int): Reference Unix timestamp (seconds).
+
+    Returns:
+        list[RangeStats]: One entry per ``RANGE_KEYS`` key, in order.
+    """
+    best_history = next(
+        (offer.history for offer in offers if offer.offer_id == best_offer_id), []
+    )
+    best_current = current_record(best_history)
+    ranges = []
+    for key in RANGE_KEYS:
+        window_days = range_window_days(key)
+        stats = compute_window_stats(
+            filter_window(best_history, window_days, now), best_current
+        )
+        lowest = lowest_across_offers(offers, window_days, now)
+        ranges.append(
+            RangeStats(
+                key=key,
+                window_start=(
+                    None if window_days is None else now - window_days * SECONDS_PER_DAY
+                ),
+                average=stats.average,
+                price_change_pct=stats.price_change_pct,
+                lowest=(
+                    LowestPrice(
+                        price=lowest.price,
+                        timestamp=lowest.timestamp,
+                        offer_id=lowest.offer_id,
+                    )
+                    if lowest
+                    else None
+                ),
+            )
+        )
+    return ranges
+
+
 def get_detail(
     session: Session, product_id: int, now: int | None = None
 ) -> ProductDetailResponse:
-    """Build the full product detail: every offer with its whole history.
+    """Build the full product detail: every offer with its whole history, the
+    best offer and the precomputed statistics of every chart range.
 
     Args:
         session (Session): Active database session.
@@ -345,6 +408,11 @@ def get_detail(
     ).all():
         histories[row.offer_id].append(row)
 
+    offer_histories = [
+        OfferHistory(offer_id=offer.id, history=histories[offer.id]) for offer in offers
+    ]
+    # Neither the best offer nor the product's stock depends on the window.
+    offer_stats = compute_product_offer_stats(offer_histories, None, now)
     stale_days = product_stale_days(
         [
             histories[offer.id][-1].timestamp if histories[offer.id] else None
@@ -383,6 +451,10 @@ def get_detail(
         ],
         is_stale=stale_days is not None,
         stale_days=stale_days,
+        best_offer_id=offer_stats.best_offer_id,
+        is_in_stock=offer_stats.is_in_stock,
+        default_range=str(get_hist_window_size(session)),
+        ranges=_range_stats(offer_histories, offer_stats.best_offer_id, now),
     )
 
 

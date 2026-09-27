@@ -10,16 +10,32 @@ from typing import Literal
 from sqlmodel import Session, select
 from src.models.database_models import Config
 
-# Historical window options, in days. Mirrored by the frontend
-# (``frontend/src/lib/histWindow.js``) and pinned for both sides by
-# ``contracts/hist-window.json``.
+# Historical window options, in days.
 HIST_WINDOW_OPTIONS = (30, 60, 90, 180)
 DEFAULT_HIST_WINDOW = 60
 HistWindowSize = Literal[30, 60, 90, 180]
 
-# Telegram daily check report modes. Mirrored by the frontend
-# (``frontend/src/lib/dailyCheckReport.js``) and pinned for both sides by
-# ``contracts/daily-check-report.json``.
+# Ranges of the product detail's chart and stats: every historical window
+# option plus the full history. Derived from ``HIST_WINDOW_OPTIONS`` so a new
+# option adds a range.
+RANGE_ALL = "all"
+RANGE_KEYS = (*(str(days) for days in HIST_WINDOW_OPTIONS), RANGE_ALL)
+RangeKey = Literal[RANGE_KEYS]
+
+
+def range_window_days(key: str) -> int | None:
+    """Return the window length of a range key (``None`` for the full history).
+
+    Args:
+        key (str): One of ``RANGE_KEYS``.
+
+    Returns:
+        int | None: The window in days, or ``None`` for ``RANGE_ALL``.
+    """
+    return None if key == RANGE_ALL else int(key)
+
+
+# Telegram daily check report modes.
 DAILY_CHECK_REPORT_OPTIONS = ("off", "limit_days", "every_day")
 DEFAULT_DAILY_CHECK_REPORT = "limit_days"
 DailyCheckReport = Literal["off", "limit_days", "every_day"]
