@@ -453,6 +453,18 @@ Inside the container:
 - If the API or Nginx process dies, the container exits so Docker can restart it.
 - **`TZ`** (default `UTC`) sets the local time used for the analysis hour and for "one check per product per day"; set it to your own time zone. `just docker-run` forwards your shell's `TZ`.
 
+#### Publishing to Docker Hub
+
+`just docker-release [version]` runs [`scripts/docker-release.sh`](scripts/docker-release.sh), which builds the image and pushes it to Docker Hub tagged both as `<version>` and as `latest`. Without a version, the short git commit hash is used. It refuses to release uncommitted changes (override with `ALLOW_DIRTY=1`).
+
+```bash
+export DOCKERHUB_USERNAME=your_user
+export DOCKERHUB_TOKEN=dckr_pat_...   # Personal access token (Read & Write); optional if already `docker login`-ed
+just docker-release 1.0.0             # Pushes your_user/wishlist-tracker:1.0.0 and :latest
+```
+
+Optional variables: `DOCKERHUB_REPO` (default `$DOCKERHUB_USERNAME/wishlist-tracker`) and `DOCKER_PLATFORMS` (default `linux/amd64`, e.g. `linux/amd64,linux/arm64` for a multi-arch image).
+
 ### 5. Environment Variables
 
 Create a `backend/.env` file with your credentials:
@@ -482,6 +494,7 @@ just test           # Run the backend (pytest) and frontend (Vitest) test suites
 just test-e2e       # Run the frontend Playwright e2e smoke tests (mocked API)
 just db-reset --populate  # Delete and recreate the database with demo data
 just docker-build   # Build the Docker image (then: just docker-run)
+just docker-release 1.0.0  # Build and push the image to Docker Hub (also as latest)
 ```
 
 | Group   | Recipes                                                                      |
@@ -491,7 +504,7 @@ just docker-build   # Build the Docker image (then: just docker-run)
 | test    | `test`, `test-backend`, `test-frontend`, `test-e2e`                          |
 | dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
 | db      | `db-init`, `db-seed`, `db-clean`, `db-reset`                                 |
-| docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`                   |
+| docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`, `docker-release` |
 
 > `just test-e2e` needs Chromium installed once: `cd frontend && npx playwright install chromium`.
 > It is not part of the default `just test` (which stays fast, unit-tests-only) since it needs
