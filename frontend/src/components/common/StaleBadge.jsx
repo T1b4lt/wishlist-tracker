@@ -19,12 +19,15 @@ import {
  * @param {object} props
  * @param {number|null|undefined} props.lastCheckedAt - Unix seconds of the
  *   latest price record (`last_checked_at`).
+ * @param {string[]} [props.storeNames] - Stale stores, listed in the
+ *   tooltip for a product tracked in several stores.
  * @param {number} [props.now] - Reference Unix time in seconds; defaults to
  *   now (set in tests for deterministic output).
  * @param {object} [rest] - Forwarded to the underlying `Badge`.
  */
 export const StaleBadge = ({
   lastCheckedAt,
+  storeNames,
   now = nowInSeconds(),
   ...rest
 }) => {
@@ -33,8 +36,14 @@ export const StaleBadge = ({
 
   if (days === null || days < STALE_AFTER_DAYS) return null;
 
+  const hint = t('common.status.staleHint');
+  const content =
+    storeNames && storeNames.length > 0
+      ? `${t('common.status.staleStores', { stores: storeNames.join(', ') })} ${hint}`
+      : hint;
+
   return (
-    <Tooltip content={t('common.status.staleHint')} showArrow>
+    <Tooltip content={content} showArrow>
       <Badge
         variant="subtle"
         colorPalette="orange"

@@ -27,7 +27,7 @@ test.describe('Dashboard', () => {
     await page.goto('/');
 
     await expect(
-      page.getByText(/Gemini limit reached at .+ with 15 products left/)
+      page.getByText(/Gemini limit reached at .+ with 15 prices left/)
     ).toBeVisible();
     await expect(
       page.getByText('12 still pending, retrying every 10 minutes.')

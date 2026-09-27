@@ -24,7 +24,8 @@
       "outOfStock": "Out of stock",
       "stale_one": "No updates for {{count}} day",
       "stale_other": "No updates for {{count}} days",
-      "staleHint": "The price could not be checked lately. The store page may be down, the product may have been removed, or the page may be blocking the agent."
+      "staleHint": "The price could not be checked lately. The store page may be down, the product may have been removed, or the page may be blocking the agent.",
+      "staleStores": "Not updated in: {{stores}}."
     },
     "priority": {
       "high": "High",
@@ -240,11 +241,18 @@
         }
       },
       "dailyCheck": {
-        "limitReached_one": "Gemini limit reached at {{time}} with {{count}} product left to check today.",
-        "limitReached_other": "Gemini limit reached at {{time}} with {{count}} products left to check today.",
+        "limitReached_one": "Gemini limit reached at {{time}} with {{count}} price left to check today.",
+        "limitReached_other": "Gemini limit reached at {{time}} with {{count}} prices left to check today.",
         "stillPending_one": "{{count}} still pending, retrying every 10 minutes.",
         "stillPending_other": "{{count}} still pending, retrying every 10 minutes.",
-        "allChecked": "Gemini limit reached at {{time}}; all products were checked by retrying."
+        "allChecked": "Gemini limit reached at {{time}}; all prices were checked by retrying."
+      },
+      "offers": {
+        "moreStores_one": "+{{count}} store",
+        "moreStores_other": "+{{count}} stores",
+        "moreStoresShort": "+{{count}}",
+        "bestPrice": "Best price",
+        "notChecked": "Not checked yet"
       }
     },
     "categories": {

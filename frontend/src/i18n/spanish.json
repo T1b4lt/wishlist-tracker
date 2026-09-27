@@ -24,7 +24,8 @@
       "outOfStock": "Sin stock",
       "stale_one": "Sin actualizar desde hace {{count}} día",
       "stale_other": "Sin actualizar desde hace {{count}} días",
-      "staleHint": "No se ha podido comprobar el precio últimamente. Puede que la tienda esté caída, que el producto se haya retirado o que la página esté bloqueando al agente."
+      "staleHint": "No se ha podido comprobar el precio últimamente. Puede que la tienda esté caída, que el producto se haya retirado o que la página esté bloqueando al agente.",
+      "staleStores": "Sin actualizar en: {{stores}}."
     },
     "priority": {
       "high": "Alta",
@@ -240,11 +241,18 @@
         }
       },
       "dailyCheck": {
-        "limitReached_one": "Límite de Gemini alcanzado a las {{time}} con {{count}} producto pendiente de revisar hoy.",
-        "limitReached_other": "Límite de Gemini alcanzado a las {{time}} con {{count}} productos pendientes de revisar hoy.",
+        "limitReached_one": "Límite de Gemini alcanzado a las {{time}} con {{count}} precio pendiente de revisar hoy.",
+        "limitReached_other": "Límite de Gemini alcanzado a las {{time}} con {{count}} precios pendientes de revisar hoy.",
         "stillPending_one": "Queda {{count}} pendiente, se reintenta cada 10 minutos.",
         "stillPending_other": "Quedan {{count}} pendientes, se reintenta cada 10 minutos.",
-        "allChecked": "Límite de Gemini alcanzado a las {{time}}; todos los productos se revisaron con reintentos."
+        "allChecked": "Límite de Gemini alcanzado a las {{time}}; todos los precios se revisaron con reintentos."
+      },
+      "offers": {
+        "moreStores_one": "+{{count}} tienda",
+        "moreStores_other": "+{{count}} tiendas",
+        "moreStoresShort": "+{{count}}",
+        "bestPrice": "Mejor precio",
+        "notChecked": "Sin revisar todavía"
       }
     },
     "categories": {

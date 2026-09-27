@@ -39,7 +39,7 @@ describe('DailyCheckNotice', () => {
 
     expect(
       await screen.findByText(
-        'Gemini limit reached at 12:03 with 15 products left to check today.'
+        'Gemini limit reached at 12:03 with 15 prices left to check today.'
       )
     ).toBeInTheDocument();
     expect(
@@ -53,7 +53,7 @@ describe('DailyCheckNotice', () => {
 
     expect(
       await screen.findByText(
-        'Gemini limit reached at 12:03; all products were checked by retrying.'
+        'Gemini limit reached at 12:03; all prices were checked by retrying.'
       )
     ).toBeInTheDocument();
   });

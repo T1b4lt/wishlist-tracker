@@ -9,14 +9,19 @@ import { ProductRowActions } from './ProductRowActions';
 // one live Chakra `Menu` open-and-select per test file/module is flaky in
 // jsdom), so "Open store page" gets its own file rather than becoming a
 // second one there.
+// Tracked in two stores; the second one is the best offer.
 const PRODUCT = {
   id: 3,
   name: 'Standing Desk',
-  url: 'https://example.com/standing-desk'
+  best_offer_id: 8,
+  offers: [
+    { id: 7, url: 'https://example.com/standing-desk' },
+    { id: 8, url: 'https://other.example/standing-desk' }
+  ]
 };
 
 describe('ProductRowActions "Open store page"', () => {
-  it('opens the product url in a new tab, without bubbling to the row/card', async () => {
+  it('opens the best offer url in a new tab, without bubbling to the row/card', async () => {
     const user = userEvent.setup();
     const windowOpen = vi.spyOn(window, 'open').mockImplementation(() => {});
     const outerOnClick = vi.fn();
@@ -37,7 +42,7 @@ describe('ProductRowActions "Open store page"', () => {
     );
 
     expect(windowOpen).toHaveBeenCalledWith(
-      PRODUCT.url,
+      'https://other.example/standing-desk',
       '_blank',
       'noopener,noreferrer'
     );

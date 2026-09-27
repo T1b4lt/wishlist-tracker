@@ -11,12 +11,17 @@ import {
   StoreFavicon
 } from '@/components/common';
 import { formatPrice } from '@/lib/format';
+import { findBestOfferSummary } from '@/lib/bestOffer';
+import { oldestCheckedAt, staleOffers } from '@/lib/staleness';
+import { OfferStores } from './OfferStores';
 import { ProductRowActions } from './ProductRowActions';
 import { useRowActivation } from './useRowActivation';
 
 const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
   const { t } = useTranslation();
   const activation = useRowActivation(`/product/${product.id}`);
+  const best = findBestOfferSummary(product);
+  const stale = staleOffers(product);
 
   return (
     <AnimatedListItem as="li" delay={index * staggerStepSeconds}>
@@ -38,19 +43,15 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
           <VStack align="flex-start" gap={1.5} flex={1} minW={0}>
             <HStack gap={2} minW={0}>
               <StoreFavicon
-                storeId={product.store_id}
-                hasFavicon={product.store_has_favicon}
+                storeId={best?.store_id ?? null}
+                hasFavicon={Boolean(best?.store_has_favicon)}
               />
               <Text fontWeight="medium" color="fg">
                 {product.name}
               </Text>
             </HStack>
             <HStack gap={2} wrap="wrap">
-              {product.store_name && (
-                <Text textStyle="xs" color="fg.muted">
-                  {product.store_name}
-                </Text>
-              )}
+              <OfferStores product={product} locale={locale} />
               <CategoryTag
                 name={product.category_name}
                 color={product.category_color}
@@ -64,7 +65,14 @@ const ProductCard = ({ product, index, locale, onEdit, onDelete }) => {
             </Flex>
             <HStack gap={2} wrap="wrap">
               <StockStatus inStock={product.is_in_stock} />
-              <StaleBadge lastCheckedAt={product.last_checked_at} />
+              <StaleBadge
+                lastCheckedAt={oldestCheckedAt(stale)}
+                storeNames={
+                  product.offers.length > 1
+                    ? stale.map((offer) => offer.store_name)
+                    : undefined
+                }
+              />
             </HStack>
           </VStack>
           <ProductRowActions

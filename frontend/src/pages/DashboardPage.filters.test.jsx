@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
+import { singleStoreProduct } from '@/test/products';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { products as productsApi, config as configApi } from '@/lib/api';
 import { useProductsStore, initialProductsState } from '@/stores/productsStore';
@@ -22,22 +23,23 @@ vi.mock('@/lib/api', () => ({
   }
 }));
 
-const product = (overrides) => ({
-  url: 'https://example.com',
-  category_id: 1,
-  category_name: 'Drones',
-  category_color: '#3B82F6',
-  priority: 'High',
-  price_change_pct: 0,
-  is_at_lowest: false,
-  is_in_stock: true,
-  currency: 'EUR',
-  store_domain: null,
-  store_has_favicon: false,
-  recent_prices: [],
-  last_checked_at: null,
-  ...overrides
-});
+const product = (overrides) =>
+  singleStoreProduct({
+    url: 'https://example.com',
+    category_id: 1,
+    category_name: 'Drones',
+    category_color: '#3B82F6',
+    priority: 'High',
+    price_change_pct: 0,
+    is_at_lowest: false,
+    is_in_stock: true,
+    currency: 'EUR',
+    store_domain: null,
+    store_has_favicon: false,
+    recent_prices: [],
+    last_checked_at: null,
+    ...overrides
+  });
 
 const PRODUCTS = [
   product({

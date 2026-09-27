@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { Router, useLocation } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
+import { singleStoreProduct } from '@/test/products';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { faviconUrl } from '@/lib/api/stores';
 import { spyOnConsoleError } from '@/test/consoleErrors';
@@ -13,7 +14,7 @@ vi.mock('motion/react', async (importOriginal) => {
   return { ...actual, useReducedMotion: () => true };
 });
 
-const PRODUCT = {
+const FLAT_PRODUCT = {
   id: 7,
   name: 'Espresso Machine',
   url: 'https://example.com/espresso-machine',
@@ -36,6 +37,7 @@ const PRODUCT = {
   store_domain: 'amazon.es',
   store_has_favicon: true
 };
+const PRODUCT = singleStoreProduct(FLAT_PRODUCT);
 
 /** Shows the current location, so a test can assert whether navigation happened. */
 const LocationProbe = () => {
@@ -130,7 +132,12 @@ describe('ProductCardList', () => {
   it('flags a product whose price has not been updated for days', () => {
     const now = Math.floor(Date.now() / 1000);
     renderCards({
-      products: [{ ...PRODUCT, last_checked_at: now - 5 * 86400 - 60 }]
+      products: [
+        singleStoreProduct({
+          ...FLAT_PRODUCT,
+          last_checked_at: now - 5 * 86400 - 60
+        })
+      ]
     });
 
     expect(screen.getByText('No updates for 5 days')).toBeInTheDocument();
@@ -138,7 +145,12 @@ describe('ProductCardList', () => {
 
   it('shows no outdated badge for a recently checked product', () => {
     renderCards({
-      products: [{ ...PRODUCT, last_checked_at: Math.floor(Date.now() / 1000) }]
+      products: [
+        singleStoreProduct({
+          ...FLAT_PRODUCT,
+          last_checked_at: Math.floor(Date.now() / 1000)
+        })
+      ]
     });
 
     expect(screen.queryByText(/No updates for/)).not.toBeInTheDocument();

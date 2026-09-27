@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { spyOnConsoleError } from '@/test/consoleErrors';
 import { StaleBadge } from './StaleBadge';
@@ -26,5 +27,21 @@ describe('StaleBadge', () => {
     renderWithProviders(<StaleBadge lastCheckedAt={null} now={NOW} />);
 
     expect(screen.queryByText(/No updates/)).not.toBeInTheDocument();
+  });
+
+  it('names the stale stores in the tooltip', async () => {
+    renderWithProviders(
+      <StaleBadge
+        lastCheckedAt={NOW - 4 * DAY}
+        storeNames={['Amazon']}
+        now={NOW}
+      />
+    );
+
+    await userEvent.hover(screen.getByText('No updates for 4 days'));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Not updated in: Amazon.'
+    );
   });
 });

@@ -9,6 +9,7 @@ import {
 } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
+import { findBestOfferSummary } from '@/lib/bestOffer';
 
 /**
  * A product's row/card actions menu (Open, Edit, Open store page, Delete),
@@ -23,7 +24,8 @@ import { useLocation } from 'wouter';
  * "whatever was focused before it opened" (it would land on `<body>`).
  *
  * @param {object} props
- * @param {{ id: number|string, name: string, url: string }} props.product
+ * @param {{ id: number|string, name: string, best_offer_id: number|null, offers: object[] }} props.product
+ *   "Open store page" opens the best offer (see `findBestOfferSummary`).
  * @param {(product: object, triggerEl: HTMLElement|null) => void} props.onEdit
  * @param {(product: object, triggerEl: HTMLElement|null) => void} props.onDelete
  */
@@ -31,6 +33,7 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const triggerRef = useRef(null);
+  const bestUrl = findBestOfferSummary(product)?.url;
 
   return (
     <Box onClick={(event) => event.stopPropagation()}>
@@ -68,17 +71,19 @@ export const ProductRowActions = ({ product, onEdit, onDelete }) => {
                   {t('common.actions.edit')}
                 </HStack>
               </Menu.Item>
-              <Menu.Item
-                value="storePage"
-                onSelect={() =>
-                  window.open(product.url, '_blank', 'noopener,noreferrer')
-                }
-              >
-                <HStack gap={2}>
-                  <Icon as={LuExternalLink} size="md" />
-                  {t('pages.dashboard.menu.storePage')}
-                </HStack>
-              </Menu.Item>
+              {bestUrl && (
+                <Menu.Item
+                  value="storePage"
+                  onSelect={() =>
+                    window.open(bestUrl, '_blank', 'noopener,noreferrer')
+                  }
+                >
+                  <HStack gap={2}>
+                    <Icon as={LuExternalLink} size="md" />
+                    {t('pages.dashboard.menu.storePage')}
+                  </HStack>
+                </Menu.Item>
+              )}
               <Menu.Separator />
               <Menu.Item
                 value="delete"

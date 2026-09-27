@@ -92,8 +92,8 @@ describe('DashboardSummary', () => {
     renderWithProviders(
       <DashboardSummary
         products={[
-          product({ last_checked_at: now - 4 * 86400 }),
-          product({ last_checked_at: now })
+          product({ offers: [{ last_checked_at: now - 4 * 86400 }] }),
+          product({ offers: [{ last_checked_at: now }] })
         ]}
         locale="en-US"
       />
@@ -106,7 +106,11 @@ describe('DashboardSummary', () => {
   it('hides the outdated stat when every price is up to date', () => {
     renderWithProviders(
       <DashboardSummary
-        products={[product({ last_checked_at: Math.floor(Date.now() / 1000) })]}
+        products={[
+          product({
+            offers: [{ last_checked_at: Math.floor(Date.now() / 1000) }]
+          })
+        ]}
         locale="en-US"
       />
     );

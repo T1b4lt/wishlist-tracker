@@ -10,7 +10,8 @@ import { ProductRowActions } from './ProductRowActions';
 const PRODUCT = {
   id: 3,
   name: 'Standing Desk',
-  url: 'https://example.com/standing-desk'
+  best_offer_id: 7,
+  offers: [{ id: 7, url: 'https://example.com/standing-desk' }]
 };
 
 /** Shows the current location, so a test can assert whether navigation happened. */

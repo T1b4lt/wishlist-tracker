@@ -14,11 +14,16 @@ import {
 } from '@/components/common';
 import { formatPrice } from '@/lib/format';
 import { Sparkline } from './Sparkline';
+import { findBestOfferSummary } from '@/lib/bestOffer';
+import { oldestCheckedAt, staleOffers } from '@/lib/staleness';
+import { OfferStores } from './OfferStores';
 import { ProductRowActions } from './ProductRowActions';
 import { useTableRowActivation } from './useRowActivation';
 
 const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
   const activation = useTableRowActivation(`/product/${product.id}`);
+  const best = findBestOfferSummary(product);
+  const stale = staleOffers(product);
 
   return (
     <AnimatedListItem
@@ -34,8 +39,8 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
         <VStack align="flex-start" gap={1}>
           <HStack gap={2} minW={0}>
             <StoreFavicon
-              storeId={product.store_id}
-              hasFavicon={product.store_has_favicon}
+              storeId={best?.store_id ?? null}
+              hasFavicon={Boolean(best?.store_has_favicon)}
             />
             <Link href={`/product/${product.id}`} asChild>
               <Text
@@ -52,11 +57,7 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
             </Link>
           </HStack>
           <HStack gap={2} wrap="wrap">
-            {product.store_name && (
-              <Text textStyle="xs" color="fg.muted">
-                {product.store_name}
-              </Text>
-            )}
+            <OfferStores product={product} locale={locale} />
             <CategoryTag
               name={product.category_name}
               color={product.category_color}
@@ -85,7 +86,14 @@ const ProductTableRow = ({ product, index, locale, onEdit, onDelete }) => {
       <Table.Cell textAlign="center">
         <VStack gap={1}>
           <StockStatus inStock={product.is_in_stock} justify="center" />
-          <StaleBadge lastCheckedAt={product.last_checked_at} />
+          <StaleBadge
+            lastCheckedAt={oldestCheckedAt(stale)}
+            storeNames={
+              product.offers.length > 1
+                ? stale.map((offer) => offer.store_name)
+                : undefined
+            }
+          />
         </VStack>
       </Table.Cell>
       <Table.Cell textAlign="center">
