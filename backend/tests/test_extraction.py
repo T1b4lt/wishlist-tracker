@@ -267,3 +267,39 @@ def test_fetch_favicon_times_out_to_none(monkeypatch):
     )
 
     assert result is None
+
+
+# --- Browser launch ---
+
+
+class _LaunchCalled(Exception):
+    """Raised by the fake launcher to stop right after recording its args."""
+
+
+def test_browser_launches_with_a_non_headless_user_agent(monkeypatch):
+    """Anti-bot services (e.g. Cloudflare) block the ``HeadlessChrome`` UA."""
+    launched = {}
+
+    async def fake_launch(**kwargs):
+        launched.update(kwargs)
+        raise _LaunchCalled
+
+    monkeypatch.setattr(stagehand_utils.local_browser, "launch", fake_launch)
+
+    async def open_page():
+        async with stagehand_utils._open_product_page(
+            GoogleAIStudioProvider("key"), "https://example.com"
+        ):
+            pass
+
+    with pytest.raises(_LaunchCalled):
+        asyncio.run(open_page())
+
+    user_agents = [
+        arg.removeprefix("--user-agent=")
+        for arg in launched["args"]
+        if arg.startswith("--user-agent=")
+    ]
+    assert len(user_agents) == 1
+    assert "Chrome/" in user_agents[0]
+    assert "Headless" not in user_agents[0]

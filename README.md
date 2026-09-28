@@ -380,7 +380,7 @@ Offers are linked to a store resolved from their URL's domain on create and on U
 
 - **Python 3.12+** and [uv](https://github.com/astral-sh/uv)
 - **Node.js 24+** and **npm**
-- **Google Chrome** installed on the system (required by Stagehand v4 for local browser scraping)
+- **Google Chrome** installed on the system (required by Stagehand v4 for local browser scraping). It runs headless but sends a regular desktop Chrome User-Agent (`USER_AGENT` in `backend/src/stagehand_utils.py`), since stores behind anti-bot services such as Cloudflare block the default `HeadlessChrome` one
 - A **Google API key** with access to Gemini models, **or** an [Ollama](https://ollama.com/) instance reachable from the backend (models of 20B+ parameters recommended; smaller ones don't guarantee good results)
 - _(Optional)_ A **Telegram Bot** token for notifications
 

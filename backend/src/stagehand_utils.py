@@ -23,12 +23,23 @@ from stagehand import Page, Stagehand, local_browser
 # Instruction used to dismiss cookie banners and pop-ups before extracting.
 DISMISS_POPUPS_INSTRUCTION = "Close any pop-ups or cookies consent banners if present"
 
-# Extra Chrome flags for WSL/Docker environments (GPU and /dev/shm restrictions).
-# The sandbox is disabled separately through ``chromium_sandbox=False``.
+# User-Agent of a regular desktop Chrome. Headless Chrome announces itself as
+# ``HeadlessChrome``, which anti-bot services (e.g. Cloudflare on Decathlon)
+# answer with a verification page instead of the product. It stays on Linux
+# to match the ``navigator.platform`` the browser really reports.
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+)
+
+# Extra Chrome flags: WSL/Docker restrictions (GPU and /dev/shm) plus the
+# realistic User-Agent. The sandbox is disabled separately through
+# ``chromium_sandbox=False``.
 CHROME_ARGS = [
     "--disable-setuid-sandbox",
     "--disable-gpu",
     "--disable-dev-shm-usage",
+    f"--user-agent={USER_AGENT}",
 ]
 
 # Largest favicon accepted (bytes); anything bigger is ignored.
