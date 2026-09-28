@@ -18,6 +18,7 @@ import {
   LuEllipsis,
   LuExternalLink,
   LuPencil,
+  LuRefreshCw,
   LuSplit,
   LuTrash2
 } from 'react-icons/lu';
@@ -30,12 +31,17 @@ const OfferRow = ({
   isBest,
   isOnly,
   locale,
+  isChecking,
+  onCheck,
   onEdit,
   onUnlink,
   onRemove
 }) => {
   const { t } = useTranslation();
   const triggerRef = useRef(null);
+  const checkLabel = t('pages.product.offers.checkNow', {
+    store: offer.store_name
+  });
 
   return (
     <List.Item
@@ -80,6 +86,17 @@ const OfferRow = ({
             <StockStatus inStock={offer.is_in_stock} />
           )}
         </VStack>
+        <IconButton
+          variant="ghost"
+          size="sm"
+          aria-label={checkLabel}
+          title={checkLabel}
+          loading={isChecking}
+          disabled={isChecking}
+          onClick={() => onCheck(offer)}
+        >
+          <Icon as={LuRefreshCw} />
+        </IconButton>
         <Menu.Root positioning={{ placement: 'bottom-end' }}>
           <Menu.Trigger asChild>
             <IconButton
@@ -148,15 +165,18 @@ const OfferRow = ({
 /**
  * The product page's "Stores" card: one row per offer with its store,
  * price, stock, last check and, with several stores, a "Best price"
- * marker, plus a menu to open
- * the store page, edit the URL, unlink the store into its own product or
- * remove it. Unlink and remove are disabled on a product's only store.
+ * marker, a button to check its price now (replacing today's record) and a
+ * menu to open the store page, edit the URL, unlink the store into its own
+ * product or remove it. Unlink and remove are disabled on a product's only
+ * store.
  *
  * @param {object} props
  * @param {object[]} props.offers - `OfferDetail` records.
  * @param {string} props.currency
  * @param {number|null} props.bestOfferId
  * @param {string} props.locale
+ * @param {Set<number>} [props.checkingOfferIds] - Offers whose price check is in progress.
+ * @param {(offer: object) => void} props.onCheck
  * @param {(offer: object, triggerEl: HTMLElement|null) => void} props.onEdit
  * @param {(offer: object) => void} props.onUnlink
  * @param {(offer: object, triggerEl: HTMLElement|null) => void} props.onRemove
@@ -167,6 +187,8 @@ export const OfferList = ({
   currency,
   bestOfferId,
   locale,
+  checkingOfferIds,
+  onCheck,
   onEdit,
   onUnlink,
   onRemove,
@@ -192,6 +214,8 @@ export const OfferList = ({
               isBest={offers.length > 1 && offer.id === bestOfferId}
               isOnly={offers.length === 1}
               locale={locale}
+              isChecking={checkingOfferIds?.has(offer.id) ?? false}
+              onCheck={onCheck}
               onEdit={onEdit}
               onUnlink={onUnlink}
               onRemove={onRemove}

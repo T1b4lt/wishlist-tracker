@@ -10,7 +10,12 @@ import { OfferList } from './OfferList';
 
 const renderList = (props = {}) => {
   const detail = buildMultiStoreDetail();
-  const handlers = { onEdit: vi.fn(), onUnlink: vi.fn(), onRemove: vi.fn() };
+  const handlers = {
+    onEdit: vi.fn(),
+    onUnlink: vi.fn(),
+    onRemove: vi.fn(),
+    onCheck: vi.fn()
+  };
   renderWithProviders(
     <OfferList
       offers={detail.offers}
@@ -64,6 +69,27 @@ describe('OfferList', () => {
     );
 
     expect(onUnlink).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+  });
+
+  it('checks a store now from its row button', async () => {
+    const { onCheck } = renderList();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Check the price at Thomann now' })
+    );
+
+    expect(onCheck).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+  });
+
+  it('disables the check button of a store being checked', () => {
+    renderList({ checkingOfferIds: new Set([2]) });
+
+    expect(
+      screen.getByRole('button', { name: 'Check the price at Thomann now' })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Check the price at Amazon now' })
+    ).toBeEnabled();
   });
 
   it('disables unlink and remove on the only store', async () => {

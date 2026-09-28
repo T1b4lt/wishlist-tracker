@@ -176,6 +176,20 @@ export const useProductsStore = create((set, get) => ({
   },
 
   /**
+   * Check an offer's price now (replacing today's record), then refresh the
+   * summary and the product detail. A failed check is rethrown unchanged.
+   * @param {number|string} productId
+   * @param {number|string} offerId
+   * @returns {Promise<{ outcome: 'stored', checked_at: number }>}
+   */
+  async checkOffer(productId, offerId) {
+    const result = await offersApi.check(offerId);
+    await get().fetchSummary();
+    await get()._refreshDetailSilently(productId);
+    return result;
+  },
+
+  /**
    * Delete an offer, then refresh.
    * @param {number|string} productId
    * @param {number|string} offerId

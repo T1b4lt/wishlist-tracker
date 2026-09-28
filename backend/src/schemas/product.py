@@ -61,6 +61,13 @@ class OfferResponse(BaseModel):
     currency: str
 
 
+class OfferCheckResponse(BaseModel):
+    """Result of a manual offer check that stored a new record."""
+
+    outcome: Literal["stored"]
+    checked_at: int  # Unix seconds of the new record
+
+
 class ProductResponse(BaseModel):
     """A product's shared fields and its offers."""
 

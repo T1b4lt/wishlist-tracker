@@ -32,6 +32,14 @@ describe('offers api module', () => {
     });
   });
 
+  it('check posts to /offers/:id/check', () => {
+    offers.check(5, 'sig');
+    expect(request).toHaveBeenCalledWith('/offers/5/check', {
+      method: 'POST',
+      signal: 'sig'
+    });
+  });
+
   it('remove deletes /offers/:id', () => {
     offers.remove(5, 'sig');
     expect(request).toHaveBeenCalledWith('/offers/5', {

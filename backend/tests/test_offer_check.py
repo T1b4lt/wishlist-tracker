@@ -324,3 +324,177 @@ def test_a_rejected_request_checks_nothing(client, session, check):
 
     assert response.status_code == 409
     assert check.scraped == []
+
+
+# --- manual refresh (POST /offers/{id}/check) ---
+
+
+def _refresh(offer_id, now=NOW):
+    return asyncio.run(offer_check.refresh_offer(offer_id, now=now))
+
+
+def test_refresh_stores_a_record_when_the_offer_has_none_today(session, check):
+    outcome = _refresh(check.offer_id)
+
+    assert outcome is offer_check.CheckOutcome.STORED
+    assert [(h.price, h.timestamp) for h in _history(session, check.offer_id)] == [
+        (100.0, _ts(NOW))
+    ]
+
+
+def test_refresh_marks_the_offer_as_checked_for_the_daily_run(
+    session, check, monkeypatch
+):
+    monkeypatch.setattr(cronjob, "engine", session.get_bind())
+    _refresh(check.offer_id)
+
+    asyncio.run(cronjob.fetch_and_store_product_status(now=NOW.replace(hour=12)))
+
+    assert check.scraped == ["https://www.thomann.es/widget.htm"]
+    assert len(_history(session, check.offer_id)) == 1
+
+
+def test_refresh_replaces_todays_record(session, check):
+    _start_daily_run(session, total_offers=1)
+    yesterday = _ts(NOW - timedelta(days=1))
+    add_history(
+        session,
+        check.offer_id,
+        [(80.0, True, yesterday), (90.0, True, _ts(NOW.replace(hour=1)))],
+    )
+
+    _refresh(check.offer_id)
+
+    assert [(h.price, h.timestamp) for h in _history(session, check.offer_id)] == [
+        (80.0, yesterday),
+        (100.0, _ts(NOW)),
+    ]
+    assert _daily_run(session).total_offers == 1
+
+
+def test_refresh_keeps_todays_record_when_the_check_fails(session, check):
+    add_history(session, check.offer_id, [(90.0, True, _ts(NOW.replace(hour=1)))])
+    check.error = RuntimeError("page did not load")
+
+    outcome = _refresh(check.offer_id)
+
+    assert outcome is offer_check.CheckOutcome.FAILED
+    assert [h.price for h in _history(session, check.offer_id)] == [90.0]
+
+
+def test_refresh_sends_telegram_alerts(session, check):
+    add_history(
+        session,
+        check.offer_id,
+        [
+            (120.0, False, _ts(NOW - timedelta(days=2))),
+            (130.0, True, _ts(NOW - timedelta(days=1))),
+        ],
+    )
+
+    _refresh(check.offer_id)
+
+    # Price drop (130 -> 100 in stock); the last record was in stock, so no
+    # stock alert.
+    assert [a["new_price"] for a in check.alerts] == [100.0]
+
+
+def test_refresh_clears_the_offers_pending_retry(session, check):
+    _start_daily_run(session)
+    session.add(PendingStatusRetry(offer_id=check.offer_id, day_start=_day_start(NOW)))
+    session.commit()
+
+    _refresh(check.offer_id)
+
+    assert _pending(session) == set()
+
+
+def test_refresh_quota_error_after_the_daily_run_marks_the_offer_pending(
+    session, check
+):
+    _start_daily_run(session)
+    check.error = _quota_error()
+
+    outcome = _refresh(check.offer_id)
+
+    assert outcome is offer_check.CheckOutcome.RATE_LIMITED
+    assert _pending(session) == {(check.offer_id, _day_start(NOW))}
+    assert _daily_run(session).limit_reason == offer_check.LIMIT_REASON_QUOTA
+
+
+def test_refresh_quota_error_keeps_an_offer_recorded_today_out_of_the_retries(
+    session, check
+):
+    _start_daily_run(session)
+    add_history(session, check.offer_id, [(90.0, True, _ts(NOW.replace(hour=1)))])
+    check.error = _quota_error()
+
+    _refresh(check.offer_id)
+
+    assert _pending(session) == set()
+
+
+def test_refresh_endpoint_returns_the_stored_check(client, session, check):
+    response = client.post(f"/offers/{check.offer_id}/check")
+
+    assert response.status_code == 200
+    assert response.json()["outcome"] == "stored"
+    assert _latest_prices(session, check.offer_id) == [100.0]
+
+
+def test_refresh_endpoint_unknown_offer_is_404(client, check):
+    response = client.post("/offers/9999/check")
+
+    assert response.status_code == 404
+    assert check.scraped == []
+
+
+def test_refresh_endpoint_without_an_ai_provider_is_409(client, session, check):
+    session.delete(
+        session.exec(select(Config).where(Config.key == "google_api_key")).one()
+    )
+    session.commit()
+
+    response = client.post(f"/offers/{check.offer_id}/check")
+
+    assert response.status_code == 409
+    assert check.scraped == []
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code"),
+    [
+        (RuntimeError("page did not load"), 502),
+        (_quota_error(), 429),
+    ],
+)
+def test_refresh_endpoint_maps_failures_to_status_codes(
+    client, check, error, status_code
+):
+    check.error = error
+
+    response = client.post(f"/offers/{check.offer_id}/check")
+
+    assert response.status_code == status_code
+    assert response.json()["detail"]
+
+
+def test_refresh_endpoint_invalid_price_is_502(client, check):
+    check.status = ProductStatusExtraction(price=0, is_in_stock=True)
+
+    response = client.post(f"/offers/{check.offer_id}/check")
+
+    assert response.status_code == 502
+
+
+def test_refresh_endpoint_provider_unavailable_is_503(client, check, monkeypatch):
+    from src.routers import offer_router
+
+    async def unavailable(offer_id, now=None):
+        return offer_check.CheckOutcome.PROVIDER_UNAVAILABLE
+
+    monkeypatch.setattr(offer_router, "refresh_offer", unavailable)
+
+    response = client.post(f"/offers/{check.offer_id}/check")
+
+    assert response.status_code == 503

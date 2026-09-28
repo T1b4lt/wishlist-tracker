@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { Route, Router } from 'wouter';
@@ -6,10 +6,15 @@ import { memoryLocation } from 'wouter/memory-location';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { singleStoreDetail } from '@/test/products';
 import { spyOnConsoleError } from '@/test/consoleErrors';
-import { products as productsApi, config as configApi } from '@/lib/api';
+import {
+  products as productsApi,
+  config as configApi,
+  offers as offersApi
+} from '@/lib/api';
 import { useProductsStore, initialProductsState } from '@/stores/productsStore';
 import { useConfigStore, initialConfigState } from '@/stores/configStore';
 import { buildMultiStoreDetail } from '../../e2e/fixtures/products';
+import { toaster } from '@/components/ui/toaster';
 import ProductPage from './ProductPage';
 
 // The edit and delete flows (each opens its own Ark dismissable layer, a
@@ -29,7 +34,14 @@ vi.mock('@/lib/api', () => ({
   categories: {
     list: vi.fn().mockResolvedValue([]),
     create: vi.fn()
+  },
+  offers: {
+    check: vi.fn()
   }
+}));
+
+vi.mock('@/components/ui/toaster', () => ({
+  toaster: { create: vi.fn() }
 }));
 
 // `PriceHistoryChart` already has its own full test file (recharts +
@@ -424,5 +436,58 @@ describe('ProductPage', () => {
     expect(
       await screen.findByText('Track Mechanical Keyboard in another store.')
     ).toBeInTheDocument();
+  });
+
+  it('checks a store now and confirms it with a toast', async () => {
+    productsApi.get.mockResolvedValue(buildMultiStoreDetail({ id: 3 }));
+    offersApi.check.mockResolvedValue({ outcome: 'stored', checked_at: 1 });
+
+    renderProductPage(3);
+
+    await userEvent.setup().click(
+      await screen.findByRole('button', {
+        name: 'Check the price at Thomann now'
+      })
+    );
+
+    expect(offersApi.check).toHaveBeenCalledWith(2);
+    await waitFor(() =>
+      expect(toaster.create).toHaveBeenCalledWith({
+        title: 'Thomann price updated',
+        type: 'success'
+      })
+    );
+    expect(productsApi.get).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    [502, "Couldn't read a valid price from the Thomann page."],
+    [429, 'The Gemini quota is exhausted. Try again later.'],
+    [503, "The AI provider can't be reached. Try again later."],
+    [409, 'Configure an AI provider in Settings first.']
+  ])('explains a failed check (%i)', async (status, message) => {
+    productsApi.get.mockResolvedValue(buildMultiStoreDetail({ id: 3 }));
+    offersApi.check.mockRejectedValue(
+      Object.assign(new Error('failed'), { status })
+    );
+
+    renderProductPage(3);
+
+    await userEvent.setup().click(
+      await screen.findByRole('button', {
+        name: 'Check the price at Thomann now'
+      })
+    );
+
+    await waitFor(() =>
+      expect(toaster.create).toHaveBeenCalledWith({
+        title: "Couldn't check Thomann",
+        description: message,
+        type: 'error'
+      })
+    );
+    expect(
+      screen.getByRole('button', { name: 'Check the price at Thomann now' })
+    ).toBeEnabled();
   });
 });

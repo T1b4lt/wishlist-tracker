@@ -30,7 +30,8 @@ staleness rules by `test_staleness.py`; the precomputed ranges of the product
 detail by `test_product_detail_ranges.py`; the cronjob, including the
 once-per-day full run, the 10-minute retries of offers that hit the Gemini
 quota and the daily run summary, is covered by `test_cronjob.py`; the
-check of a store right after it is added or its URL changes by
+check of a store right after it is added or its URL changes, and the manual
+"check now" (`POST /offers/{id}/check`), by
 `test_offer_check.py`; the
 Telegram daily check report by `test_daily_report.py`; `GET /daily-check/` by
 `test_daily_check.py`; the local-day helpers by `test_local_day.py`; and

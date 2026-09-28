@@ -56,6 +56,15 @@ import {
 } from '@/lib/productHistory';
 import { useProductsStore } from '@/stores/productsStore';
 
+// Translation key (under `toasts.offers.checkError`) for each HTTP status a
+// manual price check can fail with.
+const CHECK_ERROR_KEYS = {
+  502: 'noPrice',
+  429: 'quota',
+  503: 'unavailable',
+  409: 'notConfigured'
+};
+
 const ProductPage = () => {
   const params = useParams();
   const productId = params.productId;
@@ -68,6 +77,7 @@ const ProductPage = () => {
   const removeProduct = useProductsStore((state) => state.remove);
   const unlinkOffer = useProductsStore((state) => state.unlinkOffer);
   const removeOffer = useProductsStore((state) => state.removeOffer);
+  const checkOffer = useProductsStore((state) => state.checkOffer);
 
   const status = detail?.status ?? 'idle';
   const product = detail?.data ?? null;
@@ -91,6 +101,7 @@ const ProductPage = () => {
   const [editingOffer, setEditingOffer] = useState(null);
   const [removingOffer, setRemovingOffer] = useState(null);
   const [isRemovingOffer, setIsRemovingOffer] = useState(false);
+  const [checkingOfferIds, setCheckingOfferIds] = useState(() => new Set());
   const [isAddOfferOpen, setIsAddOfferOpen] = useState(false);
   const [isMergeOpen, setIsMergeOpen] = useState(false);
 
@@ -193,6 +204,32 @@ const ProductPage = () => {
       });
     } catch {
       toaster.create({ title: t('toasts.offers.error'), type: 'error' });
+    }
+  };
+
+  const handleCheckOffer = async (offer) => {
+    setCheckingOfferIds((ids) => new Set(ids).add(offer.id));
+    try {
+      await checkOffer(product.id, offer.id);
+      toaster.create({
+        title: t('toasts.offers.checkSuccess', { store: offer.store_name }),
+        type: 'success'
+      });
+    } catch (err) {
+      const reason = CHECK_ERROR_KEYS[err?.status] ?? 'generic';
+      toaster.create({
+        title: t('toasts.offers.checkError.title', { store: offer.store_name }),
+        description: t(`toasts.offers.checkError.${reason}`, {
+          store: offer.store_name
+        }),
+        type: 'error'
+      });
+    } finally {
+      setCheckingOfferIds((ids) => {
+        const next = new Set(ids);
+        next.delete(offer.id);
+        return next;
+      });
     }
   };
 
@@ -394,6 +431,8 @@ const ProductPage = () => {
           currency={product.currency}
           bestOfferId={bestOfferId}
           locale={locale}
+          checkingOfferIds={checkingOfferIds}
+          onCheck={handleCheckOffer}
           onEdit={(offer, triggerEl) => {
             offerMenuTriggerRef.current = triggerEl;
             setEditingOffer(offer);

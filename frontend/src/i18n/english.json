@@ -393,7 +393,8 @@
         "editUrl": "Edit URL",
         "unlink": "Unlink as a separate product",
         "remove": "Remove store",
-        "onlyStoreHint": "A product needs at least one store."
+        "onlyStoreHint": "A product needs at least one store.",
+        "checkNow": "Check the price at {{store}} now"
       }
     },
     "settings": {
@@ -635,7 +636,16 @@
       "removeSuccess": "{{store}} removed",
       "error": "Something went wrong. Please try again.",
       "duplicateUrl": "This store URL is already tracked for this product.",
-      "addSuccess": "{{store}} added"
+      "addSuccess": "{{store}} added",
+      "checkSuccess": "{{store}} price updated",
+      "checkError": {
+        "title": "Couldn't check {{store}}",
+        "noPrice": "Couldn't read a valid price from the {{store}} page.",
+        "quota": "The Gemini quota is exhausted. Try again later.",
+        "unavailable": "The AI provider can't be reached. Try again later.",
+        "notConfigured": "Configure an AI provider in Settings first.",
+        "generic": "Something went wrong. Please try again."
+      }
     }
   }
 }

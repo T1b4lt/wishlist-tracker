@@ -21,7 +21,8 @@ vi.mock('@/lib/api', () => ({
     add: vi.fn(),
     update: vi.fn(),
     unlink: vi.fn(),
-    remove: vi.fn()
+    remove: vi.fn(),
+    check: vi.fn()
   }
 }));
 
@@ -376,6 +377,29 @@ describe('offer actions', () => {
     const { details } = useProductsStore.getState();
     expect(details[2]).toBeUndefined();
     expect(details[1].data).toEqual({ id: 1, offers: [] });
+  });
+
+  it('checkOffer checks the offer now, then refreshes the summary and detail', async () => {
+    offersApi.check.mockResolvedValue({ outcome: 'stored', checked_at: 1000 });
+    productsApi.dashboardSummary.mockResolvedValue([]);
+    productsApi.get.mockResolvedValue({ id: 1, offers: [] });
+
+    await expect(useProductsStore.getState().checkOffer(1, 3)).resolves.toEqual(
+      { outcome: 'stored', checked_at: 1000 }
+    );
+
+    expect(offersApi.check).toHaveBeenCalledWith(3);
+    expect(productsApi.dashboardSummary).toHaveBeenCalled();
+    expect(productsApi.get).toHaveBeenCalledWith(1);
+  });
+
+  it('checkOffer rethrows a failed check without refreshing', async () => {
+    offersApi.check.mockRejectedValue(new ApiErrorLike('quota', 429));
+
+    await expect(
+      useProductsStore.getState().checkOffer(1, 3)
+    ).rejects.toMatchObject({ status: 429 });
+    expect(productsApi.get).not.toHaveBeenCalled();
   });
 
   it('unlinkOffer returns the new product', async () => {

@@ -29,7 +29,7 @@
 Key highlights:
 
 - **Any product from any website** — the AI agent can navigate and extract data from virtually any e-commerce page.
-- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out or the Ollama instance could not be reached are retried every 10 minutes until they are checked. A newly added product or store gets its first price right away.
+- **Daily automated monitoring** — a configurable cronjob fetches product status once a day and stores the results; products left out because the Gemini quota ran out or the Ollama instance could not be reached are retried every 10 minutes until they are checked. A newly added product or store gets its first price right away, and any store's price can be checked again on demand from the product page.
 - **Instant Telegram alerts** — get notified the moment a price drops or an item is back in stock.
 - **Complete price history** — visualize how prices evolve over time with interactive charts.
 - **Multi-language support** — the UI is fully translated in English and Spanish (i18n).
@@ -134,7 +134,7 @@ wishlist-tracker/
 │       │   ├── category_service.py   # Category CRUD operations
 │       │   ├── best_offer.py         # Pure best-offer rules (which store represents a product)
 │       │   ├── offer_service.py      # Offers (a product in one store): add, edit URL, unlink, delete
-│       │   ├── offer_check_service.py # Check one offer's price & stock (daily run and right after adding it)
+│       │   ├── offer_check_service.py # Check one offer's price & stock (daily run, right after adding it, manual check)
 │       │   ├── price_stats.py        # Pure price statistics (window, average, change, lowest)
 │       │   ├── product_service.py    # Product CRUD, dashboard, detail & AI extraction
 │       │   ├── store_service.py      # Store lookup/creation by domain & favicon access
@@ -143,7 +143,7 @@ wishlist-tracker/
 │       │   ├── config_router.py      # GET/PATCH /config/
 │       │   ├── daily_check_router.py # GET /daily-check/
 │       │   ├── category_router.py    # CRUD /categories/
-│       │   ├── offer_router.py       # /products/{id}/offers, /offers/{id}, /offers/{id}/unlink
+│       │   ├── offer_router.py       # /products/{id}/offers, /offers/{id}, /offers/{id}/check, /offers/{id}/unlink
 │       │   ├── product_router.py     # CRUD /products/, /products/{id}/merge + /extract-product-info/
 │       │   ├── store_router.py       # GET /stores/{id}/favicon
 │       │   └── telegram_router.py    # /telegram-chat-id, /telegram-test-message
@@ -344,6 +344,7 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 | -------- | ------------------------ | ----------- |
 | `POST`   | `/products/{id}/offers`  | Add a store to a product: `{url, currency, store_id?}`. 409 for another currency or a URL already tracked |
 | `PATCH`  | `/offers/{id}`           | Change a store's URL: `{url}` (the store is re-resolved) |
+| `POST`   | `/offers/{id}/check`     | Check the store's price now and wait for it (a minute or two), replacing the day's price if it had one; sends Telegram alerts like the daily check. Returns `{outcome: "stored", checked_at}`; 502 when no valid price could be read, 429 when the Gemini quota is exhausted, 503 when the AI provider is unreachable (the day's previous price stays), 409 with no AI provider configured |
 | `POST`   | `/offers/{id}/unlink`    | Move the store (with its history) into a new product with the same fields. 409 for a product's only store |
 | `DELETE` | `/offers/{id}`           | Remove a store and its history. 409 for a product's only store |
 
@@ -652,6 +653,7 @@ All application settings can be managed through the **Settings** page (`/setting
 - **Add a store** from the product page (**Stores** card → **Add store**): paste the other store's URL; its store and currency are extracted, and its first price is checked right away (see [Prices of New Stores](#prices-of-new-stores)).
 - Or, in the **Add product** dialog, pick the product in **Same product as…**: the URL is added as another store of that product instead of a new product.
 - Already added the same item twice? Open one of them and use **⋯ → Merge with…** to combine both (stores and price histories), choosing whose name, category, priority and description to keep.
+- The **↻** button on a store's row checks its price now (see [Checking a Price Now](#checking-a-price-now)).
 - From a store's menu you can edit its URL, **unlink** it into its own product, or remove it (a product always keeps at least one store).
 - The dashboard counts the product once, at its best offer's price; a **+N** chip lists every store with its price.
 - All stores of a product must use the same currency.
@@ -742,6 +744,15 @@ A store does not wait for the daily check to get its first price: right after a 
 - Added **after** the day's check started: it counts in that day's total, and if the Gemini quota runs out or the AI provider cannot be reached it joins the pending retries.
 - After a **URL change**, the new price replaces the day's price of the old URL (if the check fails, the old one stays).
 - These checks send no Telegram alerts. Other failures (an invalid price, a page that does not load) leave the store for the next daily check.
+
+### Checking a Price Now
+
+The **↻** button on each row of the product page's **Stores** card checks that store's price right away, for example when you expect a price change before the analysis hour. The button spins until the page has been read (a minute or two) and a toast tells you the result.
+
+- **No price yet today**: the new price is the store's price for the day, so the daily check (and its retries) skip it.
+- **Already checked today**: the new price replaces the day's price. If the check fails (no valid price, Gemini quota exhausted, AI provider unreachable), the previous price stays.
+- Telegram price-drop and back-in-stock alerts are sent as in the daily check, compared with the store's latest price (today's, when it had one).
+- A successful check takes the store out of the day's pending retries; one stopped by the quota or an unreachable provider after the day's check started joins them.
 
 ---
 

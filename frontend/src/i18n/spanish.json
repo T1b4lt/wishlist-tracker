@@ -393,7 +393,8 @@
         "editUrl": "Editar URL",
         "unlink": "Separar como otro producto",
         "remove": "Quitar tienda",
-        "onlyStoreHint": "Un producto necesita al menos una tienda."
+        "onlyStoreHint": "Un producto necesita al menos una tienda.",
+        "checkNow": "Comprobar ahora el precio en {{store}}"
       }
     },
     "settings": {
@@ -635,7 +636,16 @@
       "removeSuccess": "{{store}} quitada",
       "error": "Algo ha ido mal. Inténtalo de nuevo.",
       "duplicateUrl": "Esta URL ya se sigue en este producto.",
-      "addSuccess": "{{store}} añadida"
+      "addSuccess": "{{store}} añadida",
+      "checkSuccess": "Precio de {{store}} actualizado",
+      "checkError": {
+        "title": "No se ha podido comprobar {{store}}",
+        "noPrice": "No se ha podido leer un precio válido en la página de {{store}}.",
+        "quota": "Se ha agotado la cuota de Gemini. Inténtalo más tarde.",
+        "unavailable": "No se puede contactar con el proveedor de IA. Inténtalo más tarde.",
+        "notConfigured": "Configura primero un proveedor de IA en Ajustes.",
+        "generic": "Algo ha salido mal. Inténtalo de nuevo."
+      }
     }
   }
 }

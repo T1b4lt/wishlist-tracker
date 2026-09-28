@@ -1,13 +1,26 @@
 """
-Offer router — a product in one store: add, edit URL, unlink and delete.
+Offer router — a product in one store: add, edit URL, check now, unlink and
+delete.
 """
 
-from fastapi import APIRouter, BackgroundTasks
+from datetime import datetime
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from src.core.database import SessionDep
 from src.models.database_models import Offer
-from src.schemas.product import OfferCreate, OfferResponse, OfferUpdate, ProductResponse
+from src.schemas.product import (
+    OfferCheckResponse,
+    OfferCreate,
+    OfferResponse,
+    OfferUpdate,
+    ProductResponse,
+)
 from src.services import offer_service, product_service
-from src.services.offer_check_service import check_offer_now
+from src.services.offer_check_service import (
+    CheckOutcome,
+    check_offer_now,
+    refresh_offer,
+)
 
 router = APIRouter(tags=["offers"])
 
@@ -39,6 +52,29 @@ def update_offer(
     if offer.url != previous_url:
         background_tasks.add_task(check_offer_now, offer.id, url_changed=True)
     return OfferResponse(**offer.model_dump())
+
+
+# HTTP error for each manual check outcome that stored nothing.
+_CHECK_ERRORS = {
+    CheckOutcome.FAILED: (502, "Could not read a valid price from the store page"),
+    CheckOutcome.RATE_LIMITED: (429, "The AI provider quota is exhausted"),
+    CheckOutcome.PROVIDER_UNAVAILABLE: (503, "The AI provider is unavailable"),
+}
+
+
+@router.post("/offers/{offer_id}/check")
+async def check_offer_price(offer_id: int) -> OfferCheckResponse:
+    """Check an offer's price now, replacing today's record if it has one.
+
+    Waits for the scrape (it can take a minute or two) and fails with 502,
+    429 or 503 when nothing was stored, keeping today's previous record.
+    """
+    now = datetime.now()
+    outcome = await refresh_offer(offer_id, now=now)
+    if outcome in _CHECK_ERRORS:
+        status_code, detail = _CHECK_ERRORS[outcome]
+        raise HTTPException(status_code=status_code, detail=detail)
+    return OfferCheckResponse(outcome="stored", checked_at=int(now.timestamp()))
 
 
 @router.post("/offers/{offer_id}/unlink")

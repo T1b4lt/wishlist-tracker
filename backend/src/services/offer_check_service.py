@@ -3,10 +3,10 @@ Offer check service — fetch, validate and store one offer's daily status.
 
 Shared by the daily cronjob (``product_status_cronjob``) and the API, which
 checks an offer right after it is added or its URL changes, so a new store
-gets its price without waiting for the next daily run. There is one record
-per offer per local day: an offer already recorded today is skipped (by the
-daily run too), except after a URL change, whose new record replaces the
-day's record of the old URL.
+gets its price without waiting for the next daily run, and when the user
+refreshes it by hand. There is one record per offer per local day: an offer
+already recorded today is skipped (by the daily run too), except after a URL
+change or a manual refresh, whose new record replaces the day's record.
 """
 
 import logging
@@ -14,6 +14,7 @@ import math
 from datetime import datetime
 from enum import Enum
 
+from fastapi import HTTPException
 from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlmodel import Session, delete, select
 from src.ai.base import AIProvider, ProviderErrorKind, ProviderUnavailableError
@@ -442,3 +443,72 @@ async def check_offer_now(
             record_stop(daily_run, int(now.timestamp()), outcome.limit_reason, 1)
             session.add(daily_run)
             session.commit()
+
+
+async def refresh_offer(offer_id: int, now: datetime | None = None) -> CheckOutcome:
+    """Check one offer now at the user's request, replacing today's record.
+
+    The new record counts as the offer's check for the day, so the daily run
+    and the retries skip it afterwards; if the offer already had a record
+    today, it is replaced once the new one is stored (a failed check keeps
+    it). Telegram alerts are sent as in the daily run, compared with the
+    offer's latest record (today's one, if any).
+
+    A stored record takes the offer out of today's pending retries. A
+    provider-wide stop (Gemini quota or provider unavailable) after the
+    daily run started is recorded in it, and an offer still without a
+    record today becomes a pending retry.
+
+    Args:
+        offer_id (int): The offer to check.
+        now (datetime | None): Naive local time; defaults to ``datetime.now()``.
+
+    Returns:
+        CheckOutcome: ``STORED``, ``FAILED``, ``RATE_LIMITED`` or
+            ``PROVIDER_UNAVAILABLE``.
+
+    Raises:
+        HTTPException: 404 for an unknown offer (or one deleted during the
+            check), 409 when no AI provider is configured.
+    """
+    now = now or datetime.now()
+    day_start, day_end = local_day_bounds(now)
+    with Session(engine) as session:
+        offer = session.get(Offer, offer_id)
+        if offer is None:
+            raise HTTPException(status_code=404, detail="Offer not found")
+        provider = load_ai_provider(session)
+        if not provider.is_configured():
+            raise HTTPException(
+                status_code=409, detail=f"{provider.label} is not configured"
+            )
+
+        outcome = await check_offer(
+            session,
+            offer,
+            provider,
+            load_telegram_settings(session),
+            now,
+            replace_today=True,
+        )
+
+        if outcome is CheckOutcome.SKIPPED:
+            raise HTTPException(status_code=404, detail="Offer not found")
+        if outcome is CheckOutcome.STORED:
+            session.exec(
+                delete(PendingStatusRetry).where(
+                    PendingStatusRetry.offer_id == offer_id
+                )
+            )
+            session.commit()
+        elif outcome.stops_run:
+            daily_run = daily_check_service.get_today_run(session, now)
+            if daily_run is not None:
+                if not has_record_between(session, offer_id, day_start, day_end):
+                    session.merge(
+                        PendingStatusRetry(offer_id=offer_id, day_start=day_start)
+                    )
+                record_stop(daily_run, int(now.timestamp()), outcome.limit_reason, 1)
+                session.add(daily_run)
+                session.commit()
+        return outcome
