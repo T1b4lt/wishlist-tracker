@@ -38,23 +38,23 @@ Key highlights:
 
 ## ✨ Key Features
 
-| Feature                    | Description                                                                                                                                                                                                                                                                                                                |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Product Management**     | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                                                                                                                                                     |
-| **AI-Powered Extraction**  | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini (Google AI Studio) or a model on your own Ollama instance.                                                                                                                                                                              |
-| **Store Detection**        | Each store a product is tracked in records its name (AI-extracted) and favicon (downloaded from the page), shown on the dashboard and detail page. |
+| Feature                         | Description                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Product Management**          | Add, edit, and delete wishlist items with custom categories and priority levels (High / Medium / Low).                                                                                                                                                                                                                                                                               |
+| **AI-Powered Extraction**       | Automatically extract product name, category, description, currency, store, price, and stock status from any URL using Stagehand v4 + Gemini (Google AI Studio) or a model on your own Ollama instance.                                                                                                                                                                              |
+| **Store Detection**             | Each store a product is tracked in records its name (AI-extracted) and favicon (downloaded from the page), shown on the dashboard and detail page.                                                                                                                                                                                                                                   |
 | **Multiple Stores per Product** | Track the same product in several stores. It counts once on the dashboard, valued by its best offer (the cheapest store in stock). Add stores from the product page or the "New product" dialog ("Same product as…"), merge two products into one, or unlink a store back into its own product. Each store keeps its own price history, stock, outdated warning and Telegram alerts. |
-| **Price Tracking**         | One price check per store per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                      |
-| **AI Provider Outages**    | When the Gemini quota runs out or the Ollama instance cannot be reached, the products left are retried every 10 minutes for the rest of the day, least recently checked first; the dashboard shows when it happened and how many products are still pending, and Telegram tells you when Ollama is unreachable and when it is back. |
-| **Outdated Price Warning** | Products whose price has not been updated for 3 days or more (the store may be down, the product may have been removed, or the page may be blocking the agent) get a badge on the dashboard, a warning on their detail page, a count in the summary strip and their own filter. |
-| **Interactive Dashboard**  | Overview of all products with current price, price change vs. the window's average (%), sparkline, stock status, and category indicators.                                                                                                                                                                                  |
-| **Search & Filters**       | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops, lowest price and outdated price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading. |
-| **Product Detail View**    | Detailed product page with a stepped price history chart (Recharts), lowest and average price in the selected range, and out-of-stock bands.                                                                                                                                                                               |
-| **Category System**        | User-defined categories with custom colors for visual organization.                                                                                                                                                                                                                                                        |
-| **Telegram Notifications** | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                                                                                                                                                                                                            |
-| **Configurable Settings**  | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                                                                                                                                                                                                              |
-| **Multi-Language (i18n)**  | Full English and Spanish translations for the entire interface.                                                                                                                                                                                                                                                            |
-| **Dark Mode**              | Theme toggle built into Chakra UI.                                                                                                                                                                                                                                                                                         |
+| **Price Tracking**              | One price check per store per day (invalid prices discarded), with a configurable window of 30, 60, 90 or 180 days.                                                                                                                                                                                                                                                                  |
+| **AI Provider Outages**         | When the Gemini quota runs out or the Ollama instance cannot be reached, the products left are retried every 10 minutes for the rest of the day, least recently checked first; the dashboard shows when it happened and how many products are still pending, and Telegram tells you when Ollama is unreachable and when it is back.                                                  |
+| **Outdated Price Warning**      | Products whose price has not been updated for 3 days or more (the store may be down, the product may have been removed, or the page may be blocking the agent) get a badge on the dashboard, a warning on their detail page, a count in the summary strip and their own filter.                                                                                                      |
+| **Interactive Dashboard**       | Overview of all products with current price, price change vs. the window's average (%), sparkline, stock status, and category indicators.                                                                                                                                                                                                                                            |
+| **Search & Filters**            | Live search on the dashboard by product or store name (case- and accent-insensitive), filters for store, category, priority, stock, price range, price drops, lowest price and outdated price, and sorting by name, price, price drop, priority, stock or last check. The state lives in the URL, so it survives going back and reloading.                                           |
+| **Product Detail View**         | Detailed product page with a stepped price history chart (Recharts), lowest and average price in the selected range, and out-of-stock bands.                                                                                                                                                                                                                                         |
+| **Category System**             | User-defined categories with custom colors for visual organization.                                                                                                                                                                                                                                                                                                                  |
+| **Telegram Notifications**      | Real-time alerts for price drops and stock changes, with inline buttons linking to the product.                                                                                                                                                                                                                                                                                      |
+| **Configurable Settings**       | Analysis hour, history window size, notification toggles, language selection, and API keys — all from the UI.                                                                                                                                                                                                                                                                        |
+| **Multi-Language (i18n)**       | Full English and Spanish translations for the entire interface.                                                                                                                                                                                                                                                                                                                      |
+| **Dark Mode**                   | Theme toggle built into Chakra UI.                                                                                                                                                                                                                                                                                                                                                   |
 
 ---
 
@@ -80,16 +80,16 @@ Key highlights:
 
 ### Backend
 
-| Technology                                                         | Purpose                           |
-| ------------------------------------------------------------------ | --------------------------------- |
-| [FastAPI](https://fastapi.tiangolo.com/)                           | Async REST API framework          |
-| [SQLModel](https://sqlmodel.tiangolo.com/)                         | ORM (SQLAlchemy + Pydantic)       |
-| [SQLite](https://www.sqlite.org/)                                  | Lightweight embedded database     |
-| [Stagehand v4](https://github.com/browserbase/stagehand)           | AI browser agent for web scraping |
-| [Google Gemini](https://ai.google.dev/)                            | LLM powering the AI extraction    |
+| Technology                                                         | Purpose                                        |
+| ------------------------------------------------------------------ | ---------------------------------------------- |
+| [FastAPI](https://fastapi.tiangolo.com/)                           | Async REST API framework                       |
+| [SQLModel](https://sqlmodel.tiangolo.com/)                         | ORM (SQLAlchemy + Pydantic)                    |
+| [SQLite](https://www.sqlite.org/)                                  | Lightweight embedded database                  |
+| [Stagehand v4](https://github.com/browserbase/stagehand)           | AI browser agent for web scraping              |
+| [Google Gemini](https://ai.google.dev/)                            | LLM powering the AI extraction                 |
 | [Ollama](https://ollama.com/)                                      | Optional self-hosted LLM for the AI extraction |
-| [python-telegram-bot](https://python-telegram-bot.readthedocs.io/) | Telegram Bot API integration      |
-| [python-dotenv](https://pypi.org/project/python-dotenv/)           | Environment variable management   |
+| [python-telegram-bot](https://python-telegram-bot.readthedocs.io/) | Telegram Bot API integration                   |
+| [python-dotenv](https://pypi.org/project/python-dotenv/)           | Environment variable management                |
 
 ---
 
@@ -264,24 +264,24 @@ The application uses **SQLite** with **SQLModel** as ORM. There are 8 tables. A 
 
 **Config keys** stored in the `Config` table:
 
-| Key                     | Default   | Description                                                                           |
-| ----------------------- | --------- | ------------------------------------------------------------------------------------- |
-| `analysis_hour`         | `12`      | Hour of the day (0–23) when the cronjob runs price analysis                           |
-| `hist_window_size`      | `60`      | Days of history used for price trends, averages and lowest prices (30, 60, 90 or 180) |
-| `is_price_drop_alert`   | `false`   | Enable Telegram alerts on price drops                                                 |
-| `is_stock_change_alert` | `false`   | Enable Telegram alerts on stock changes                                               |
-| `daily_check_report`    | `limit_days` | Telegram daily check report: `off`, `limit_days` (only on days the Gemini limit was reached or the AI provider was unavailable) or `every_day` |
-| `telegram_bot_token`    | `""`      | Telegram Bot API token                                                                |
-| `telegram_bot_chat_id`  | `""`      | Telegram chat ID for notifications                                                    |
-| `selected_language`     | `english` | UI language (`english` / `spanish`)                                                   |
-| `google_api_key`        | `""`      | Google API key for Gemini (used by Stagehand)                                         |
-| `ai_provider`           | `google_ai_studio` | AI provider behind Stagehand: `google_ai_studio` or `ollama`                  |
-| `ollama_url`            | `""`      | Base URL of the Ollama instance, e.g. `http://192.168.1.20:11434`                     |
-| `ollama_model`          | `""`      | Ollama model tag, e.g. `qwen3.8:latest`                                               |
+| Key                     | Default            | Description                                                                                                                                    |
+| ----------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `analysis_hour`         | `12`               | Hour of the day (0–23) when the cronjob runs price analysis                                                                                    |
+| `hist_window_size`      | `60`               | Days of history used for price trends, averages and lowest prices (30, 60, 90 or 180)                                                          |
+| `is_price_drop_alert`   | `false`            | Enable Telegram alerts on price drops                                                                                                          |
+| `is_stock_change_alert` | `false`            | Enable Telegram alerts on stock changes                                                                                                        |
+| `daily_check_report`    | `limit_days`       | Telegram daily check report: `off`, `limit_days` (only on days the Gemini limit was reached or the AI provider was unavailable) or `every_day` |
+| `telegram_bot_token`    | `""`               | Telegram Bot API token                                                                                                                         |
+| `telegram_bot_chat_id`  | `""`               | Telegram chat ID for notifications                                                                                                             |
+| `selected_language`     | `english`          | UI language (`english` / `spanish`)                                                                                                            |
+| `google_api_key`        | `""`               | Google API key for Gemini (used by Stagehand)                                                                                                  |
+| `ai_provider`           | `google_ai_studio` | AI provider behind Stagehand: `google_ai_studio` or `ollama`                                                                                   |
+| `ollama_url`            | `""`               | Base URL of the Ollama instance, e.g. `http://192.168.1.20:11434`                                                                              |
+| `ollama_model`          | `""`               | Ollama model tag, e.g. `qwen3.8:latest`                                                                                                        |
 
 **How price statistics are computed** (dashboard and product detail):
 
-- The window covers the last *N* calendar days (`hist_window_size` on the
+- The window covers the last _N_ calendar days (`hist_window_size` on the
   dashboard, the selected range on the detail page).
 - Only in-stock checks count for averages, lowest prices, price changes,
   "at lowest" and price-drop alerts; out-of-stock checks are still drawn on
@@ -328,41 +328,41 @@ The backend exposes the following REST API endpoints (base URL: `http://localhos
 
 ### Products
 
-| Method   | Endpoint                      | Description |
-| -------- | ----------------------------- | ----------- |
-| `POST`   | `/products/`                  | Create a product with its first store: `{name, priority, category_id, description, offer: {url, currency, store_id?}}` |
-| `GET`    | `/products/`                  | List all products with their offers |
+| Method   | Endpoint                      | Description                                                                                                                                                                                                                              |
+| -------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/products/`                  | Create a product with its first store: `{name, priority, category_id, description, offer: {url, currency, store_id?}}`                                                                                                                   |
+| `GET`    | `/products/`                  | List all products with their offers                                                                                                                                                                                                      |
 | `GET`    | `/products/dashboard-summary` | One entry per product, valued by its best offer (current price, `price_change_pct`, stock, `is_at_lowest`, `recent_prices` for the sparkline, `best_offer_id`) with its `offers` (store fields, current price, stock, `last_checked_at`) |
-| `GET`    | `/products/{id}`              | Full product detail: shared fields and every offer with its store fields and price history |
-| `PATCH`  | `/products/{id}`              | Update the shared fields (name, priority, category, description) |
-| `DELETE` | `/products/{id}`              | Delete a product (cascades to its offers and their price history) |
-| `POST`   | `/products/{id}/merge`        | Merge another product into this one: `{source_product_id, keep}` (`keep` is `target` or `source`: whose shared fields to keep). 400 with itself, 409 for another currency or a shared URL |
+| `GET`    | `/products/{id}`              | Full product detail: shared fields and every offer with its store fields and price history                                                                                                                                               |
+| `PATCH`  | `/products/{id}`              | Update the shared fields (name, priority, category, description)                                                                                                                                                                         |
+| `DELETE` | `/products/{id}`              | Delete a product (cascades to its offers and their price history)                                                                                                                                                                        |
+| `POST`   | `/products/{id}/merge`        | Merge another product into this one: `{source_product_id, keep}` (`keep` is `target` or `source`: whose shared fields to keep). 400 with itself, 409 for another currency or a shared URL                                                |
 
 ### Offers
 
-| Method   | Endpoint                 | Description |
-| -------- | ------------------------ | ----------- |
-| `POST`   | `/products/{id}/offers`  | Add a store to a product: `{url, currency, store_id?}`. 409 for another currency or a URL already tracked |
-| `PATCH`  | `/offers/{id}`           | Change a store's URL: `{url}` (the store is re-resolved) |
-| `POST`   | `/offers/{id}/check`     | Check the store's price now and wait for it (a minute or two), replacing the day's price if it had one; sends Telegram alerts like the daily check. Returns `{outcome: "stored", checked_at}`; 502 when no valid price could be read, 429 when the Gemini quota is exhausted, 503 when the AI provider is unreachable (the day's previous price stays), 409 with no AI provider configured |
-| `POST`   | `/offers/{id}/unlink`    | Move the store (with its history) into a new product with the same fields. 409 for a product's only store |
-| `DELETE` | `/offers/{id}`           | Remove a store and its history. 409 for a product's only store |
+| Method   | Endpoint                | Description                                                                                                                                                                                                                                                                                                                                                                                |
+| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST`   | `/products/{id}/offers` | Add a store to a product: `{url, currency, store_id?}`. 409 for another currency or a URL already tracked                                                                                                                                                                                                                                                                                  |
+| `PATCH`  | `/offers/{id}`          | Change a store's URL: `{url}` (the store is re-resolved)                                                                                                                                                                                                                                                                                                                                   |
+| `POST`   | `/offers/{id}/check`    | Check the store's price now and wait for it (a minute or two), replacing the day's price if it had one; sends Telegram alerts like the daily check. Returns `{outcome: "stored", checked_at}`; 502 when no valid price could be read, 429 when the Gemini quota is exhausted, 503 when the AI provider is unreachable (the day's previous price stays), 409 with no AI provider configured |
+| `POST`   | `/offers/{id}/unlink`   | Move the store (with its history) into a new product with the same fields. 409 for a product's only store                                                                                                                                                                                                                                                                                  |
+| `DELETE` | `/offers/{id}`          | Remove a store and its history. 409 for a product's only store                                                                                                                                                                                                                                                                                                                             |
 
 Offers are linked to a store resolved from their URL's domain on create and on URL change.
 
 ### Stores
 
-| Method | Endpoint               | Description                                                    |
-| ------ | ---------------------- | -------------------------------------------------------------- |
-| `GET`  | `/stores/{id}/favicon` | Store favicon image (cached for a week; 404 if none was found) |
-| `GET`  | `/daily-check/` | Today's daily check: full-run snapshot (start, total products, time the AI provider stopped it, products left then and `limit_reason`: `quota` or `unavailable`; nulls before it runs) and products still pending |
+| Method | Endpoint               | Description                                                                                                                                                                                                       |
+| ------ | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/stores/{id}/favicon` | Store favicon image (cached for a week; 404 if none was found)                                                                                                                                                    |
+| `GET`  | `/daily-check/`        | Today's daily check: full-run snapshot (start, total products, time the AI provider stopped it, products left then and `limit_reason`: `quota` or `unavailable`; nulls before it runs) and products still pending |
 
 ### AI Extraction
 
-| Method | Endpoint                 | Description                                                                                                                |
-| ------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/extract-product-info/` | AI-extract product info from a given URL, including its `store` (created with its favicon the first time a domain is seen). 503 if the AI provider cannot be reached |
-| `GET`  | `/ai/ollama/models?url=…` | Models installed on an Ollama instance, with their size and whether they are under 20B parameters. 502 if it cannot be reached |
+| Method | Endpoint                  | Description                                                                                                                                                          |
+| ------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/extract-product-info/`  | AI-extract product info from a given URL, including its `store` (created with its favicon the first time a domain is seen). 503 if the AI provider cannot be reached |
+| `GET`  | `/ai/ollama/models?url=…` | Models installed on an Ollama instance, with their size and whether they are under 20B parameters. 502 if it cannot be reached                                       |
 
 ### Telegram
 
@@ -453,16 +453,16 @@ docker run -d \
   -v wishlist-tracker-db:/app/backend/db \
   --restart unless-stopped \
   --name wishlist-tracker-app \
-  t1b4lt/wishlist-tracker:1.0.0
+  t1b4lt/wishlist-tracker:latest
 ```
 
 Then open `http://localhost:7755` and configure the AI provider (Gemini API key or Ollama URL and model) and Telegram in the **Settings** page. These are stored in the database, so **no API keys are passed as environment variables**.
 
-| Option                          | Required    | Description                                                                                                     |
-| ------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
-| `-p <host port>:7755`           | Yes         | The app (frontend and `/api`) is served on container port `7755`.                                               |
-| `-v <volume>:/app/backend/db`   | Recommended | Persists the SQLite database (and its migration backups). Without it, data is lost when the container is removed. |
-| `-e TZ=<zone>`                  | Recommended | Time zone (default `UTC`) used for the daily analysis hour and "one check per product per day".                  |
+| Option                        | Required    | Description                                                                                                       |
+| ----------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `-p <host port>:7755`         | Yes         | The app (frontend and `/api`) is served on container port `7755`.                                                 |
+| `-v <volume>:/app/backend/db` | Recommended | Persists the SQLite database (and its migration backups). Without it, data is lost when the container is removed. |
+| `-e TZ=<zone>`                | Recommended | Time zone (default `UTC`) used for the daily analysis hour and "one check per product per day".                   |
 
 `TZ` is the only environment variable the container reads; everything else is configured in the app.
 
@@ -559,14 +559,14 @@ just docker-build   # Build the Docker image (then: just docker-run)
 just docker-release 1.0.0  # Build and push the image to Docker Hub (also as latest)
 ```
 
-| Group   | Recipes                                                                      |
-| ------- | ---------------------------------------------------------------------------- |
-| setup   | `setup`, `install`, `install-backend`, `install-frontend`, `hooks`, `update` |
-| quality | `format`, `lint`, `check`, `pre-commit`                                      |
-| test    | `test`, `test-backend`, `test-frontend`, `test-e2e`                          |
-| dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`            |
+| Group   | Recipes                                                                                 |
+| ------- | --------------------------------------------------------------------------------------- |
+| setup   | `setup`, `install`, `install-backend`, `install-frontend`, `hooks`, `update`            |
+| quality | `format`, `lint`, `check`, `pre-commit`                                                 |
+| test    | `test`, `test-backend`, `test-frontend`, `test-e2e`                                     |
+| dev     | `dev`, `dev-backend`, `dev-frontend`, `cronjob`, `build`, `clean`                       |
 | db      | `db-init`, `db-migrate`, `db-revision`, `db-history`, `db-seed`, `db-clean`, `db-reset` |
-| docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`, `docker-release` |
+| docker  | `docker-build`, `docker-run`, `docker-stop`, `docker-logs`, `docker-release`            |
 
 > `just test-e2e` needs Chromium installed once: `cd frontend && npx playwright install chromium`.
 > It is not part of the default `just test` (which stays fast, unit-tests-only) since it needs
@@ -623,17 +623,17 @@ Ruff settings are in `backend/pyproject.toml` (`[tool.ruff]`). Frontend formatti
 
 All application settings can be managed through the **Settings** page (`/settings`) in the web interface:
 
-| Setting                 | Description                                                              |
-| ----------------------- | ------------------------------------------------------------------------ |
+| Setting                 | Description                                                                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **AI Provider**         | Google AI Studio (Gemini, with your API key) or Ollama (the URL of your instance and one of its models, picked from a list; models under 20B parameters show a warning). |
-| **Analysis Hour**       | Hour of the day (0–23) when the daily check starts (first run at or after it). |
-| **History Window**      | Days used for price trends, averages and lowest prices (30, 60, 90 or 180). |
-| **Language**            | Switch between English and Spanish.                                      |
-| **Telegram Bot Token**  | Your Telegram Bot API token (from [@BotFather](https://t.me/BotFather)). |
-| **Telegram Chat ID**    | Auto-detected when you send a message to the bot.                        |
-| **Price Drop Alerts**   | Toggle Telegram notifications for price drops.                           |
-| **Stock Change Alerts** | Toggle Telegram notifications when items return to stock.                |
-| **Daily Check Report**  | Telegram report of the day's check: off, only on days the Gemini limit is reached, or every day. |
+| **Analysis Hour**       | Hour of the day (0–23) when the daily check starts (first run at or after it).                                                                                           |
+| **History Window**      | Days used for price trends, averages and lowest prices (30, 60, 90 or 180).                                                                                              |
+| **Language**            | Switch between English and Spanish.                                                                                                                                      |
+| **Telegram Bot Token**  | Your Telegram Bot API token (from [@BotFather](https://t.me/BotFather)).                                                                                                 |
+| **Telegram Chat ID**    | Auto-detected when you send a message to the bot.                                                                                                                        |
+| **Price Drop Alerts**   | Toggle Telegram notifications for price drops.                                                                                                                           |
+| **Stock Change Alerts** | Toggle Telegram notifications when items return to stock.                                                                                                                |
+| **Daily Check Report**  | Telegram report of the day's check: off, only on days the Gemini limit is reached, or every day.                                                                         |
 
 ---
 
@@ -731,7 +731,7 @@ A quota error is recognized from the message Stagehand raises (`You exceeded you
 
 ### Using Ollama
 
-Stagehand v4 has no Ollama provider and no `base_url` option, so the backend plugs Ollama in through Stagehand's *bring-your-own-LLM* callback (`backend/src/ai/ollama.py`): every inference request is forwarded to Ollama's `POST /api/chat` with the JSON schema as `format` (structured outputs). Ollama cannot parse the `\d` regex shorthand Stagehand uses in its schemas, so it is rewritten as `[0-9]` before sending.
+Stagehand v4 has no Ollama provider and no `base_url` option, so the backend plugs Ollama in through Stagehand's _bring-your-own-LLM_ callback (`backend/src/ai/ollama.py`): every inference request is forwarded to Ollama's `POST /api/chat` with the JSON schema as `format` (structured outputs). Ollama cannot parse the `\d` regex shorthand Stagehand uses in its schemas, so it is rewritten as `[0-9]` before sending.
 
 - The instance must be reachable **from the backend**: in Docker, use its LAN IP (e.g. `http://192.168.1.20:11434`), not `localhost`.
 - Models under 20B parameters don't guarantee good results; `qwen3.8` has proven reliable.
