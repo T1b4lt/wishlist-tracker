@@ -879,7 +879,11 @@ export const ProductFormDialog = ({
                                 onOpenChange={(e) => setNewCategoryOpen(e.open)}
                                 positioning={{ placement: 'bottom-start' }}
                               >
-                                <Popover.Anchor>
+                                {/* `Field` aligns its children to flex-start,
+                                    so without an explicit width the anchor
+                                    (and the select inside it) would shrink
+                                    to its content and truncate the value. */}
+                                <Popover.Anchor width="full">
                                   <SelectRoot
                                     collection={categoryCollection}
                                     value={[categoryId]}

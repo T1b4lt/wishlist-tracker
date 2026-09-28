@@ -471,6 +471,39 @@ describe('ProductFormDialog', () => {
     expect(getUnexpectedErrors()).toEqual([]);
   });
 
+  it.each(['create', 'edit'])(
+    'stretches the category select to the full field width in %s mode',
+    async (mode) => {
+      const fullProduct = {
+        id: 7,
+        name: 'Mechanical Keyboard',
+        description: '',
+        category_id: 5,
+        priority: 'Medium'
+      };
+      renderWithProviders(
+        <ProductFormDialog
+          open
+          mode={mode}
+          onClose={vi.fn()}
+          product={mode === 'edit' ? fullProduct : null}
+        />
+      );
+      if (mode === 'create') {
+        // The shared fields only fade in once extraction was attempted.
+        await userEvent.click(
+          screen.getByRole('button', { name: 'Add product' })
+        );
+      }
+
+      const anchor = document.querySelector(
+        '[data-scope="popover"][data-part="anchor"]'
+      );
+      expect(anchor).not.toBeNull();
+      expect(getComputedStyle(anchor).width).toBe('var(--chakra-sizes-full)');
+    }
+  );
+
   it('renders the priority control with PriorityBadge icon and weight visuals', () => {
     renderWithProviders(
       <ProductFormDialog open mode="create" onClose={vi.fn()} product={null} />
